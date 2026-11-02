@@ -1,0 +1,164 @@
+/*
+ * FragCity Motion System
+ * Site-wide transitions, page entrances, and viewport reveal effects.
+ */
+
+.fc-motion-fade-in { animation: fc-fade-in var(--fc-duration-enter) var(--fc-ease-standard) both; }
+.fc-motion-rise-in { animation: fc-rise-in var(--fc-duration-enter) var(--fc-ease-emphasized) both; }
+.fc-motion-scale-in { animation: fc-scale-in var(--fc-duration-slow) var(--fc-ease-emphasized) both; }
+
+.fc-motion-hover-lift {
+    transition: transform var(--fc-duration-normal) var(--fc-ease-standard), box-shadow var(--fc-duration-normal) ease;
+}
+@media (hover: hover) {
+    .fc-motion-hover-lift:hover { transform: translateY(-3px); }
+}
+
+/* A shared transition contract for controls throughout the website. */
+html.fc-motion-enabled :where(a,button,input,select,textarea,summary,[role="button"],[data-fc-interactive]) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform, filter;
+    transition-duration: var(--fc-duration-normal);
+    transition-timing-function: var(--fc-ease-standard);
+}
+html.fc-motion-enabled :where(button:disabled,[aria-disabled="true"],input:disabled,select:disabled,textarea:disabled) {
+    cursor: not-allowed;
+}
+
+/* JS applies this class to cards and controls that are genuinely interactive. */
+html.fc-motion-enabled .fc-motion-interactive {
+    transition:
+        transform var(--fc-duration-normal) var(--fc-ease-emphasized),
+        border-color var(--fc-duration-normal) ease,
+        box-shadow var(--fc-duration-normal) ease,
+        background-color var(--fc-duration-normal) ease;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    html.fc-motion-enabled .fc-motion-interactive:hover:not([aria-disabled="true"]) {
+        transform: translateY(-2px);
+        box-shadow: var(--fc-shadow-md);
+    }
+    html.fc-motion-enabled .fc-motion-interactive:active { transform: translateY(0) scale(0.99); }
+}
+
+/* A polished page entrance after initial load and AJAX navigation. */
+.fc-motion-page-enter { animation: fc-page-enter 480ms var(--fc-ease-emphasized) both; }
+@keyframes fc-page-enter {
+    from { opacity: 0; transform: translate3d(0, 12px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+
+/* Viewport-based entrance for page sections and cards. */
+html.fc-motion-ready [data-fc-reveal] {
+    opacity: 0;
+    transition:
+        opacity 520ms var(--fc-ease-standard) var(--fc-reveal-delay, 0ms),
+        transform 520ms var(--fc-ease-emphasized) var(--fc-reveal-delay, 0ms);
+    will-change: opacity, transform;
+}
+html.fc-motion-ready [data-fc-reveal="up"] { transform: translate3d(0, 18px, 0); }
+html.fc-motion-ready [data-fc-reveal="down"] { transform: translate3d(0, -14px, 0); }
+html.fc-motion-ready [data-fc-reveal="left"] { transform: translate3d(18px, 0, 0); }
+html.fc-motion-ready [data-fc-reveal="right"] { transform: translate3d(-18px, 0, 0); }
+html.fc-motion-ready [data-fc-reveal="fade"] { transform: none; }
+html.fc-motion-ready [data-fc-reveal].is-visible {
+    opacity: 1;
+    transform: none;
+    will-change: auto;
+}
+
+
+/* Restore card hover after the reveal transition has completed. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    html.fc-motion-ready [data-fc-reveal].is-visible.fc-motion-interactive:hover:not([aria-disabled="true"]) {
+        transform: translateY(-2px);
+        box-shadow: var(--fc-shadow-md);
+    }
+}
+
+/* Keep AJAX departures short and page arrivals slightly more expressive. */
+.content-fader {
+    transition:
+        opacity 240ms var(--fc-ease-standard),
+        transform 240ms var(--fc-ease-emphasized);
+}
+.content-fader.fade-out {
+    opacity: 0;
+    transform: translate3d(0, 8px, 0) scale(0.996);
+    pointer-events: none;
+}
+
+@keyframes fc-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fc-rise-in {
+    from { opacity: 0; transform: translate3d(0, 16px, 0); }
+    to { opacity: 1; transform: translate3d(0, 0, 0); }
+}
+@keyframes fc-scale-in {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fc-motion-fade-in,.fc-motion-rise-in,.fc-motion-scale-in,.fc-motion-page-enter { animation: none !important; }
+    .fc-motion-hover-lift,
+    html.fc-motion-enabled :where(a,button,input,select,textarea,summary,[role="button"],[data-fc-interactive]),
+    html.fc-motion-enabled .fc-motion-interactive,
+    .content-fader { transition: none !important; }
+    .fc-motion-hover-lift:hover,
+    html.fc-motion-enabled .fc-motion-interactive:hover,
+    html.fc-motion-enabled .fc-motion-interactive:active {
+        transform: none !important;
+        box-shadow: none !important;
+    }
+    html.fc-motion-ready [data-fc-reveal] {
+        opacity: 1 !important;
+        transform: none !important;
+        transition: none !important;
+        will-change: auto;
+    }
+    .content-fader.fade-out { opacity: 1; transform: none; pointer-events: auto; }
+}
+
+
+/* Persistent performance mode. Keep controls and content usable while removing
+   animation, transitions, blur filters and expensive decorative shadows. */
+html.fc-no-animation,
+html.fc-no-animation * ,
+html.fc-no-animation *::before,
+html.fc-no-animation *::after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+    will-change: auto !important;
+}
+
+html.fc-no-animation *,
+html.fc-no-animation *::before,
+html.fc-no-animation *::after {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    filter: none !important;
+    box-shadow: none !important;
+}
+
+html.fc-no-animation [data-fc-reveal],
+html.fc-no-animation [data-fc-reveal].is-visible,
+html.fc-no-animation .fc-motion-page-enter,
+html.fc-no-animation .content-fader.fade-out {
+    opacity: 1 !important;
+    transform: none !important;
+    pointer-events: auto !important;
+}
+
+html.fc-no-animation .fc-motion-interactive:hover,
+html.fc-no-animation .fc-motion-interactive:active,
+html.fc-no-animation .fc-motion-hover-lift:hover {
+    transform: none !important;
+}
+
+html.fc-no-animation .sl-art-ring,
+html.fc-no-animation .sl-art-ring-two,
+html.fc-no-animation .leaderboard-page *,
+html.fc-no-animation .banlist-page * {
+    animation: none !important;
+    transition: none !important;
+}

@@ -1,4 +1,9 @@
 @import "tailwindcss";
+@import "./fragcity/design-tokens.css";
+@import "./fragcity/typography.css";
+@import "./fragcity/components.css";
+@import "./fragcity/motion.css";
+@import "./fragcity/paymenter-shell.css";
 
 @plugin '@tailwindcss/forms' {
     strategy: class;
@@ -15,7 +20,7 @@
 
 @theme {
     /* Font Family */
-    --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+    --font-sans: "Vazirmatn", ui-sans-serif, system-ui, sans-serif;
 
     --animate-wiggle: wiggle 1s ease-in-out infinite;
     @keyframes wiggle {

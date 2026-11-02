@@ -1,0 +1,54 @@
+/* FragCity visual adaptation for Paymenter's native navigation. */
+
+.fc-site-navigation {
+    background-color: rgba(20, 20, 20, 0.88) !important;
+    border-color: var(--fc-color-border) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(130%);
+    backdrop-filter: blur(18px) saturate(130%);
+}
+
+.fc-site-navigation a {
+    transition:
+        color var(--fc-duration-fast) ease,
+        background-color var(--fc-duration-fast) ease,
+        border-color var(--fc-duration-fast) ease;
+}
+
+.fc-site-navigation a:hover {
+    color: var(--fc-color-accent-warm) !important;
+}
+
+.fc-site-navigation .bg-background-secondary {
+    background-color: var(--fc-color-surface-2) !important;
+}
+
+.fc-site-sidebar {
+    background-color: var(--fc-color-surface-1) !important;
+    border-color: var(--fc-color-border) !important;
+}
+
+.fc-site-sidebar a {
+    border-radius: var(--fc-radius-md);
+    transition:
+        color var(--fc-duration-fast) ease,
+        background-color var(--fc-duration-fast) ease;
+}
+
+.fc-site-sidebar a:hover {
+    color: var(--fc-color-text) !important;
+    background-color: var(--fc-color-accent-soft);
+}
+
+.fc-site-sidebar a.text-primary {
+    color: var(--fc-color-accent) !important;
+}
+
+.fc-site-navigation :focus-visible,
+.fc-site-sidebar :focus-visible {
+    outline: 2px solid var(--fc-focus-color);
+    outline-offset: 3px;
+}
+
+.fc-page-main {
+    min-width: 0;
+}

@@ -1,0 +1,125 @@
+/*
+ * FragCity Design Tokens
+ * Shared visual foundation. Keep page-specific styles isolated.
+ * Use --fc-* tokens instead of redefining global HTML elements.
+ */
+
+:root {
+    /* Brand */
+    --fc-color-accent: #F97316;
+    --fc-color-accent-hover: #EA580C;
+    --fc-color-accent-strong: #C2410C;
+    --fc-color-accent-warm: #FFB347;
+    --fc-color-accent-soft: rgba(249, 115, 22, 0.10);
+    --fc-color-accent-border: rgba(249, 115, 22, 0.30);
+
+    /* Neutral surfaces */
+    --fc-color-canvas: #0D0D0D;
+    --fc-color-surface-1: #111111;
+    --fc-color-surface-2: #141414;
+    --fc-color-surface-3: #191919;
+    --fc-color-surface-4: #202020;
+    --fc-color-border: #292929;
+    --fc-color-border-strong: #3A3A3A;
+
+    /* Content */
+    --fc-color-text: #F5F5F5;
+    --fc-color-text-secondary: #A3A3A3;
+    --fc-color-text-muted: #737373;
+    --fc-color-text-inverse: #111111;
+
+    /* Semantic states */
+    --fc-color-success: #22C55E;
+    --fc-color-success-soft: rgba(34, 197, 94, 0.10);
+    --fc-color-warning: #F59E0B;
+    --fc-color-warning-soft: rgba(245, 158, 11, 0.10);
+    --fc-color-danger: #EF4444;
+    --fc-color-danger-soft: rgba(239, 68, 68, 0.10);
+    --fc-color-info: #60A5FA;
+    --fc-color-info-soft: rgba(96, 165, 250, 0.10);
+
+    /* Typography */
+    --fc-font-sans: "Vazirmatn", -apple-system, BlinkMacSystemFont, "Segoe UI", Tahoma, sans-serif;
+    --fc-font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+    --fc-font-size-xs: 0.72rem;
+    --fc-font-size-sm: 0.82rem;
+    --fc-font-size-md: 0.92rem;
+    --fc-font-size-lg: 1.05rem;
+    --fc-font-size-xl: 1.3rem;
+    --fc-line-height: 1.75;
+
+    /* Spacing */
+    --fc-space-1: 4px;
+    --fc-space-2: 8px;
+    --fc-space-3: 12px;
+    --fc-space-4: 16px;
+    --fc-space-5: 20px;
+    --fc-space-6: 24px;
+    --fc-space-8: 32px;
+    --fc-space-10: 40px;
+    --fc-space-12: 48px;
+
+    /* Shape */
+    --fc-radius-xs: 6px;
+    --fc-radius-sm: 8px;
+    --fc-radius-md: 11px;
+    --fc-radius-lg: 14px;
+    --fc-radius-xl: 18px;
+    --fc-radius-pill: 999px;
+
+    /* Elevation */
+    --fc-shadow-sm: 0 4px 12px rgba(0, 0, 0, 0.18);
+    --fc-shadow-md: 0 10px 28px rgba(0, 0, 0, 0.26);
+    --fc-shadow-lg: 0 18px 48px rgba(0, 0, 0, 0.34);
+    --fc-shadow-accent: 0 8px 24px rgba(249, 115, 22, 0.12);
+
+    /* Motion */
+    --fc-duration-instant: 100ms;
+    --fc-duration-fast: 140ms;
+    --fc-duration-normal: 200ms;
+    --fc-duration-slow: 320ms;
+    --fc-duration-enter: 420ms;
+    --fc-ease-standard: cubic-bezier(0.2, 0.8, 0.2, 1);
+    --fc-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+
+    /* Focus */
+    --fc-focus-color: rgba(249, 115, 22, 0.82);
+    --fc-focus-shadow: 0 0 0 3px rgba(249, 115, 22, 0.18);
+
+    /* Layering */
+    --fc-z-dropdown: 100;
+    --fc-z-sticky: 200;
+    --fc-z-overlay: 900;
+    --fc-z-modal: 1000;
+    --fc-z-toast: 1100;
+}
+
+/* Common layout helpers. Values can be customized per element. */
+.fc-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--fc-gap, var(--fc-space-3));
+}
+
+.fc-cluster {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--fc-gap, var(--fc-space-2));
+}
+
+.fc-muted {
+    color: var(--fc-color-text-secondary);
+}
+
+.fc-visually-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}

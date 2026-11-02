@@ -1,0 +1,19 @@
+@font-face {
+    font-family: "Vazirmatn";
+    src: url("../../fonts/Vazirmatn-variable.woff2") format("woff2");
+    font-style: normal;
+    font-weight: 100 900;
+    font-display: swap;
+}
+
+@layer base {
+    html,
+    body {
+        font-family: var(--fc-font-sans);
+    }
+
+    body {
+        background-color: var(--fc-color-canvas);
+        color: var(--fc-color-text);
+    }
+}
