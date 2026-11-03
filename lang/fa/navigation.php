@@ -1,2 +1,0 @@
-<?php
-return ['home'=>'خانه','shop'=>'فروشگاه','cart'=>'سبد خرید','login'=>'ورود','register'=>'ثبت‌نام','services'=>'سرویس‌ها','invoices'=>'فاکتورها','account'=>'حساب کاربری','personal_details'=>'اطلاعات شخصی','security'=>'امنیت','dashboard'=>'داشبورد','tickets'=>'تیکت‌های پشتیبانی','admin'=>'مدیریت','notifications'=>'اعلان‌ها'];
