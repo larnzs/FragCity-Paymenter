@@ -1076,7 +1076,7 @@
           "0": "غیرفعال",
           "1": "فعال"
         },
-        "default": "1",
+        "default": "0",
         "required": true
       },
       {
@@ -1189,7 +1189,7 @@
         "label": "Bot Guard SteamID Whitelist",
         "type": "text",
         "description": "SteamID64های مجاز، جداشده با کاما.",
-        "default": null,
+        "default": "",
         "required": false,
         "validation": "nullable|string"
       },
@@ -1198,7 +1198,7 @@
         "label": "Bot Guard IP Whitelist",
         "type": "text",
         "description": "IPهای مجاز، جداشده با کاما.",
-        "default": null,
+        "default": "",
         "required": false,
         "validation": "nullable|string"
       },
@@ -1223,7 +1223,7 @@
           "0": "غیرفعال",
           "1": "فعال"
         },
-        "default": "0",
+        "default": "1",
         "required": true
       },
       {
@@ -1235,7 +1235,7 @@
           "0": "غیرفعال",
           "1": "فعال"
         },
-        "default": "0",
+        "default": "1",
         "required": true
       },
       {
@@ -1243,7 +1243,7 @@
         "label": "Admin Startup Parameters",
         "type": "text",
         "description": "پارامترهای آزاد Startup؛ فقط مدیر محصول باید آن را تنظیم کند.",
-        "default": null,
+        "default": "",
         "required": false,
         "validation": "nullable|string"
       }
