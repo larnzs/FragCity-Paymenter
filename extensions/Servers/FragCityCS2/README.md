@@ -4,6 +4,18 @@ Compatibility target: **Paymenter v1.5.9**.
 
 This extension inherits Paymenter's built-in Pterodactyl server implementation. FragCity-specific Product settings and customer Checkout fields are generated from `resources/cs2-egg-variables.json`.
 
+## FragCity client identity provisioning
+
+Before delegating server creation to Paymenter's official Pterodactyl implementation, this extension ensures the corresponding Pterodactyl client user exists and has FragCity's chosen identity:
+
+- `fragcity_username` is read from the Paymenter User Property written by the signed FragCity API bridge.
+- Paymenter's native `first_name`, `last_name` and `email` are sent to Pterodactyl's native `first_name`, `last_name` and `email` fields.
+- Pterodactyl's `external_id` is set to the Paymenter user ID, providing a stable cross-system identity.
+- If a Pterodactyl user already exists for that email, the extension updates the username and client identity only when its `external_id` is empty or matches the Paymenter user ID. A conflicting external identity stops provisioning rather than silently claiming another account.
+- The extension then delegates server creation to the unchanged Paymenter Pterodactyl implementation, which finds the client by email and assigns the server.
+
+The Pterodactyl Application API permits a nullable password during client creation. This extension does not send or store a plaintext password, so the Pterodactyl panel password remains independent from the FragCity/Paymenter password. No Paymenter Core file is modified.
+
 ## Egg coverage
 
 The manifest is audited against the source Egg:
