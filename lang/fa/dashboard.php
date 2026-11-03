@@ -1,2 +1,0 @@
-<?php
-return ['dashboard_title'=>'داشبورد','welcome_back'=>'خوش آمدید، :name!','dashboard_description'=>'سرویس‌های فعال، فاکتورها و تیکت‌های خود را از این بخش مدیریت کنید و از آخرین وضعیت آن‌ها باخبر شوید.','open_tickets'=>'تیکت‌های باز','unpaid_invoices'=>'فاکتورهای پرداخت‌نشده','active_services'=>'سرویس‌های فعال','view_all'=>'مشاهده همه'];
