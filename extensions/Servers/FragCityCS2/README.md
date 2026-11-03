@@ -6,12 +6,16 @@ This extension inherits Paymenter's built-in Pterodactyl server implementation a
 
 ## What is generated
 
-- **17 customer checkout fields**, rendered automatically by Paymenter's `getCheckoutConfig()` hook.
-- **11 admin product settings**, appended to the built-in Pterodactyl product settings.
-- A manifest containing all **32 Egg variables**, their defaults, Egg validation rules, access flags, allowed values, and Paymenter routing.
+- **11 customer checkout fields**: GSLT, map, maximum players, tickrate, map group, cooldown policy, password, Workshop Collection, console log level, Bot Guard toggle and Bot Guard ban duration.
+- **17 admin product settings**: tokenless policy, update/validation controls, Game Type and Game Mode, plugin frameworks, prerelease policy, Bot Guard action and allow-lists, console filtering, automatic cleanup, log persistence and custom startup parameters.
+- A manifest containing all **32 Egg variables**, their defaults, Egg validation rules, source access flags, allowed values, and explicit Paymenter routing.
+- **4 variables are intentionally not exposed**: fixed CS2 AppID, AUTHKEY, development-only GDB port and the unused EXEC variable.
+
+`ENABLE_GUARD` is a paid add-on toggle. Its selection is captured as a service property; the extra charge must be calculated by the FragCity Raw PHP checkout using the manifest's `fragcity_pricing` contract. Paymenter's checkout extension hook does not add a surcharge by itself.
+
+`TICKRATE` is customer-selectable. The FragCity storefront should treat 64 as the base option and 128 as a priced upgrade using the same pricing contract. A future customer dashboard must also update the existing service's Egg environment when changing tickrate; changing a checkout value alone does not modify an already-provisioned server.
 
 No rows need to be manually created in Paymenter's native Config Options screen.
-
 ## Install
 
 Copy this folder into the Paymenter installation:
