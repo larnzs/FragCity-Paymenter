@@ -7,9 +7,9 @@ This extension inherits Paymenter's built-in Pterodactyl server implementation a
 ## What is generated
 
 - **11 customer checkout fields**: GSLT, map, maximum players, tickrate, map group, cooldown policy, password, Workshop Collection, console log level, Bot Guard toggle and Bot Guard ban duration.
-- **17 admin product settings**: tokenless policy, update/validation controls, Game Type and Game Mode, plugin frameworks, prerelease policy, Bot Guard action and allow-lists, console filtering, automatic cleanup, log persistence and custom startup parameters.
+- **18 admin product settings**: tokenless policy, update/validation controls, Game Type and Game Mode, plugin frameworks, prerelease policy, Bot Guard action and allow-lists, console filtering, automatic cleanup, log persistence custom startup parameters and the admin-only CFG filename (`EXEC`).
 - A manifest containing all **32 Egg variables**, their defaults, Egg validation rules, source access flags, allowed values, and explicit Paymenter routing.
-- **4 variables are intentionally not exposed**: fixed CS2 AppID, AUTHKEY, development-only GDB port and the unused EXEC variable.
+- **3 variables are intentionally not exposed**: fixed CS2 AppID, AUTHKEY and development-only GDB port.
 
 `ENABLE_GUARD` is a paid add-on toggle. Its selection is captured as a service property; the extra charge must be calculated by the FragCity Raw PHP checkout using the manifest's `fragcity_pricing` contract. Paymenter's checkout extension hook does not add a surcharge by itself.
 
@@ -44,7 +44,7 @@ For a test product, select **FragCity CS2** as its server extension. Its inherit
 
 - Customer checkout: GSLT, map, game type/mode, selected frameworks, prerelease preference, console log level, console filter, cleanup, console log persistence, tickrate, map group, cooldown, server password, Workshop Collection.
 - Product admin settings: tokenless policy, max players, update/validation controls, SwiftlyS2, Egg Bot Guard and its action/allow-lists, and custom startup parameters.
-- Not exposed: fixed CS2 AppID, the secret `AUTHKEY` (its actual default is redacted), GDB development port, and `EXEC` because the current Egg startup command does not reference it.
+- Not exposed: fixed CS2 AppID, the secret `AUTHKEY` (its actual default is redacted), GDB development port, The `EXEC` variable is now exposed as an admin-only product setting, but it will not execute a CFG until `+exec {{EXEC}}` is added to the Egg startup command.
 
 `CUSTOM_PARAMS` is deliberately an **admin-only product setting** because it inserts free-form arguments into the startup command.
 
