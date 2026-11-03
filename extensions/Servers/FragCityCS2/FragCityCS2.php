@@ -10,27 +10,32 @@ use RuntimeException;
 /**
  * FragCity's CS2 checkout layer.
  *
- * The actual server lifecycle, Pterodactyl API calls, and Egg environment
- * construction remain inherited from Paymenter's built-in Pterodactyl extension.
- * This class only provides the customer-facing CS2 Egg fields.
+ * Server lifecycle and Pterodactyl API behavior are inherited unchanged.
+ * This class adds product-level Egg settings and customer checkout fields.
  */
 #[ExtensionMeta(
     name: 'FragCity CS2',
-    description: 'Pterodactyl provisioning with checkout fields generated from the FragCity CS2 Egg.',
-    version: '1.0.0',
+    description: 'Pterodactyl provisioning with settings generated from the FragCity CS2 Egg.',
+    version: '1.0.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
 class FragCityCS2 extends PterodactylExtension
 {
-    /**
-     * Return checkout fields generated from the checked-in Egg manifest.
-     *
-     * Paymenter 1.5.9 passes the product, current checkout values, and product
-     * settings to this method. Pterodactyl API credentials remain the settings
-     * of this server extension and are not exposed to customers.
-     */
+    public function getProductConfig($values = []): array
+    {
+        return array_merge(
+            parent::getProductConfig($values),
+            $this->loadManifest()['paymenter']['product_fields'] ?? []
+        );
+    }
+
     public function getCheckoutConfig(Product $product, $values = [], $settings = []): array
+    {
+        return $this->loadManifest()['paymenter']['checkout_fields'] ?? [];
+    }
+
+    private function loadManifest(): array
     {
         $manifestPath = __DIR__ . '/resources/cs2-egg-variables.json';
 
@@ -39,12 +44,11 @@ class FragCityCS2 extends PterodactylExtension
         }
 
         $manifest = json_decode((string) file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
-        $fields = $manifest['paymenter']['checkout_fields'] ?? null;
 
-        if (!is_array($fields)) {
-            throw new RuntimeException('FragCity CS2 Egg manifest does not contain valid Paymenter checkout fields.');
+        if (!is_array($manifest) || !isset($manifest['paymenter'])) {
+            throw new RuntimeException('FragCity CS2 Egg manifest is invalid.');
         }
 
-        return $fields;
+        return $manifest;
     }
 }
