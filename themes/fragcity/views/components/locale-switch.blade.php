@@ -15,14 +15,14 @@
     <x-slot:content>
         @if(count($locales) > 1)
         <div>
-            <strong class="block p-2 text-xs font-semibold uppercase text-base/50">{{ __('general.language') }}</strong>
-            <x-select wire:model.live="currentLocale" :options="collect($locales)->map(fn($code) => ['value' => $code, 'label' => config('app.available_locales')[$code] ?? strtoupper($code)])->values()->toArray()" :placeholder="__('general.select_language')" />
+            <strong class="block p-2 text-xs font-semibold uppercase text-base/50">{{ app()->getLocale() === 'fa' ? __('general.language') : 'Language' }}</strong>
+            <x-select wire:model.live="currentLocale" :options="collect($locales)->map(fn($code) => ['value' => $code, 'label' => config('app.available_locales')[$code] ?? strtoupper($code)])->values()->toArray()" :placeholder="app()->getLocale() === 'fa' ? __('general.select_language') : 'Select language'" />
         </div>
         @endif
         @if(count($this->currencies) > 1 && Cart::items()->isEmpty())
         <div>
-            <strong class="block p-2 text-xs font-semibold uppercase text-base/50">{{ __('general.currency') }}</strong>
-            <x-select wire:model.live="currentCurrency" :options="$this->currencies" :placeholder="__('general.select_currency')" />
+            <strong class="block p-2 text-xs font-semibold uppercase text-base/50">{{ app()->getLocale() === 'fa' ? __('general.currency') : 'Currency' }}</strong>
+            <x-select wire:model.live="currentCurrency" :options="$this->currencies" :placeholder="app()->getLocale() === 'fa' ? __('general.select_currency') : 'Select currency'" />
         </div>
         @endif
     </x-slot:content>
