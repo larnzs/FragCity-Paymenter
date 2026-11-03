@@ -10,8 +10,8 @@
   },
   "summary": {
     "total_egg_variables": 32,
-    "checkout_fields": 11,
-    "product_admin_fields": 18,
+    "checkout_fields": 12,
+    "product_admin_fields": 17,
     "not_exposed": 3,
     "target_paymenter": "v1.5.9"
   },
@@ -536,6 +536,74 @@
         "status": "checkout",
         "field_name": "MAPGROUP",
         "field_type": "select"
+      },
+      "storefront_allowed_values": [
+        "mg_active",
+        "mg_comp",
+        "mg_gg",
+        "mg_dm",
+        "mg_wingman",
+        "mg_prefire",
+        "mg_retake",
+        "mg_executes",
+        "mg_awp",
+        "mg_1v1",
+        "mg_aim",
+        "mg_bhop",
+        "mg_surf",
+        "mg_kz",
+        "mg_ctf",
+        "mg_hns",
+        "mg_soccer",
+        "mg_course",
+        "mg_deathrun",
+        "mg_minigames",
+        "mg_scoutzknivez",
+        "mg_battle",
+        "mg_battleroyale",
+        "mg_casual-1.6",
+        "mg_valve_competitive",
+        "mg_valve_deathmatch",
+        "mg_valve_arms_race",
+        "mg_valve_wingman",
+        "mg_casualw",
+        "mg_casuala",
+        "mg_valve_retakes",
+        "mg_45"
+      ],
+      "storefront_options": {
+        "mg_active": "Casual — mg_active",
+        "mg_comp": "Casual / Competitive / Practice Mode — mg_comp",
+        "mg_gg": "Gun Game / One In The Chamber — mg_gg",
+        "mg_dm": "Deathmatch — mg_dm",
+        "mg_wingman": "Wingman — mg_wingman",
+        "mg_prefire": "Prefire — mg_prefire",
+        "mg_retake": "Retakes — mg_retake",
+        "mg_executes": "Executes — mg_executes",
+        "mg_awp": "Awp Only — mg_awp",
+        "mg_1v1": "1v1 Arenas — mg_1v1",
+        "mg_aim": "Aim — mg_aim",
+        "mg_bhop": "Bhop — mg_bhop",
+        "mg_surf": "Surf — mg_surf",
+        "mg_kz": "Kreedz Climbing — mg_kz",
+        "mg_ctf": "Capture The Flag — mg_ctf",
+        "mg_hns": "Hide N Seek — mg_hns",
+        "mg_soccer": "Soccer — mg_soccer",
+        "mg_course": "Course — mg_course",
+        "mg_deathrun": "Deathrun — mg_deathrun",
+        "mg_minigames": "Minigames — mg_minigames",
+        "mg_scoutzknivez": "ScoutzKnivez — mg_scoutzknivez",
+        "mg_battle": "Battle Ball — mg_battle",
+        "mg_battleroyale": "Battle Royale — mg_battleroyale",
+        "mg_casual-1.6": "Casual (1.6) — mg_casual-1.6",
+        "mg_valve_competitive": "Competitive (Valve) — mg_valve_competitive",
+        "mg_valve_deathmatch": "Deathmatch FFA (Valve) — mg_valve_deathmatch",
+        "mg_valve_arms_race": "Arms Race (Valve) — mg_valve_arms_race",
+        "mg_valve_wingman": "Wingman (Valve) — mg_valve_wingman",
+        "mg_casualw": "Casual Workshop — mg_casualw",
+        "mg_casuala": "Casual Active — mg_casuala",
+        "mg_valve_retakes": "Retakes (Valve) — mg_valve_retakes",
+        "mg_45": "Competitive 45° — mg_45"
       }
     },
     {
@@ -592,7 +660,7 @@
       "order": 31,
       "name": "Execute specific cfg related to the gamemode",
       "env_variable": "EXEC",
-      "description": "+exec",
+      "description": "CFG مربوط به GameModes در GameModeManager. فهرست فروشگاه فقط از GameModes.Default و GameModes.List ساخته شده و شامل Settings، Warmup یا custom CFGها نیست.",
       "default_value": "comp.cfg",
       "default_redacted": false,
       "user_viewable": true,
@@ -835,9 +903,81 @@
         "wingman.cfg"
       ],
       "paymenter": {
-        "status": "product_setting",
+        "status": "checkout",
         "field_name": "EXEC",
-        "field_type": "text"
+        "field_type": "select"
+      },
+      "storefront_allowed_values": [
+        "casual.cfg",
+        "gg.cfg",
+        "deathmatch.cfg",
+        "comp.cfg",
+        "wingman.cfg",
+        "prac.cfg",
+        "prefire.cfg",
+        "retake.cfg",
+        "executes.cfg",
+        "awp.cfg",
+        "1v1.cfg",
+        "aim.cfg",
+        "bhop.cfg",
+        "surf.cfg",
+        "kz.cfg",
+        "ctf.cfg",
+        "hns.cfg",
+        "soccer.cfg",
+        "course.cfg",
+        "deathrun.cfg",
+        "minigames.cfg",
+        "scoutzknivez.cfg",
+        "oitc.cfg",
+        "battle.cfg",
+        "br.cfg",
+        "Casual-1.6.cfg",
+        "valve-competitive.cfg",
+        "valve-deathmatch-freeforall.cfg",
+        "valve-armsrace.cfg",
+        "valve-wingman.cfg",
+        "casualw.cfg",
+        "casual-active.cfg",
+        "valve-retake.cfg",
+        "45.cfg"
+      ],
+      "storefront_options": {
+        "casual.cfg": "Casual — casual.cfg",
+        "gg.cfg": "Gun Game — gg.cfg",
+        "deathmatch.cfg": "Deathmatch — deathmatch.cfg",
+        "comp.cfg": "Competitive — comp.cfg",
+        "wingman.cfg": "Wingman — wingman.cfg",
+        "prac.cfg": "Practice Mode — prac.cfg",
+        "prefire.cfg": "Prefire — prefire.cfg",
+        "retake.cfg": "Retakes — retake.cfg",
+        "executes.cfg": "Executes — executes.cfg",
+        "awp.cfg": "Awp Only — awp.cfg",
+        "1v1.cfg": "1v1 Arenas — 1v1.cfg",
+        "aim.cfg": "Aim — aim.cfg",
+        "bhop.cfg": "Bhop — bhop.cfg",
+        "surf.cfg": "Surf — surf.cfg",
+        "kz.cfg": "Kreedz Climbing — kz.cfg",
+        "ctf.cfg": "Capture The Flag — ctf.cfg",
+        "hns.cfg": "Hide N Seek — hns.cfg",
+        "soccer.cfg": "Soccer — soccer.cfg",
+        "course.cfg": "Course — course.cfg",
+        "deathrun.cfg": "Deathrun — deathrun.cfg",
+        "minigames.cfg": "Minigames — minigames.cfg",
+        "scoutzknivez.cfg": "ScoutzKnivez — scoutzknivez.cfg",
+        "oitc.cfg": "One In The Chamber — oitc.cfg",
+        "battle.cfg": "Battle Ball — battle.cfg",
+        "br.cfg": "Battle Royale — br.cfg",
+        "Casual-1.6.cfg": "Casual (1.6) — Casual-1.6.cfg",
+        "valve-competitive.cfg": "Competitive (Valve) — valve-competitive.cfg",
+        "valve-deathmatch-freeforall.cfg": "Deathmatch FFA (Valve) — valve-deathmatch-freeforall.cfg",
+        "valve-armsrace.cfg": "Arms Race (Valve) — valve-armsrace.cfg",
+        "valve-wingman.cfg": "Wingman (Valve) — valve-wingman.cfg",
+        "casualw.cfg": "Casual Workshop — casualw.cfg",
+        "casual-active.cfg": "Casual Active — casual-active.cfg",
+        "valve-retake.cfg": "Retakes (Valve) — valve-retake.cfg",
+        "45.cfg": "Competitive 45° — 45.cfg"
       }
     },
     {
@@ -917,43 +1057,87 @@
         "required": true
       },
       {
-        "name": "MAPGROUP",
-        "label": "گروه نقشه / Game Mode Collection",
+        "name": "EXEC",
+        "label": "حالت بازی (Game Mode CFG)",
         "type": "select",
-        "description": "گروه نقشه‌ای که با +mapgroup به CS2 ارسال می‌شود.",
+        "description": "فایل CFG مربوط به GameModeManager. فقط مودهای تعریف‌شده در GameModes فهرست می‌شوند؛ فایل‌های Settings، Warmup و custom در دسترس Checkout نیستند.",
         "options": {
-          "mg_active": "Active",
-          "mg_comp": "Comp",
-          "mg_gg": "Gg",
-          "mg_dm": "Dm",
-          "mg_wingman": "Wingman",
-          "mg_prefire": "Prefire",
-          "mg_retake": "Retake",
-          "mg_executes": "Executes",
-          "mg_awp": "Awp",
-          "mg_1v1": "1v1",
-          "mg_aim": "Aim",
-          "mg_bhop": "Bhop",
-          "mg_surf": "Surf",
-          "mg_kz": "Kz",
-          "mg_ctf": "Ctf",
-          "mg_hns": "Hns",
-          "mg_soccer": "Soccer",
-          "mg_course": "Course",
-          "mg_deathrun": "Deathrun",
-          "mg_minigames": "Minigames",
-          "mg_scoutzknivez": "Scoutzknivez",
-          "mg_battle": "Battle",
-          "mg_battleroyale": "Battleroyale",
-          "mg_casual-1.6": "Casual 1.6",
-          "mg_valve_competitive": "Valve Competitive",
-          "mg_valve_deathmatch": "Valve Deathmatch",
-          "mg_valve_arms_race": "Valve Arms Race",
-          "mg_valve_wingman": "Valve Wingman",
-          "mg_casualw": "Casualw",
-          "mg_casuala": "Casuala",
-          "mg_valve_retakes": "Valve Retakes",
-          "mg_45": "45"
+          "casual.cfg": "Casual — casual.cfg",
+          "gg.cfg": "Gun Game — gg.cfg",
+          "deathmatch.cfg": "Deathmatch — deathmatch.cfg",
+          "comp.cfg": "Competitive — comp.cfg",
+          "wingman.cfg": "Wingman — wingman.cfg",
+          "prac.cfg": "Practice Mode — prac.cfg",
+          "prefire.cfg": "Prefire — prefire.cfg",
+          "retake.cfg": "Retakes — retake.cfg",
+          "executes.cfg": "Executes — executes.cfg",
+          "awp.cfg": "Awp Only — awp.cfg",
+          "1v1.cfg": "1v1 Arenas — 1v1.cfg",
+          "aim.cfg": "Aim — aim.cfg",
+          "bhop.cfg": "Bhop — bhop.cfg",
+          "surf.cfg": "Surf — surf.cfg",
+          "kz.cfg": "Kreedz Climbing — kz.cfg",
+          "ctf.cfg": "Capture The Flag — ctf.cfg",
+          "hns.cfg": "Hide N Seek — hns.cfg",
+          "soccer.cfg": "Soccer — soccer.cfg",
+          "course.cfg": "Course — course.cfg",
+          "deathrun.cfg": "Deathrun — deathrun.cfg",
+          "minigames.cfg": "Minigames — minigames.cfg",
+          "scoutzknivez.cfg": "ScoutzKnivez — scoutzknivez.cfg",
+          "oitc.cfg": "One In The Chamber — oitc.cfg",
+          "battle.cfg": "Battle Ball — battle.cfg",
+          "br.cfg": "Battle Royale — br.cfg",
+          "Casual-1.6.cfg": "Casual (1.6) — Casual-1.6.cfg",
+          "valve-competitive.cfg": "Competitive (Valve) — valve-competitive.cfg",
+          "valve-deathmatch-freeforall.cfg": "Deathmatch FFA (Valve) — valve-deathmatch-freeforall.cfg",
+          "valve-armsrace.cfg": "Arms Race (Valve) — valve-armsrace.cfg",
+          "valve-wingman.cfg": "Wingman (Valve) — valve-wingman.cfg",
+          "casualw.cfg": "Casual Workshop — casualw.cfg",
+          "casual-active.cfg": "Casual Active — casual-active.cfg",
+          "valve-retake.cfg": "Retakes (Valve) — valve-retake.cfg",
+          "45.cfg": "Competitive 45° — 45.cfg"
+        },
+        "default": "comp.cfg",
+        "required": true
+      },
+      {
+        "name": "MAPGROUP",
+        "label": "گروه نقشه (MAPGROUP)",
+        "type": "select",
+        "description": "شناسه Map Group مرتبط با مود بازی. مقادیر از MapGroups در GameModeManager خوانده شده‌اند.",
+        "options": {
+          "mg_active": "Casual — mg_active",
+          "mg_comp": "Casual / Competitive / Practice Mode — mg_comp",
+          "mg_gg": "Gun Game / One In The Chamber — mg_gg",
+          "mg_dm": "Deathmatch — mg_dm",
+          "mg_wingman": "Wingman — mg_wingman",
+          "mg_prefire": "Prefire — mg_prefire",
+          "mg_retake": "Retakes — mg_retake",
+          "mg_executes": "Executes — mg_executes",
+          "mg_awp": "Awp Only — mg_awp",
+          "mg_1v1": "1v1 Arenas — mg_1v1",
+          "mg_aim": "Aim — mg_aim",
+          "mg_bhop": "Bhop — mg_bhop",
+          "mg_surf": "Surf — mg_surf",
+          "mg_kz": "Kreedz Climbing — mg_kz",
+          "mg_ctf": "Capture The Flag — mg_ctf",
+          "mg_hns": "Hide N Seek — mg_hns",
+          "mg_soccer": "Soccer — mg_soccer",
+          "mg_course": "Course — mg_course",
+          "mg_deathrun": "Deathrun — mg_deathrun",
+          "mg_minigames": "Minigames — mg_minigames",
+          "mg_scoutzknivez": "ScoutzKnivez — mg_scoutzknivez",
+          "mg_battle": "Battle Ball — mg_battle",
+          "mg_battleroyale": "Battle Royale — mg_battleroyale",
+          "mg_casual-1.6": "Casual (1.6) — mg_casual-1.6",
+          "mg_valve_competitive": "Competitive (Valve) — mg_valve_competitive",
+          "mg_valve_deathmatch": "Deathmatch FFA (Valve) — mg_valve_deathmatch",
+          "mg_valve_arms_race": "Arms Race (Valve) — mg_valve_arms_race",
+          "mg_valve_wingman": "Wingman (Valve) — mg_valve_wingman",
+          "mg_casualw": "Casual Workshop — mg_casualw",
+          "mg_casuala": "Casual Active — mg_casuala",
+          "mg_valve_retakes": "Retakes (Valve) — mg_valve_retakes",
+          "mg_45": "Competitive 45° — mg_45"
         },
         "default": "mg_comp",
         "required": true
@@ -1247,249 +1431,6 @@
         "default": "",
         "required": false,
         "validation": "nullable|string"
-      },
-      {
-        "name": "EXEC",
-        "label": "Admin CFG File (EXEC)",
-        "type": "select",
-        "description": "انتخاب فایل CFG برای محصول. فقط فایل‌های مجاز تعریف‌شده در Egg قابل انتخاب‌اند. فعلاً تا زمانی که +exec {{EXEC}} به Startup خود Egg اضافه نشود، این مقدار به‌تنهایی فایل CFG را اجرا نمی‌کند.",
-        "default": "comp.cfg",
-        "required": true,
-        "options": {
-          "1v1.cfg": "1v1.cfg",
-          "45.cfg": "45.cfg",
-          "aim.cfg": "aim.cfg",
-          "awp-aim.cfg": "awp-aim.cfg",
-          "awp.cfg": "awp.cfg",
-          "battle.cfg": "battle.cfg",
-          "bhop.cfg": "bhop.cfg",
-          "bots.cfg": "bots.cfg",
-          "br.cfg": "br.cfg",
-          "Casual-1.6.cfg": "Casual-1.6.cfg",
-          "casual-active.cfg": "casual-active.cfg",
-          "casual.cfg": "casual.cfg",
-          "casualw.cfg": "casualw.cfg",
-          "cmds.cfg": "cmds.cfg",
-          "comp.cfg": "comp.cfg",
-          "course.cfg": "course.cfg",
-          "cs2-executes/executes.cfg": "cs2-executes/executes.cfg",
-          "cs2-retakes/retakes.cfg": "cs2-retakes/retakes.cfg",
-          "cs2ac.cfg": "cs2ac.cfg",
-          "ctf.cfg": "ctf.cfg",
-          "custom_1v1.cfg": "custom_1v1.cfg",
-          "custom_aim.cfg": "custom_aim.cfg",
-          "custom_all.cfg": "custom_all.cfg",
-          "custom_awp.cfg": "custom_awp.cfg",
-          "custom_battle.cfg": "custom_battle.cfg",
-          "custom_bhop.cfg": "custom_bhop.cfg",
-          "custom_bots.cfg": "custom_bots.cfg",
-          "custom_br.cfg": "custom_br.cfg",
-          "custom_casual.cfg": "custom_casual.cfg",
-          "custom_casual1.6.cfg": "custom_casual1.6.cfg",
-          "custom_comp.cfg": "custom_comp.cfg",
-          "custom_course.cfg": "custom_course.cfg",
-          "custom_ctf.cfg": "custom_ctf.cfg",
-          "custom_deathmatch.cfg": "custom_deathmatch.cfg",
-          "custom_deathrun.cfg": "custom_deathrun.cfg",
-          "custom_executes.cfg": "custom_executes.cfg",
-          "custom_ffamulti.cfg": "custom_ffamulti.cfg",
-          "custom_gg.cfg": "custom_gg.cfg",
-          "custom_hns.cfg": "custom_hns.cfg",
-          "custom_kz.cfg": "custom_kz.cfg",
-          "custom_minigames.cfg": "custom_minigames.cfg",
-          "custom_oitc.cfg": "custom_oitc.cfg",
-          "custom_practice.cfg": "custom_practice.cfg",
-          "custom_prefire.cfg": "custom_prefire.cfg",
-          "custom_retake.cfg": "custom_retake.cfg",
-          "custom_scoutzknivez.cfg": "custom_scoutzknivez.cfg",
-          "custom_soccer.cfg": "custom_soccer.cfg",
-          "custom_surf.cfg": "custom_surf.cfg",
-          "custom_valve-armsrace.cfg": "custom_valve-armsrace.cfg",
-          "custom_valve-competitive.cfg": "custom_valve-competitive.cfg",
-          "custom_valve-deathmatch-freeforall.cfg": "custom_valve-deathmatch-freeforall.cfg",
-          "custom_valve-deathmatch.cfg": "custom_valve-deathmatch.cfg",
-          "custom_valve-retake.cfg": "custom_valve-retake.cfg",
-          "custom_valve-wingman.cfg": "custom_valve-wingman.cfg",
-          "custom_wingman.cfg": "custom_wingman.cfg",
-          "deathmatch.cfg": "deathmatch.cfg",
-          "deathrun.cfg": "deathrun.cfg",
-          "dm-valve.cfg": "dm-valve.cfg",
-          "dm.cfg": "dm.cfg",
-          "env.cfg": "env.cfg",
-          "executes.cfg": "executes.cfg",
-          "gg.cfg": "gg.cfg",
-          "gungame/gungame.disable_rtv.cfg": "gungame/gungame.disable_rtv.cfg",
-          "gungame/gungame.gameend.cfg": "gungame/gungame.gameend.cfg",
-          "gungame/gungame.mapvote.cfg": "gungame/gungame.mapvote.cfg",
-          "gungame/gungame.warmupend.cfg": "gungame/gungame.warmupend.cfg",
-          "gungame/gungame.warmupstart.cfg": "gungame/gungame.warmupstart.cfg",
-          "hns.cfg": "hns.cfg",
-          "kz.cfg": "kz.cfg",
-          "mapconfigs/ar_dizzy.cfg": "mapconfigs/ar_dizzy.cfg",
-          "mapconfigs/bhop_ragnarok.cfg": "mapconfigs/bhop_ragnarok.cfg",
-          "mapconfigs/cs_italy.cfg": "mapconfigs/cs_italy.cfg",
-          "mapconfigs/cs_office.cfg": "mapconfigs/cs_office.cfg",
-          "mapconfigs/de_ancient.cfg": "mapconfigs/de_ancient.cfg",
-          "mapconfigs/de_anubis.cfg": "mapconfigs/de_anubis.cfg",
-          "mapconfigs/de_dust2.cfg": "mapconfigs/de_dust2.cfg",
-          "mapconfigs/de_inferno.cfg": "mapconfigs/de_inferno.cfg",
-          "mapconfigs/de_mirage.cfg": "mapconfigs/de_mirage.cfg",
-          "mapconfigs/de_nuke.cfg": "mapconfigs/de_nuke.cfg",
-          "mapconfigs/de_overpass.cfg": "mapconfigs/de_overpass.cfg",
-          "mapconfigs/de_vertigo.cfg": "mapconfigs/de_vertigo.cfg",
-          "mapconfigs/forced/de_examplemap.cfg": "mapconfigs/forced/de_examplemap.cfg",
-          "mapconfigs/fun_bounce.cfg": "mapconfigs/fun_bounce.cfg",
-          "mapconfigs/ka_soccer_2009.cfg": "mapconfigs/ka_soccer_2009.cfg",
-          "mapconfigs/mg_acrophobia_run_v2.cfg": "mapconfigs/mg_acrophobia_run_v2.cfg",
-          "mapconfigs/mg_alley_course_v2.cfg": "mapconfigs/mg_alley_course_v2.cfg",
-          "mapconfigs/mg_circle_course_v3.cfg": "mapconfigs/mg_circle_course_v3.cfg",
-          "mapconfigs/mg_glave_course_v2.cfg": "mapconfigs/mg_glave_course_v2.cfg",
-          "mapconfigs/mg_metal_course_v2.cfg": "mapconfigs/mg_metal_course_v2.cfg",
-          "mapconfigs/mg_metro_course_s2.cfg": "mapconfigs/mg_metro_course_s2.cfg",
-          "mapconfigs/mg_metro_course_v1.cfg": "mapconfigs/mg_metro_course_v1.cfg",
-          "mapconfigs/mg_office_course_v3.cfg": "mapconfigs/mg_office_course_v3.cfg",
-          "mapconfigs/mg_simpsons_course_v2.cfg": "mapconfigs/mg_simpsons_course_v2.cfg",
-          "mapconfigs/mg_skeet_multigames_v7.cfg": "mapconfigs/mg_skeet_multigames_v7.cfg",
-          "mapconfigs/mg_sky_realm_v3.cfg": "mapconfigs/mg_sky_realm_v3.cfg",
-          "mapconfigs/mg_sonic_course_v2.cfg": "mapconfigs/mg_sonic_course_v2.cfg",
-          "mapconfigs/mg_switch_course_v2.cfg": "mapconfigs/mg_switch_course_v2.cfg",
-          "mapconfigs/mg_warmcup_headshot.cfg": "mapconfigs/mg_warmcup_headshot.cfg",
-          "mapconfigs/minus_denhet.cfg": "mapconfigs/minus_denhet.cfg",
-          "mapconfigs/only_up.cfg": "mapconfigs/only_up.cfg",
-          "mapconfigs/prefixes/aim_.cfg": "mapconfigs/prefixes/aim_.cfg",
-          "mapconfigs/prefixes/awp_.cfg": "mapconfigs/prefixes/awp_.cfg",
-          "mapconfigs/prefixes/ba_.cfg": "mapconfigs/prefixes/ba_.cfg",
-          "mapconfigs/prefixes/bhop_.cfg": "mapconfigs/prefixes/bhop_.cfg",
-          "mapconfigs/prefixes/cr_.cfg": "mapconfigs/prefixes/cr_.cfg",
-          "mapconfigs/prefixes/cs_.cfg": "mapconfigs/prefixes/cs_.cfg",
-          "mapconfigs/prefixes/db_.cfg": "mapconfigs/prefixes/db_.cfg",
-          "mapconfigs/prefixes/de_.cfg": "mapconfigs/prefixes/de_.cfg",
-          "mapconfigs/prefixes/deathrun_.cfg": "mapconfigs/prefixes/deathrun_.cfg",
-          "mapconfigs/prefixes/dm_.cfg": "mapconfigs/prefixes/dm_.cfg",
-          "mapconfigs/prefixes/dz_.cfg": "mapconfigs/prefixes/dz_.cfg",
-          "mapconfigs/prefixes/fy_.cfg": "mapconfigs/prefixes/fy_.cfg",
-          "mapconfigs/prefixes/gg_.cfg": "mapconfigs/prefixes/gg_.cfg",
-          "mapconfigs/prefixes/hns_.cfg": "mapconfigs/prefixes/hns_.cfg",
-          "mapconfigs/prefixes/hs_.cfg": "mapconfigs/prefixes/hs_.cfg",
-          "mapconfigs/prefixes/jb_.cfg": "mapconfigs/prefixes/jb_.cfg",
-          "mapconfigs/prefixes/kz_.cfg": "mapconfigs/prefixes/kz_.cfg",
-          "mapconfigs/prefixes/seek_.cfg": "mapconfigs/prefixes/seek_.cfg",
-          "mapconfigs/prefixes/surf_.cfg": "mapconfigs/prefixes/surf_.cfg",
-          "mapconfigs/prefixes/ttt_.cfg": "mapconfigs/prefixes/ttt_.cfg",
-          "mapconfigs/prefixes/ze_.cfg": "mapconfigs/prefixes/ze_.cfg",
-          "mapconfigs/prefixes/zm_.cfg": "mapconfigs/prefixes/zm_.cfg",
-          "mapconfigs/scoutzknivez_pure_cs2.cfg": "mapconfigs/scoutzknivez_pure_cs2.cfg",
-          "mapconfigs/winterday_bs.cfg": "mapconfigs/winterday_bs.cfg",
-          "MatchZy/config.cfg": "MatchZy/config.cfg",
-          "MatchZy/dryrun.cfg": "MatchZy/dryrun.cfg",
-          "MatchZy/knife.cfg": "MatchZy/knife.cfg",
-          "MatchZy/live_override.cfg": "MatchZy/live_override.cfg",
-          "MatchZy/live_wingman_override.cfg": "MatchZy/live_wingman_override.cfg",
-          "MatchZy/live_wingman.cfg": "MatchZy/live_wingman.cfg",
-          "MatchZy/live.cfg": "MatchZy/live.cfg",
-          "MatchZy/override.cfg": "MatchZy/override.cfg",
-          "MatchZy/prac.cfg": "MatchZy/prac.cfg",
-          "MatchZy/sleep.cfg": "MatchZy/sleep.cfg",
-          "MatchZy/warmup.cfg": "MatchZy/warmup.cfg",
-          "MatchZy/whitelist.cfg": "MatchZy/whitelist.cfg",
-          "minigames.cfg": "minigames.cfg",
-          "mods.cfg": "mods.cfg",
-          "multiaddonmanager/multiaddonmanager.cfg": "multiaddonmanager/multiaddonmanager.cfg",
-          "oitc.cfg": "oitc.cfg",
-          "on_boot.cfg": "on_boot.cfg",
-          "prac.cfg": "prac.cfg",
-          "practice.cfg": "practice.cfg",
-          "prefire.cfg": "prefire.cfg",
-          "retake.cfg": "retake.cfg",
-          "scoutzknivez.cfg": "scoutzknivez.cfg",
-          "server.cfg": "server.cfg",
-          "settings/alltalk_on.cfg": "settings/alltalk_on.cfg",
-          "settings/bhop_off.cfg": "settings/bhop_off.cfg",
-          "settings/bhop_on.cfg": "settings/bhop_on.cfg",
-          "settings/bots_ar.cfg": "settings/bots_ar.cfg",
-          "settings/bots_buy.cfg": "settings/bots_buy.cfg",
-          "settings/bots_dm.cfg": "settings/bots_dm.cfg",
-          "settings/bots_dont_buy.cfg": "settings/bots_dont_buy.cfg",
-          "settings/course.cfg": "settings/course.cfg",
-          "settings/disable_autobhop.cfg": "settings/disable_autobhop.cfg",
-          "settings/disable_bhop.cfg": "settings/disable_bhop.cfg",
-          "settings/disable_bots.cfg": "settings/disable_bots.cfg",
-          "settings/disable_buying.cfg": "settings/disable_buying.cfg",
-          "settings/disable_course.cfg": "settings/disable_course.cfg",
-          "settings/disable_custom_player_models.cfg": "settings/disable_custom_player_models.cfg",
-          "settings/disable_dice.cfg": "settings/disable_dice.cfg",
-          "settings/disable_drop_weapons.cfg": "settings/disable_drop_weapons.cfg",
-          "settings/disable_fun.cfg": "settings/disable_fun.cfg",
-          "settings/disable_knifedrop.cfg": "settings/disable_knifedrop.cfg",
-          "settings/disable_map_voting.cfg": "settings/disable_map_voting.cfg",
-          "settings/disable_movement_unlock.cfg": "settings/disable_movement_unlock.cfg",
-          "settings/disable_one_round.cfg": "settings/disable_one_round.cfg",
-          "settings/disable_random_round.cfg": "settings/disable_random_round.cfg",
-          "settings/disable_random_spawns.cfg": "settings/disable_random_spawns.cfg",
-          "settings/disable_revive.cfg": "settings/disable_revive.cfg",
-          "settings/disable_scoutz.cfg": "settings/disable_scoutz.cfg",
-          "settings/disable_spectator_list.cfg": "settings/disable_spectator_list.cfg",
-          "settings/disable_surf.cfg": "settings/disable_surf.cfg",
-          "settings/disable_teleport_kill.cfg": "settings/disable_teleport_kill.cfg",
-          "settings/disable_warcraft.cfg": "settings/disable_warcraft.cfg",
-          "settings/disable_weapon_speed.cfg": "settings/disable_weapon_speed.cfg",
-          "settings/enable_alltalk.cfg": "settings/enable_alltalk.cfg",
-          "settings/enable_autobhop.cfg": "settings/enable_autobhop.cfg",
-          "settings/enable_bhop.cfg": "settings/enable_bhop.cfg",
-          "settings/enable_bots.cfg": "settings/enable_bots.cfg",
-          "settings/enable_buying.cfg": "settings/enable_buying.cfg",
-          "settings/enable_course.cfg": "settings/enable_course.cfg",
-          "settings/enable_custom_player_models.cfg": "settings/enable_custom_player_models.cfg",
-          "settings/enable_dice.cfg": "settings/enable_dice.cfg",
-          "settings/enable_fun.cfg": "settings/enable_fun.cfg",
-          "settings/enable_knifedrop.cfg": "settings/enable_knifedrop.cfg",
-          "settings/enable_movement_unlock.cfg": "settings/enable_movement_unlock.cfg",
-          "settings/enable_one_round.cfg": "settings/enable_one_round.cfg",
-          "settings/enable_random_round.cfg": "settings/enable_random_round.cfg",
-          "settings/enable_random_spawns.cfg": "settings/enable_random_spawns.cfg",
-          "settings/enable_revive.cfg": "settings/enable_revive.cfg",
-          "settings/enable_scoutz.cfg": "settings/enable_scoutz.cfg",
-          "settings/enable_spectator_list.cfg": "settings/enable_spectator_list.cfg",
-          "settings/enable_surf.cfg": "settings/enable_surf.cfg",
-          "settings/enable_teleport_kill.cfg": "settings/enable_teleport_kill.cfg",
-          "settings/enable_warcraft.cfg": "settings/enable_warcraft.cfg",
-          "settings/enable_weapon_speed.cfg": "settings/enable_weapon_speed.cfg",
-          "settings/inventory_simulator.cfg": "settings/inventory_simulator.cfg",
-          "settings/kz_on.cfg": "settings/kz_on.cfg",
-          "settings/logging.cfg": "settings/logging.cfg",
-          "settings/map_voting.cfg": "settings/map_voting.cfg",
-          "settings/movement_restore.cfg": "settings/movement_restore.cfg",
-          "settings/movement_unlock.cfg": "settings/movement_unlock.cfg",
-          "settings/no_bots.cfg": "settings/no_bots.cfg",
-          "settings/no_buying.cfg": "settings/no_buying.cfg",
-          "settings/no_drop_weapons.cfg": "settings/no_drop_weapons.cfg",
-          "settings/no_warmup.cfg": "settings/no_warmup.cfg",
-          "settings/one_round.cfg": "settings/one_round.cfg",
-          "settings/quake_sounds.cfg": "settings/quake_sounds.cfg",
-          "settings/random_spawns.cfg": "settings/random_spawns.cfg",
-          "settings/surf_off.cfg": "settings/surf_off.cfg",
-          "settings/surf_on.cfg": "settings/surf_on.cfg",
-          "SharpTimer/example.config.cfg": "SharpTimer/example.config.cfg",
-          "SharpTimer/example.custom_exec.cfg": "SharpTimer/example.custom_exec.cfg",
-          "SharpTimer/MapData/MapExecs/example.bhop_.cfg": "SharpTimer/MapData/MapExecs/example.bhop_.cfg",
-          "SharpTimer/MapData/MapExecs/example.de_example.cfg": "SharpTimer/MapData/MapExecs/example.de_example.cfg",
-          "SharpTimer/MapData/MapExecs/example.surf_.cfg": "SharpTimer/MapData/MapExecs/example.surf_.cfg",
-          "SharpTimer/MapData/MapExecs/example.vnl_.cfg": "SharpTimer/MapData/MapExecs/example.vnl_.cfg",
-          "soccer.cfg": "soccer.cfg",
-          "surf.cfg": "surf.cfg",
-          "unload_plugins.cfg": "unload_plugins.cfg",
-          "valve-armsrace.cfg": "valve-armsrace.cfg",
-          "valve-competitive.cfg": "valve-competitive.cfg",
-          "valve-deathmatch-freeforall.cfg": "valve-deathmatch-freeforall.cfg",
-          "valve-deathmatch.cfg": "valve-deathmatch.cfg",
-          "valve-retake.cfg": "valve-retake.cfg",
-          "valve-wingman.cfg": "valve-wingman.cfg",
-          "vip.cfg": "vip.cfg",
-          "warmup/dm.cfg": "warmup/dm.cfg",
-          "warmup/knives_only.cfg": "warmup/knives_only.cfg",
-          "warmup/scoutz_only.cfg": "warmup/scoutz_only.cfg",
-          "wingman.cfg": "wingman.cfg"
-        }
       }
     ]
   },
@@ -1511,5 +1452,391 @@
         "upgrade_pricing_key": "cs2_tickrate_128"
       }
     ]
+  },
+  "game_mode_manager": {
+    "source": {
+      "repository": "larnzs/cs2-kus-addons",
+      "branch": "integration/kus-monorepo",
+      "path": "game/csgo/addons/counterstrikesharp/configs/plugins/GameModeManager/GameModeManager.json",
+      "version": 12,
+      "sha": "81137de88d19591406fec32316f1b14d4a49cc47"
+    },
+    "note": "Checkout selectors are generated from GameModes.Default and GameModes.List only. Settings and Warmup CFGs are intentionally excluded.",
+    "cfg_options": [
+      {
+        "name": "Casual",
+        "config": "casual.cfg",
+        "defaultMap": "de_dust2",
+        "mapGroups": [
+          "mg_active",
+          "mg_comp"
+        ]
+      },
+      {
+        "name": "Gun Game",
+        "config": "gg.cfg",
+        "defaultMap": "ar_pool_day",
+        "mapGroups": [
+          "mg_gg"
+        ]
+      },
+      {
+        "name": "Deathmatch",
+        "config": "deathmatch.cfg",
+        "defaultMap": "de_dust2",
+        "mapGroups": [
+          "mg_dm"
+        ]
+      },
+      {
+        "name": "Competitive",
+        "config": "comp.cfg",
+        "defaultMap": "de_inferno",
+        "mapGroups": [
+          "mg_comp"
+        ]
+      },
+      {
+        "name": "Wingman",
+        "config": "wingman.cfg",
+        "defaultMap": "de_nuke",
+        "mapGroups": [
+          "mg_wingman"
+        ]
+      },
+      {
+        "name": "Practice Mode",
+        "config": "prac.cfg",
+        "defaultMap": "de_dust2",
+        "mapGroups": [
+          "mg_comp"
+        ]
+      },
+      {
+        "name": "Prefire",
+        "config": "prefire.cfg",
+        "defaultMap": "de_inferno",
+        "mapGroups": [
+          "mg_prefire"
+        ]
+      },
+      {
+        "name": "Retakes",
+        "config": "retake.cfg",
+        "defaultMap": "de_dust2",
+        "mapGroups": [
+          "mg_retake"
+        ]
+      },
+      {
+        "name": "Executes",
+        "config": "executes.cfg",
+        "defaultMap": "de_mirage",
+        "mapGroups": [
+          "mg_executes"
+        ]
+      },
+      {
+        "name": "Awp Only",
+        "config": "awp.cfg",
+        "defaultMap": "3142070597",
+        "mapGroups": [
+          "mg_awp"
+        ]
+      },
+      {
+        "name": "1v1 Arenas",
+        "config": "1v1.cfg",
+        "defaultMap": "3070253400",
+        "mapGroups": [
+          "mg_1v1"
+        ]
+      },
+      {
+        "name": "Aim",
+        "config": "aim.cfg",
+        "defaultMap": "3084291314",
+        "mapGroups": [
+          "mg_aim"
+        ]
+      },
+      {
+        "name": "Bhop",
+        "config": "bhop.cfg",
+        "defaultMap": "3088973190",
+        "mapGroups": [
+          "mg_bhop"
+        ]
+      },
+      {
+        "name": "Surf",
+        "config": "surf.cfg",
+        "defaultMap": "3082548297",
+        "mapGroups": [
+          "mg_surf"
+        ]
+      },
+      {
+        "name": "Kreedz Climbing",
+        "config": "kz.cfg",
+        "defaultMap": "3086304337",
+        "mapGroups": [
+          "mg_kz"
+        ]
+      },
+      {
+        "name": "Capture The Flag",
+        "config": "ctf.cfg",
+        "defaultMap": "3555531615",
+        "mapGroups": [
+          "mg_ctf"
+        ]
+      },
+      {
+        "name": "Hide N Seek",
+        "config": "hns.cfg",
+        "defaultMap": "3644811896",
+        "mapGroups": [
+          "mg_hns"
+        ]
+      },
+      {
+        "name": "Soccer",
+        "config": "soccer.cfg",
+        "defaultMap": "3238565662",
+        "mapGroups": [
+          "mg_soccer"
+        ]
+      },
+      {
+        "name": "Course",
+        "config": "course.cfg",
+        "defaultMap": "3070455802",
+        "mapGroups": [
+          "mg_course"
+        ]
+      },
+      {
+        "name": "Deathrun",
+        "config": "deathrun.cfg",
+        "defaultMap": "3164611860",
+        "mapGroups": [
+          "mg_deathrun"
+        ]
+      },
+      {
+        "name": "Minigames",
+        "config": "minigames.cfg",
+        "defaultMap": "3082120895",
+        "mapGroups": [
+          "mg_minigames"
+        ]
+      },
+      {
+        "name": "ScoutzKnivez",
+        "config": "scoutzknivez.cfg",
+        "defaultMap": "3073929825",
+        "mapGroups": [
+          "mg_scoutzknivez"
+        ]
+      },
+      {
+        "name": "One In The Chamber",
+        "config": "oitc.cfg",
+        "defaultMap": "ar_pool_day",
+        "mapGroups": [
+          "mg_gg"
+        ]
+      },
+      {
+        "name": "Battle Ball",
+        "config": "battle.cfg",
+        "defaultMap": "3280650663",
+        "mapGroups": [
+          "mg_battle"
+        ]
+      },
+      {
+        "name": "Battle Royale",
+        "config": "br.cfg",
+        "defaultMap": "3462095803",
+        "mapGroups": [
+          "mg_battleroyale"
+        ]
+      },
+      {
+        "name": "Casual (1.6)",
+        "config": "Casual-1.6.cfg",
+        "defaultMap": "3201205818",
+        "mapGroups": [
+          "mg_casual-1.6"
+        ]
+      },
+      {
+        "name": "Competitive (Valve)",
+        "config": "valve-competitive.cfg",
+        "defaultMap": "de_dust2",
+        "mapGroups": [
+          "mg_valve_competitive"
+        ]
+      },
+      {
+        "name": "Deathmatch FFA (Valve)",
+        "config": "valve-deathmatch-freeforall.cfg",
+        "defaultMap": "de_dust2",
+        "mapGroups": [
+          "mg_valve_deathmatch"
+        ]
+      },
+      {
+        "name": "Arms Race (Valve)",
+        "config": "valve-armsrace.cfg",
+        "defaultMap": "ar_pool_day",
+        "mapGroups": [
+          "mg_valve_arms_race"
+        ]
+      },
+      {
+        "name": "Wingman (Valve)",
+        "config": "valve-wingman.cfg",
+        "defaultMap": "de_nuke",
+        "mapGroups": [
+          "mg_valve_wingman"
+        ]
+      },
+      {
+        "name": "Casual Workshop",
+        "config": "casualw.cfg",
+        "defaultMap": "3073150255",
+        "mapGroups": [
+          "mg_casualw"
+        ]
+      },
+      {
+        "name": "Casual Active",
+        "config": "casual-active.cfg",
+        "defaultMap": "de_mirage",
+        "mapGroups": [
+          "mg_casuala"
+        ]
+      },
+      {
+        "name": "Retakes (Valve)",
+        "config": "valve-retake.cfg",
+        "defaultMap": "de_dust2",
+        "mapGroups": [
+          "mg_valve_retakes"
+        ]
+      },
+      {
+        "name": "Competitive 45°",
+        "config": "45.cfg",
+        "defaultMap": "3276886893",
+        "mapGroups": [
+          "mg_45"
+        ]
+      }
+    ],
+    "map_group_options": {
+      "mg_active": [
+        "Casual"
+      ],
+      "mg_comp": [
+        "Casual",
+        "Competitive",
+        "Practice Mode"
+      ],
+      "mg_gg": [
+        "Gun Game",
+        "One In The Chamber"
+      ],
+      "mg_dm": [
+        "Deathmatch"
+      ],
+      "mg_wingman": [
+        "Wingman"
+      ],
+      "mg_prefire": [
+        "Prefire"
+      ],
+      "mg_retake": [
+        "Retakes"
+      ],
+      "mg_executes": [
+        "Executes"
+      ],
+      "mg_awp": [
+        "Awp Only"
+      ],
+      "mg_1v1": [
+        "1v1 Arenas"
+      ],
+      "mg_aim": [
+        "Aim"
+      ],
+      "mg_bhop": [
+        "Bhop"
+      ],
+      "mg_surf": [
+        "Surf"
+      ],
+      "mg_kz": [
+        "Kreedz Climbing"
+      ],
+      "mg_ctf": [
+        "Capture The Flag"
+      ],
+      "mg_hns": [
+        "Hide N Seek"
+      ],
+      "mg_soccer": [
+        "Soccer"
+      ],
+      "mg_course": [
+        "Course"
+      ],
+      "mg_deathrun": [
+        "Deathrun"
+      ],
+      "mg_minigames": [
+        "Minigames"
+      ],
+      "mg_scoutzknivez": [
+        "ScoutzKnivez"
+      ],
+      "mg_battle": [
+        "Battle Ball"
+      ],
+      "mg_battleroyale": [
+        "Battle Royale"
+      ],
+      "mg_casual-1.6": [
+        "Casual (1.6)"
+      ],
+      "mg_valve_competitive": [
+        "Competitive (Valve)"
+      ],
+      "mg_valve_deathmatch": [
+        "Deathmatch FFA (Valve)"
+      ],
+      "mg_valve_arms_race": [
+        "Arms Race (Valve)"
+      ],
+      "mg_valve_wingman": [
+        "Wingman (Valve)"
+      ],
+      "mg_casualw": [
+        "Casual Workshop"
+      ],
+      "mg_casuala": [
+        "Casual Active"
+      ],
+      "mg_valve_retakes": [
+        "Retakes (Valve)"
+      ],
+      "mg_45": [
+        "Competitive 45°"
+      ]
+    }
   }
 }
