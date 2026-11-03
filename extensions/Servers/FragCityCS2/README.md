@@ -1,14 +1,16 @@
 # FragCity CS2 — Paymenter Server Extension
 
-This extension adds a customer-facing CS2 configuration form to Paymenter **v1.5.9** while inheriting the built-in Pterodactyl server lifecycle and API implementation.
+Compatibility target: **Paymenter v1.5.9** (the version pinned by FragCity).
 
-## What it does
+This extension inherits Paymenter's built-in Pterodactyl server implementation and reads its CS2 field definitions from `resources/cs2-egg-variables.json`.
 
-- Uses the custom FragCity CS2 Egg manifest as the single source of truth for checkout fields.
-- Provides 17 checkout fields automatically; no manual Config Option creation is required.
-- Keeps Pterodactyl API host/key in the server extension settings.
-- Inherits the built-in Pterodactyl methods for node, nest, egg, allocations, server creation, suspension, unsuspension, termination, and actions.
-- Leaves all 32 Egg variables documented in `resources/cs2-egg-variables.json`, including those deliberately kept internal or admin-only.
+## What is generated
+
+- **17 customer checkout fields**, rendered automatically by Paymenter's `getCheckoutConfig()` hook.
+- **11 admin product settings**, appended to the built-in Pterodactyl product settings.
+- A manifest containing all **32 Egg variables**, their defaults, Egg validation rules, access flags, allowed values, and Paymenter routing.
+
+No rows need to be manually created in Paymenter's native Config Options screen.
 
 ## Install
 
@@ -26,33 +28,26 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Open Paymenter Admin → Extensions / Servers and enable **FragCity CS2**.
+Open Paymenter Admin → Extensions → Servers and enable **FragCity CS2**.
 
-Configure its Pterodactyl URL and Application API key. These settings are separate from the built-in Pterodactyl extension because Paymenter stores settings per server extension. Use the same URL and API key as the existing Pterodactyl extension.
+Configure its Pterodactyl URL and Application API key. Paymenter stores settings separately for each server extension, so enter the same host and API key currently used by the built-in Pterodactyl extension.
 
-For a new or test product, select **FragCity CS2** as its server extension and configure its normal Pterodactyl product settings (node, location, nest, egg, resources, allocations, etc.).
+For a test product, select **FragCity CS2** as its server extension. Its inherited Pterodactyl product settings (node, location, nest, egg, allocations, resource limits, etc.) remain available. The CS2 admin settings appear alongside them.
 
-**Do not switch an existing production product until the extension has been enabled, configured, and tested with a test product.** The extension inherits the Pterodactyl implementation, but the selected server-extension record and its credentials are distinct.
+**Do not switch a production product until a separate test product has successfully provisioned a server.** The extension implementation is inherited, but the FragCityCS2 extension record has its own credentials/settings record.
 
-## Field policy
+## Field routing
 
-The manifest contains all 32 Egg variables. 17 safe, useful variables are exposed at checkout.
+- Customer checkout: GSLT, map, game type/mode, selected frameworks, prerelease preference, console log level, console filter, cleanup, console log persistence, tickrate, map group, cooldown, server password, Workshop Collection.
+- Product admin settings: tokenless policy, max players, update/validation controls, SwiftlyS2, Egg Bot Guard and its action/allow-lists, and custom startup parameters.
+- Not exposed: fixed CS2 AppID, the secret `AUTHKEY` (its actual default is redacted), GDB development port, and `EXEC` because the current Egg startup command does not reference it.
 
-The following are intentionally not exposed to customers:
+`CUSTOM_PARAMS` is deliberately an **admin-only product setting** because it inserts free-form arguments into the startup command.
 
-- Internal Egg controls and fixed AppID / player-limit / update settings.
-- `AUTHKEY`: secret server-side value. Its actual default is redacted from the manifest.
-- `CUSTOM_PARAMS`: arbitrary startup arguments; must remain admin-controlled.
-- Bot Guard sub-options while the Egg keeps Bot Guard itself locked for customers.
-- `EXEC`: the current Egg startup command does not reference this variable, so adding it to checkout would not change the server startup behavior.
-- GDB development-only setting and other Egg variables marked non-editable.
+Optional checkout inputs use Paymenter's server-extension checkout hook; they are not native Config Options. In Paymenter 1.5.9, native text/number Config Options are validated as required, which is unsuitable for optional GSLT/password/Workshop fields.
 
-Optional text/number inputs are handled through Paymenter's server-extension `getCheckoutConfig()` hook. They are not represented as native Config Options, because Paymenter 1.5.9 validates native text/number Config Options as required at checkout.
+## Source
 
-## Source of truth
-
-- Egg repository: https://github.com/larnzs/cs2-kus-addons/blob/integration/kus-monorepo/pterodactyl/egg-kitsune-lab-c-s2-go--k4ryuu-m-o-d-i-f-i-e-d.json
-- Paymenter compatibility: v1.5.9
-- Generated manifest: `resources/cs2-egg-variables.json`
-
-If the Egg variables change, regenerate the manifest and review the checkout field policy before deploying the update.
+- Egg: https://github.com/larnzs/cs2-kus-addons/blob/integration/kus-monorepo/pterodactyl/egg-kitsune-lab-c-s2-go--k4ryuu-m-o-d-i-f-i-e-d.json
+- Paymenter source compatibility: v1.5.9
+- Manifest: `resources/cs2-egg-variables.json`
