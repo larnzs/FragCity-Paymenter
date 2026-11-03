@@ -14,7 +14,7 @@ Before delegating server creation to Paymenter's official Pterodactyl implementa
 - If a Pterodactyl user already exists for that email, the extension updates the username and client identity only when its `external_id` is empty or matches the Paymenter user ID. A conflicting external identity stops provisioning rather than silently claiming another account.
 - The extension then delegates server creation to the unchanged Paymenter Pterodactyl implementation, which finds the client by email and assigns the server.
 
-The Pterodactyl Application API permits a nullable password during client creation. This extension does not send or store a plaintext password, so the Pterodactyl panel password remains independent from the FragCity/Paymenter password. No Paymenter Core file is modified.
+The Pterodactyl Application API permits the password field to be omitted during client creation. When it is omitted, Pterodactyl generates a random password and sends its account-created notification with a password-reset link. This extension does not persist or send a plaintext password, so the Pterodactyl panel password remains independent from the FragCity/Paymenter password. No Paymenter Core file is modified.
 
 ## Egg coverage
 
