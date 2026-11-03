@@ -255,6 +255,7 @@ class FragCityAPI extends Extension
             ]);
         } catch (RuntimeException $e) {
             $safeErrors = [
+                'username_already_in_use',
                 'linked_paymenter_user_missing',
                 'email_already_linked_to_another_paymenter_user',
                 'paymenter_user_already_linked_to_another_steam_account',
