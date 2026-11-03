@@ -35,7 +35,27 @@ class FragCityCS2 extends PterodactylExtension
 
     public function getCheckoutConfig(Product $product, $values = [], $settings = []): array
     {
-        return $this->loadManifest()['paymenter']['checkout_fields'] ?? [];
+        $fields = $this->loadManifest()['paymenter']['checkout_fields'] ?? [];
+
+        // Paymenter v1.5.9's Checkout component and Blade view expect
+        // select options as [egg_value => display_label]. Product settings
+        // use FilamentInput, which supports explicit [{value, label}] pairs.
+        // Keep the manifest canonical and adapt only this Checkout boundary.
+        foreach ($fields as &$field) {
+            if (!in_array($field['type'] ?? null, ['select', 'radio'], true)) {
+                continue;
+            }
+
+            $options = [];
+            foreach ($field['options'] ?? [] as $option) {
+                $options[(string) $option['value']] = (string) $option['label'];
+            }
+
+            $field['options'] = $options;
+        }
+        unset($field);
+
+        return $fields;
     }
 
     /**
@@ -175,8 +195,9 @@ class FragCityCS2 extends PterodactylExtension
 
     /**
      * Fail closed if the manifest drifts from its own Egg-variable contract.
-     * Select options must use explicit {value, label} records so PHP cannot
-     * mistake numeric Egg values ("0", "1") for sequential option indexes.
+     * The manifest stores Select options as explicit value/label records.
+     * Product settings pass these records to FilamentInput; Checkout adapts
+     * them to the keyed map required by Paymenter v1.5.9's Livewire and Blade.
      */
     private function validateManifestContract(array $manifest): void
     {
