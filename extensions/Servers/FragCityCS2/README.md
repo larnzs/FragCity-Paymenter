@@ -77,6 +77,16 @@ For a test Product, select **FragCity CS2** as its server extension. Inherited P
 
 No rows need to be manually created in Paymenter's native Config Options screen.
 
+## Egg value safety
+
+All select options are stored as explicit `value` / `label` pairs. The `value` is the exact Egg environment value (for example, `"0"` or `"1"`); the Persian/English `label` is display-only and must never be sent to Pterodactyl.
+
+Paymenter v1.5.9 interprets sequential PHP arrays as value lists. Numeric JSON object keys such as `"0"` and `"1"` can therefore be converted into their labels. The manifest now uses explicit option records to avoid that behavior.
+
+Before provisioning, FragCityCS2 validates every select value against the manifest. Legacy values previously saved as labels are translated back to their exact Egg values. Unknown or invalid values stop provisioning before the inherited Pterodactyl API request. No Paymenter Core files are modified.
+
+The manifest is also validated at runtime: variable coverage, scope assignment, select value uniqueness, defaults, allowed Egg/storefront values, and boolean values (`0` / `1`) must all match the declared contract.
+
 ## Important behavior
 
 - `CUSTOM_PARAMS` remains an admin-only free-form startup argument field.
