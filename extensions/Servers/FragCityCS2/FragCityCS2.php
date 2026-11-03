@@ -19,7 +19,7 @@ use RuntimeException;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.0.2',
+    version: '1.1.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -60,7 +60,9 @@ class FragCityCS2 extends PterodactylExtension
 
     /**
      * Normalize and validate all FragCity select values before delegating
-     * provisioning to Paymenter's unchanged Pterodactyl implementation.
+     * provisioning to Paymenter's official Pterodactyl implementation. Before
+     * delegation, ensure the Pterodactyl client account uses FragCity's
+     * validated username and the native Paymenter first/last name fields.
      *
      * Older product/service records may contain a display label (for example
      * "غیرفعال") because numeric option keys were previously interpreted as a
@@ -83,7 +85,108 @@ class FragCityCS2 extends PterodactylExtension
             $service->id
         );
 
+        $this->ensurePterodactylClientUser($service);
+
         return parent::createServer($service, $settings, $properties);
+    }
+
+    /**
+     * Create or update the Pterodactyl client identity before the official
+     * Paymenter provisioner looks it up by email and creates the server.
+     *
+     * The username is stored on the Paymenter user as the FragCity-owned
+     * "fragcity_username" property because Paymenter has no native username
+     * field. The two client names and email use Paymenter's native user fields.
+     * Pterodactyl allows a nullable password on Application API user creation;
+     * we intentionally do not invent or persist a second plaintext password.
+     */
+    private function ensurePterodactylClientUser(Service $service): void
+    {
+        $orderUser = $service->user;
+        if (!$orderUser) {
+            throw new RuntimeException('FragCity CS2 provisioning requires a Paymenter user.');
+        }
+
+        $paymenterUserId = (int) $orderUser->id;
+        $email = mb_strtolower(trim((string) $orderUser->email));
+        $firstName = trim((string) $orderUser->first_name);
+        $lastName = trim((string) $orderUser->last_name);
+        $username = strtolower(trim((string) $orderUser->properties()
+            ->where('key', 'fragcity_username')
+            ->value('value')));
+
+        if ($paymenterUserId < 1 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('FragCity CS2 provisioning found an invalid Paymenter client identity.');
+        }
+
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{1,48}[a-z0-9]$/D', $username)) {
+            throw new RuntimeException('FragCity username is missing or is not valid for Pterodactyl.');
+        }
+
+        if ($firstName === '' || mb_strlen($firstName) > 191) {
+            throw new RuntimeException('FragCity client first name is missing or invalid.');
+        }
+
+        if ($lastName === '' || mb_strlen($lastName) > 191) {
+            throw new RuntimeException('FragCity client last name is missing or invalid.');
+        }
+
+        $externalId = (string) $paymenterUserId;
+        $users = $this->request('/api/application/users', 'get', [
+            'filter' => ['email' => $email],
+        ]);
+        $attributes = $users['data'][0]['attributes'] ?? null;
+
+        // An email may have changed after a previous successful provisioning.
+        // external_id is the stable Paymenter-user-to-Pterodactyl-user link.
+        if (!is_array($attributes)) {
+            $byExternalId = $this->request('/api/application/users', 'get', [
+                'filter' => ['external_id' => $externalId],
+            ]);
+            $attributes = $byExternalId['data'][0]['attributes'] ?? null;
+        }
+
+        $clientData = [
+            'external_id' => $externalId,
+            'email' => $email,
+            'username' => $username,
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+        ];
+
+        if (is_array($attributes)) {
+            $pterodactylUserId = (int) ($attributes['id'] ?? 0);
+            $existingExternalId = trim((string) ($attributes['external_id'] ?? ''));
+
+            if ($pterodactylUserId < 1) {
+                throw new RuntimeException('Pterodactyl returned a client user without a valid ID.');
+            }
+
+            if ($existingExternalId !== '' && $existingExternalId !== $externalId) {
+                throw new RuntimeException(
+                    'The Pterodactyl email is already linked to a different external account.'
+                );
+            }
+
+            $needsUpdate =
+                $existingExternalId !== $externalId
+                || strtolower((string) ($attributes['email'] ?? '')) !== $email
+                || strtolower((string) ($attributes['username'] ?? '')) !== $username
+                || trim((string) ($attributes['first_name'] ?? '')) !== $firstName
+                || trim((string) ($attributes['last_name'] ?? '')) !== $lastName;
+
+            if ($needsUpdate) {
+                $this->request(
+                    '/api/application/users/' . $pterodactylUserId,
+                    'patch',
+                    $clientData
+                );
+            }
+
+            return;
+        }
+
+        $this->request('/api/application/users', 'post', $clientData);
     }
 
     private function normalizeSelectEnvironmentValues(
