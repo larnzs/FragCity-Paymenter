@@ -1,0 +1,2 @@
+<?php
+return ['cronjob'=>['invoices_created'=>'فاکتورهای ایجادشده','orders_cancelled'=>'سفارش‌های لغوشده','upgrade_invoices_updated'=>'فاکتورهای ارتقای به‌روزرسانی‌شده','services_suspended'=>'سرویس‌های تعلیق‌شده','services_terminated'=>'سرویس‌های خاتمه‌یافته','tickets_closed'=>'تیکت‌های بسته‌شده','email_logs_deleted'=>'گزارش‌های ایمیل حذف‌شده']];

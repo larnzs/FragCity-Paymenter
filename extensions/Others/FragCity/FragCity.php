@@ -6,20 +6,25 @@ use App\Classes\Extension\Extension;
 
 class FragCity extends Extension
 {
-    /**
-     * Return FragCity extension configuration fields.
-     */
     public function getConfig($values = []): array
     {
         return [];
     }
 
     /**
-     * Register FragCity functionality.
+     * Register Persian locale metadata at runtime. No Paymenter core files are modified.
      */
     public function boot(): void
     {
-        // FragCity services, routes and integrations
-        // will be registered in subsequent development phases.
+        $locales = config('app.available_locales', []);
+        $locales['fa'] = 'فارسی';
+
+        $rtl = config('app.rtl_locales', []);
+        $rtl[] = 'fa';
+
+        config([
+            'app.available_locales' => $locales,
+            'app.rtl_locales' => array_values(array_unique($rtl)),
+        ]);
     }
 }
