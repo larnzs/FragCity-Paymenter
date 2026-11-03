@@ -10,8 +10,8 @@
   },
   "summary": {
     "total_egg_variables": 32,
-    "checkout_fields": 17,
-    "product_admin_fields": 11,
+    "checkout_fields": 11,
+    "product_admin_fields": 17,
     "not_exposed": 4,
     "target_paymenter": "v1.5.9"
   },
@@ -61,7 +61,7 @@
       "rules": "required|numeric|max:64|min:5",
       "field_type": "text",
       "paymenter": {
-        "status": "product_setting",
+        "status": "checkout",
         "field_name": "SRCDS_MAXPLAYERS",
         "field_type": "number"
       }
@@ -155,7 +155,7 @@
         "6"
       ],
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "GAME_TYPE",
         "field_type": "select"
       }
@@ -179,7 +179,7 @@
         "4"
       ],
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "GAME_MODE",
         "field_type": "select"
       }
@@ -196,7 +196,7 @@
       "rules": "required|boolean",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "INSTALL_METAMOD",
         "field_type": "select"
       }
@@ -213,7 +213,7 @@
       "rules": "required|boolean",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "INSTALL_CSS",
         "field_type": "select"
       }
@@ -247,7 +247,7 @@
       "rules": "required|boolean",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "INSTALL_MODSHARP",
         "field_type": "select"
       }
@@ -264,7 +264,7 @@
       "rules": "required|boolean",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "PRERELEASE",
         "field_type": "select"
       }
@@ -304,7 +304,7 @@
       "rules": "required|boolean",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "ENABLE_FILTER",
         "field_type": "select"
       }
@@ -321,7 +321,7 @@
       "rules": "required|boolean",
       "field_type": "text",
       "paymenter": {
-        "status": "product_setting",
+        "status": "checkout",
         "field_name": "ENABLE_GUARD",
         "field_type": "select"
       }
@@ -360,7 +360,7 @@
       "rules": "nullable|numeric|min:1",
       "field_type": "text",
       "paymenter": {
-        "status": "product_setting",
+        "status": "checkout",
         "field_name": "GUARD_BAN_MINUTES",
         "field_type": "number"
       }
@@ -428,7 +428,7 @@
       "rules": "required|boolean",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "CLEANUP_ENABLED",
         "field_type": "select"
       }
@@ -445,7 +445,7 @@
       "rules": "required|boolean",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "ENABLE_LOG_FILES",
         "field_type": "select"
       }
@@ -889,133 +889,19 @@
         "placeholder": "de_dust2"
       },
       {
-        "name": "GAME_TYPE",
-        "label": "نوع بازی (Game Type)",
-        "type": "select",
-        "description": "مقدار Game Type در تنظیمات CS2.",
-        "options": {
-          "0": "0",
-          "1": "1",
-          "2": "2",
-          "3": "3",
-          "4": "4",
-          "5": "5",
-          "6": "6"
-        },
-        "default": "0",
-        "required": true
-      },
-      {
-        "name": "GAME_MODE",
-        "label": "حالت بازی (Game Mode)",
-        "type": "select",
-        "description": "مقدار Game Mode در تنظیمات CS2.",
-        "options": {
-          "0": "0",
-          "1": "1",
-          "2": "2",
-          "3": "3",
-          "4": "4"
-        },
-        "default": "0",
-        "required": true
-      },
-      {
-        "name": "INSTALL_METAMOD",
-        "label": "نصب MetaMod:Source",
-        "type": "select",
-        "description": "فریم‌ورک پایه افزونه‌ها؛ برای CounterStrikeSharp به‌صورت خودکار لازم است.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
-        "default": "1",
-        "required": true
-      },
-      {
-        "name": "INSTALL_CSS",
-        "label": "نصب CounterStrikeSharp",
-        "type": "select",
-        "description": "پلتفرم اجرای پلاگین‌های C#؛ در صورت فعال بودن، MetaMod نیز لازم می‌شود.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
-        "default": "1",
-        "required": true
-      },
-      {
-        "name": "INSTALL_MODSHARP",
-        "label": "نصب ModSharp",
-        "type": "select",
-        "description": "گزینه پیشرفته؛ طبق منطق Egg با CounterStrikeSharp و SwiftlyS2 سازگار نیست و Egg ناسازگاری را مدیریت می‌کند.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
-        "default": "0",
-        "required": true
-      },
-      {
-        "name": "PRERELEASE",
-        "label": "دریافت نسخه‌های آزمایشی فریم‌ورک‌ها",
-        "type": "select",
-        "description": "فعال‌سازی دریافت نسخه‌های Beta/Prerelease برای فریم‌ورک‌ها؛ ممکن است ناپایدار باشند.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
-        "default": "0",
-        "required": true
-      },
-      {
-        "name": "CONSOLE_LOG_LEVEL",
-        "label": "سطح لاگ کنسول",
-        "type": "text",
-        "description": "یکی از DEBUG، INFO، WARNING یا ERROR؛ خالی گذاشتن یعنی استفاده از تنظیمات logging.json.",
-        "default": null,
-        "required": false,
+        "name": "SRCDS_MAXPLAYERS",
+        "label": "ظرفیت بازیکن هم‌زمان",
+        "type": "number",
+        "description": "حداکثر تعداد بازیکنانی که می‌توانند هم‌زمان وارد سرور شوند؛ مقدار مجاز بین 5 و 64 است.",
+        "default": "32",
+        "required": true,
         "validation": [
-          "nullable",
-          "in:DEBUG,INFO,WARNING,ERROR"
+          "required",
+          "numeric",
+          "min:5",
+          "max:64"
         ],
-        "placeholder": "DEBUG / INFO / WARNING / ERROR"
-      },
-      {
-        "name": "ENABLE_FILTER",
-        "label": "فیلتر پیام‌های کنسول",
-        "type": "select",
-        "description": "فیلتر پیام‌های ناخواسته؛ الگوها در /egg/configs/console-filter.json تنظیم می‌شوند.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
-        "default": "0",
-        "required": true
-      },
-      {
-        "name": "CLEANUP_ENABLED",
-        "label": "پاک‌سازی خودکار فایل‌های قدیمی",
-        "type": "select",
-        "description": "پاک‌سازی خودکار لاگ‌ها، دموها و فایل‌های بکاپ بر اساس cleanup.json.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
-        "default": "0",
-        "required": true
-      },
-      {
-        "name": "ENABLE_LOG_FILES",
-        "label": "ماندگاری تاریخچه کامل کنسول",
-        "type": "select",
-        "description": "ذخیره خروجی کامل کنسول روی دیسک Node؛ نیازمند ماژول consolelog در cs2node است.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
-        "default": "0",
-        "required": true
+        "placeholder": "32"
       },
       {
         "name": "TICKRATE",
@@ -1109,6 +995,51 @@
           "numeric"
         ],
         "placeholder": "Workshop Collection ID"
+      },
+      {
+        "name": "CONSOLE_LOG_LEVEL",
+        "label": "سطح لاگ کنسول",
+        "type": "text",
+        "description": "یکی از DEBUG، INFO، WARNING یا ERROR؛ خالی گذاشتن یعنی استفاده از تنظیمات logging.json.",
+        "default": null,
+        "required": false,
+        "validation": [
+          "nullable",
+          "in:DEBUG,INFO,WARNING,ERROR"
+        ],
+        "placeholder": "DEBUG / INFO / WARNING / ERROR"
+      },
+      {
+        "name": "ENABLE_GUARD",
+        "label": "فعال‌سازی محافظ Bot Guard",
+        "type": "select",
+        "description": "افزونه محافظت در برابر بات‌ها و اتصال‌های مخرب. فعال‌سازی آن به‌عنوان افزونه پولی در سبد خرید FragCity محاسبه می‌شود.",
+        "options": {
+          "0": "غیرفعال",
+          "1": "فعال — افزونه پولی"
+        },
+        "default": "0",
+        "required": true,
+        "billing": {
+          "type": "paid_addon",
+          "key": "cs2_bot_guard",
+          "enabled_value": "1",
+          "pricing_owner": "FragCity Raw PHP checkout"
+        }
+      },
+      {
+        "name": "GUARD_BAN_MINUTES",
+        "label": "مدت مسدودسازی Bot Guard (دقیقه)",
+        "type": "number",
+        "description": "مدت مسدودسازی در صورت انتخاب رفتار Kick یا Block توسط مدیر محصول. فقط در صورت فعال بودن Bot Guard کاربرد دارد.",
+        "default": "60",
+        "required": false,
+        "validation": [
+          "nullable",
+          "numeric",
+          "min:1"
+        ],
+        "placeholder": "60"
       }
     ],
     "product_fields": [
@@ -1123,15 +1054,6 @@
         },
         "default": "0",
         "required": true
-      },
-      {
-        "name": "SRCDS_MAXPLAYERS",
-        "label": "CS2 Maximum Players",
-        "type": "number",
-        "description": "حداکثر تعداد بازیکنان این محصول؛ از 5 تا 64. مقدار را بر اساس پلن فروش تنظیم کنید.",
-        "default": "32",
-        "required": true,
-        "validation": "required|numeric|min:5|max:64"
       },
       {
         "name": "SRCDS_STOP_UPDATE",
@@ -1158,6 +1080,62 @@
         "required": true
       },
       {
+        "name": "GAME_TYPE",
+        "label": "نوع بازی (Game Type)",
+        "type": "select",
+        "description": "مقدار Game Type در تنظیمات CS2.",
+        "options": {
+          "0": "0",
+          "1": "1",
+          "2": "2",
+          "3": "3",
+          "4": "4",
+          "5": "5",
+          "6": "6"
+        },
+        "default": "0",
+        "required": true
+      },
+      {
+        "name": "GAME_MODE",
+        "label": "حالت بازی (Game Mode)",
+        "type": "select",
+        "description": "مقدار Game Mode در تنظیمات CS2.",
+        "options": {
+          "0": "0",
+          "1": "1",
+          "2": "2",
+          "3": "3",
+          "4": "4"
+        },
+        "default": "0",
+        "required": true
+      },
+      {
+        "name": "INSTALL_METAMOD",
+        "label": "نصب MetaMod:Source",
+        "type": "select",
+        "description": "فریم‌ورک پایه افزونه‌ها؛ برای CounterStrikeSharp به‌صورت خودکار لازم است.",
+        "options": {
+          "0": "غیرفعال",
+          "1": "فعال"
+        },
+        "default": "1",
+        "required": true
+      },
+      {
+        "name": "INSTALL_CSS",
+        "label": "نصب CounterStrikeSharp",
+        "type": "select",
+        "description": "پلتفرم اجرای پلاگین‌های C#؛ در صورت فعال بودن، MetaMod نیز لازم می‌شود.",
+        "options": {
+          "0": "غیرفعال",
+          "1": "فعال"
+        },
+        "default": "1",
+        "required": true
+      },
+      {
         "name": "INSTALL_SWIFTLY",
         "label": "Install SwiftlyS2",
         "type": "select",
@@ -1170,10 +1148,22 @@
         "required": true
       },
       {
-        "name": "ENABLE_GUARD",
-        "label": "Enable Egg Bot Guard",
+        "name": "INSTALL_MODSHARP",
+        "label": "نصب ModSharp",
         "type": "select",
-        "description": "فعال‌سازی Bot Guard داخلی Egg؛ این گزینه با Host Guard در cs2node متفاوت است.",
+        "description": "گزینه پیشرفته؛ طبق منطق Egg با CounterStrikeSharp و SwiftlyS2 سازگار نیست و Egg ناسازگاری را مدیریت می‌کند.",
+        "options": {
+          "0": "غیرفعال",
+          "1": "فعال"
+        },
+        "default": "0",
+        "required": true
+      },
+      {
+        "name": "PRERELEASE",
+        "label": "دریافت نسخه‌های آزمایشی فریم‌ورک‌ها",
+        "type": "select",
+        "description": "فعال‌سازی دریافت نسخه‌های Beta/Prerelease برای فریم‌ورک‌ها؛ ممکن است ناپایدار باشند.",
         "options": {
           "0": "غیرفعال",
           "1": "فعال"
@@ -1195,15 +1185,6 @@
         "required": true
       },
       {
-        "name": "GUARD_BAN_MINUTES",
-        "label": "Bot Guard Ban Duration (minutes)",
-        "type": "number",
-        "description": "مدت بلاک برحسب دقیقه؛ در صورت فعال بودن Guard.",
-        "default": "60",
-        "required": false,
-        "validation": "nullable|numeric|min:1"
-      },
-      {
         "name": "GUARD_WHITELIST_STEAMIDS",
         "label": "Bot Guard SteamID Whitelist",
         "type": "text",
@@ -1222,6 +1203,42 @@
         "validation": "nullable|string"
       },
       {
+        "name": "ENABLE_FILTER",
+        "label": "فیلتر پیام‌های کنسول",
+        "type": "select",
+        "description": "فیلتر پیام‌های ناخواسته؛ الگوها در /egg/configs/console-filter.json تنظیم می‌شوند.",
+        "options": {
+          "0": "غیرفعال",
+          "1": "فعال"
+        },
+        "default": "0",
+        "required": true
+      },
+      {
+        "name": "CLEANUP_ENABLED",
+        "label": "پاک‌سازی خودکار فایل‌های قدیمی",
+        "type": "select",
+        "description": "پاک‌سازی خودکار لاگ‌ها، دموها و فایل‌های بکاپ بر اساس cleanup.json.",
+        "options": {
+          "0": "غیرفعال",
+          "1": "فعال"
+        },
+        "default": "0",
+        "required": true
+      },
+      {
+        "name": "ENABLE_LOG_FILES",
+        "label": "ماندگاری تاریخچه کامل کنسول",
+        "type": "select",
+        "description": "ذخیره خروجی کامل کنسول روی دیسک Node؛ نیازمند ماژول consolelog در cs2node است.",
+        "options": {
+          "0": "غیرفعال",
+          "1": "فعال"
+        },
+        "default": "0",
+        "required": true
+      },
+      {
         "name": "CUSTOM_PARAMS",
         "label": "Admin Startup Parameters",
         "type": "text",
@@ -1229,6 +1246,25 @@
         "default": null,
         "required": false,
         "validation": "nullable|string"
+      }
+    ]
+  },
+  "fragcity_pricing": {
+    "owner": "FragCity Raw PHP checkout",
+    "note": "This metadata is a pricing contract for the FragCity storefront. Paymenter's getCheckoutConfig hook only captures service properties and does not calculate these surcharges.",
+    "paid_addons": [
+      {
+        "field": "ENABLE_GUARD",
+        "enabled_value": "1",
+        "pricing_key": "cs2_bot_guard"
+      }
+    ],
+    "tiered_options": [
+      {
+        "field": "TICKRATE",
+        "base_value": "64",
+        "upgrade_value": "128",
+        "upgrade_pricing_key": "cs2_tickrate_128"
       }
     ]
   }
