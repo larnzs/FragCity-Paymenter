@@ -107,6 +107,7 @@ class FragCityAPI extends Extension
 
         $validator = Validator::make($payload, [
             'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'username' => ['required', 'string', 'min:3', 'max:50', 'regex:/^[a-z0-9][a-z0-9_-]{1,48}[a-z0-9]$/'],
             'email' => ['required', 'string', 'email', 'max:255'],
             'phone' => ['required', 'string', 'regex:/^09[0-9]{9}$/', 'max:15'],
             'first_name' => ['required', 'string', 'min:1', 'max:191'],
