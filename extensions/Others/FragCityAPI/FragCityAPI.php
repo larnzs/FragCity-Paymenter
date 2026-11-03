@@ -209,11 +209,28 @@ class FragCityAPI extends Extension
                 // intentionally refreshes the Paymenter password to the same
                 // current password supplied during the authenticated FragCity
                 // registration/login flow.
+                $usernameTaken = User::query()
+                    ->where('id', '<>', (int) $user->id)
+                    ->whereHas('properties', function ($query) use ($username): void {
+                        $query->where('key', 'fragcity_username')
+                            ->where('value', $username);
+                    })
+                    ->exists();
+
+                if ($usernameTaken) {
+                    throw new RuntimeException('username_already_in_use');
+                }
+
                 $user->first_name = $firstName;
-                $user->last_name = $lastName !== '' ? $lastName : null;
+                $user->last_name = $lastName;
                 $user->email = $email;
                 $user->password = $password;
                 $user->save();
+
+                $user->properties()->updateOrCreate(
+                    ['key' => 'fragcity_username'],
+                    ['name' => 'FragCity Username', 'value' => $username]
+                );
 
                 $user->properties()->updateOrCreate(
                     ['key' => 'fragcity_phone'],
