@@ -8,7 +8,7 @@ This repository is **not** a Paymenter fork or a full Paymenter installation. Up
 
 - Paymenter: v1.5.9
 - Laravel: 12.x
-- PHP: 8.3+
+- PHP: 8.3 or 8.4 (upstream constraint: `^8.3 || ^8.4`)
 
 ## Kept components
 
