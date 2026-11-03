@@ -1,37 +1,45 @@
 # FragCity Paymenter Add-ons
 
-Private development repository for FragCity-specific Paymenter extensions,
-customer-facing themes, integrations, Persian translations and deployment tooling.
+Private repository for the small set of FragCity-owned add-ons that integrate with an unmodified Paymenter installation.
 
-This repository is not a full Paymenter installation.
+This repository is **not** a Paymenter fork or a full Paymenter installation. Upstream Paymenter core files, official language files, Laravel application files, Composer dependencies and runtime data stay in the original Paymenter project and are not copied or patched here.
 
 ## Compatibility target
+
 - Paymenter: v1.5.9
 - Laravel: 12.x
 - PHP: 8.3+
 
-## Project structure
-- `extensions/Others/FragCity`: FragCity application functionality and runtime locale registration.
-- `themes/fragcity`: FragCity customer-facing theme.
-- `lang/fa`: Persian translations for Paymenter's shared and customer-facing language groups.
-- `deployment`: Deployment and update guidance.
-- `docs`: Architecture and development documentation.
-- `LICENSES`: Third-party license notices.
+## Kept components
+
+- `extensions/Servers/FragCityCS2`: FragCity CS2 server extension. It inherits Paymenter's Pterodactyl server implementation and supplies Egg-derived product and checkout configuration.
+- `themes/fragcity`: retained FragCity theme assets. Keeping this theme does not mean the Paymenter customer UI is part of the FragCity product.
+- `docs`: architecture, development and integration contracts.
+- `deployment`: deployment guidance for FragCity-owned add-ons only.
+- `LICENSES`: required upstream license notices for files derived from Paymenter's default theme.
+
+A separate `FragCityAPI` extension will be added when the authenticated server-to-server Bridge is implemented. It will be independent of the CS2 provisioning extension and will not contain locale registration or translation code.
 
 ## Design identity
+
 - Background: `#0D0D0D`
 - Surface: `#171717`
 - Primary: `#F97316`
 - Accent: `#FFB347`
 
-## Important
-The Paymenter application core, its environment configuration, credentials,
-database, user uploads and runtime data are not stored here.
+## Product boundary
 
-The customer-facing theme is based on Paymenter's default theme.
-See `LICENSES/Paymenter-MIT.txt`.
+FragCity's Raw PHP website owns the public storefront, customer dashboard, administrator dashboard, checkout and payment experience. Customers are not directed to Paymenter or Pterodactyl.
 
-Persian localization is provided as an add-on: deploy `lang/fa` into the
-Paymenter installation's `lang/fa` directory and enable the FragCity
-extension. The extension registers the Persian locale label and RTL locale
-metadata at runtime; Paymenter core files are not modified.
+Paymenter is used privately as the commercial/service supervisor and provisioning coordinator. Pterodactyl/Wings remain responsible for actual game-server records and runtime lifecycle.
+
+## Upstream integrity
+
+- Install and update Paymenter from its official upstream repository.
+- Keep the pinned Paymenter version compatible with these add-ons.
+- Do not copy Paymenter core into this repository.
+- Do not replace upstream language files or maintain a private translation layer here.
+- Deploy only the specific FragCity theme/extension files that are required.
+- Never overwrite Paymenter core, `.env`, `vendor`, database contents or runtime storage.
+
+The retained theme is based on Paymenter's default theme. See `LICENSES/Paymenter-MIT.txt`.
