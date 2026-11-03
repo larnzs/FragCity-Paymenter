@@ -289,7 +289,16 @@ class FragCityCS2 extends PterodactylExtension
                         }
                     }
 
-                    if ($optionValues !== $expectedValues) {
+                    // Option order is a UI concern, not part of the Egg
+                    // value contract. Compare exact values as sets so an empty
+                    // nullable default can appear first in the UI without being
+                    // incorrectly rejected here.
+                    $actualValueSet = $optionValues;
+                    $expectedValueSet = $expectedValues;
+                    sort($actualValueSet, SORT_STRING);
+                    sort($expectedValueSet, SORT_STRING);
+
+                    if ($actualValueSet !== $expectedValueSet) {
                         throw new RuntimeException(
                             "Select options for {$name} do not match the declared Egg/storefront values."
                         );
