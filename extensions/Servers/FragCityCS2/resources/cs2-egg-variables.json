@@ -10,8 +10,8 @@
   },
   "summary": {
     "total_egg_variables": 32,
-    "checkout_fields": 12,
-    "product_admin_fields": 17,
+    "checkout_fields": 8,
+    "product_admin_fields": 21,
     "not_exposed": 3,
     "target_paymenter": "v1.5.9"
   },
@@ -104,7 +104,7 @@
       "order": 6,
       "name": "Game Server Login Token (GSLT)",
       "env_variable": "STEAM_ACC",
-      "description": "The Steam Game Server Login Token (GSLT) used to publicly list your server. Optional, but recommended for increased visibility and access to additional features. Learn more: https://steamcommunity.com/dev/managegameservers",
+      "description": "توکن GSLT برای معرفی سرور در فهرست عمومی Steam. این مقدار در سطح Product تنظیم می‌شود و برای تمام سرویس‌های ساخته‌شده از این محصول مشترک خواهد بود.",
       "default_value": "",
       "default_redacted": false,
       "user_viewable": true,
@@ -112,7 +112,7 @@
       "rules": "max:32|nullable",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "STEAM_ACC",
         "field_type": "password"
       }
@@ -273,7 +273,7 @@
       "order": 15,
       "name": "Console Log Level",
       "env_variable": "CONSOLE_LOG_LEVEL",
-      "description": "Minimum level shown in the console: DEBUG, INFO, WARNING or ERROR. DEBUG shows what the egg decided and why. Overrides logging.json's console_level when set. Leave empty to use the config file's value.",
+      "description": "سطح نمایش پیام‌های کنسول. برای استفاده از مقدار logging.json، گزینه پیش‌فرض را انتخاب کنید. این مقدار در سطح Product تنظیم می‌شود.",
       "default_value": "",
       "default_redacted": false,
       "user_viewable": true,
@@ -287,9 +287,9 @@
         "ERROR"
       ],
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "CONSOLE_LOG_LEVEL",
-        "field_type": "text"
+        "field_type": "select"
       }
     },
     {
@@ -643,7 +643,7 @@
       "order": 30,
       "name": "Server Password",
       "env_variable": "PASSWORD",
-      "description": "+sv_password",
+      "description": "رمز ورود سرور. این مقدار در سطح Product تنظیم می‌شود و برای تمام سرویس‌های ساخته‌شده از این محصول مشترک خواهد بود.",
       "default_value": "",
       "default_redacted": false,
       "user_viewable": true,
@@ -651,7 +651,7 @@
       "rules": "max:16|nullable",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "PASSWORD",
         "field_type": "password"
       }
@@ -984,7 +984,7 @@
       "order": 32,
       "name": "Workshop Collection for loading up a server with specific workshop playlist",
       "env_variable": "WORKSHOP",
-      "description": "+host_workshop_collection",
+      "description": "شناسه مجموعه Workshop برای بارگذاری هنگام راه‌اندازی. اختیاری؛ این مقدار در سطح Product تنظیم می‌شود.",
       "default_value": "",
       "default_redacted": false,
       "user_viewable": true,
@@ -992,7 +992,7 @@
       "rules": "nullable|numeric",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
+        "status": "product_setting",
         "field_name": "WORKSHOP",
         "field_type": "number"
       }
@@ -1001,20 +1001,6 @@
   "paymenter": {
     "extension": "FragCityCS2",
     "checkout_fields": [
-      {
-        "name": "STEAM_ACC",
-        "label": "توکن ورود سرور استیم (GSLT)",
-        "type": "password",
-        "description": "اختیاری؛ برای معرفی سرور در فهرست عمومی Steam. توکن را فقط در اختیار همین سرور قرار دهید.",
-        "default": null,
-        "required": false,
-        "validation": [
-          "nullable",
-          "string",
-          "max:32"
-        ],
-        "placeholder": "GSLT (اختیاری)"
-      },
       {
         "name": "SRCDS_MAP",
         "label": "نقشه پیش‌فرض",
@@ -1153,46 +1139,6 @@
         },
         "default": "0",
         "required": true
-      },
-      {
-        "name": "PASSWORD",
-        "label": "رمز عبور سرور",
-        "type": "password",
-        "description": "اختیاری؛ برای ورود به سرور.",
-        "default": null,
-        "required": false,
-        "validation": [
-          "nullable",
-          "string",
-          "max:16"
-        ],
-        "placeholder": "بدون رمز عبور"
-      },
-      {
-        "name": "WORKSHOP",
-        "label": "شناسه Workshop Collection",
-        "type": "number",
-        "description": "اختیاری؛ شناسه مجموعه نقشه‌های Workshop برای بارگذاری هنگام راه‌اندازی.",
-        "default": null,
-        "required": false,
-        "validation": [
-          "nullable",
-          "numeric"
-        ],
-        "placeholder": "Workshop Collection ID"
-      },
-      {
-        "name": "CONSOLE_LOG_LEVEL",
-        "label": "سطح لاگ کنسول",
-        "type": "text",
-        "description": "یکی از DEBUG، INFO، WARNING یا ERROR؛ خالی گذاشتن یعنی استفاده از تنظیمات logging.json.",
-        "default": null,
-        "required": false,
-        "validation": [
-          "nullable",
-          "in:DEBUG,INFO,WARNING,ERROR"
-        ],
-        "placeholder": "DEBUG / INFO / WARNING / ERROR"
       },
       {
         "name": "ENABLE_GUARD",
@@ -1431,6 +1377,66 @@
         "default": "",
         "required": false,
         "validation": "nullable|string"
+      },
+      {
+        "name": "STEAM_ACC",
+        "label": "توکن ورود سرور استیم (GSLT)",
+        "type": "password",
+        "description": "توکن GSLT برای معرفی سرور در فهرست عمومی Steam. این مقدار در سطح Product تنظیم می‌شود و برای تمام سرویس‌های ساخته‌شده از این محصول مشترک خواهد بود.",
+        "default": "",
+        "required": false,
+        "validation": [
+          "nullable",
+          "string",
+          "max:32"
+        ],
+        "placeholder": "GSLT (اختیاری)"
+      },
+      {
+        "name": "PASSWORD",
+        "label": "رمز عبور سرور",
+        "type": "password",
+        "description": "رمز ورود سرور. این مقدار در سطح Product تنظیم می‌شود و برای تمام سرویس‌های ساخته‌شده از این محصول مشترک خواهد بود.",
+        "default": "",
+        "required": false,
+        "validation": [
+          "nullable",
+          "string",
+          "max:16"
+        ],
+        "placeholder": "بدون رمز عبور"
+      },
+      {
+        "name": "WORKSHOP",
+        "label": "شناسه Workshop Collection",
+        "type": "number",
+        "description": "شناسه مجموعه Workshop برای بارگذاری هنگام راه‌اندازی. اختیاری؛ این مقدار در سطح Product تنظیم می‌شود.",
+        "default": "",
+        "required": false,
+        "validation": [
+          "nullable",
+          "numeric"
+        ],
+        "placeholder": "Workshop Collection ID"
+      },
+      {
+        "name": "CONSOLE_LOG_LEVEL",
+        "label": "سطح لاگ کنسول",
+        "type": "select",
+        "description": "سطح نمایش پیام‌های کنسول. برای استفاده از مقدار logging.json، گزینه پیش‌فرض را انتخاب کنید. این مقدار در سطح Product تنظیم می‌شود.",
+        "options": {
+          "": "استفاده از logging.json (پیش‌فرض)",
+          "DEBUG": "DEBUG",
+          "INFO": "INFO",
+          "WARNING": "WARNING",
+          "ERROR": "ERROR"
+        },
+        "default": "",
+        "required": false,
+        "validation": [
+          "nullable",
+          "in:DEBUG,INFO,WARNING,ERROR"
+        ]
       }
     ]
   },
