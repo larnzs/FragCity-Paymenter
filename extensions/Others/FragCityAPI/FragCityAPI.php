@@ -19,7 +19,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account synchronization bridge for FragCity.',
-    version: '1.0.0',
+    version: '1.1.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -73,7 +73,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.0.0',
+            'version' => '1.1.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -93,12 +93,21 @@ class FragCityAPI extends Extension
             ], 400);
         }
 
+        // The payload is decoded from the raw HMAC-signed body. Normalize
+        // client names here so whitespace-only values cannot pass as names.
+        $payload['first_name'] = is_string($payload['first_name'] ?? null)
+            ? trim($payload['first_name'])
+            : $payload['first_name'] ?? null;
+        $payload['last_name'] = is_string($payload['last_name'] ?? null)
+            ? trim($payload['last_name'])
+            : $payload['last_name'] ?? null;
+
         $validator = Validator::make($payload, [
             'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
             'email' => ['required', 'string', 'email', 'max:255'],
             'phone' => ['required', 'string', 'regex:/^09[0-9]{9}$/', 'max:15'],
-            'first_name' => ['required', 'string', 'min:1', 'max:255'],
-            'last_name' => ['nullable', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'min:1', 'max:191'],
+            'last_name' => ['required', 'string', 'min:1', 'max:191'],
             'password' => ['required', 'string', 'min:8', 'max:255'],
         ]);
 
@@ -115,7 +124,7 @@ class FragCityAPI extends Extension
         $email = mb_strtolower(trim($data['email']));
         $phone = trim($data['phone']);
         $firstName = trim($data['first_name']);
-        $lastName = trim((string) ($data['last_name'] ?? ''));
+        $lastName = trim((string) $data['last_name']);
         $password = $data['password'];
 
         try {
