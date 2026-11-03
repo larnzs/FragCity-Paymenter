@@ -79,13 +79,17 @@ No rows need to be manually created in Paymenter's native Config Options screen.
 
 ## Egg value safety
 
-All select options are stored as explicit `value` / `label` pairs. The `value` is the exact Egg environment value (for example, `"0"` or `"1"`); the Persian/English `label` is display-only and must never be sent to Pterodactyl.
+All select options are stored in the manifest as explicit `value` / `label` records. The `value` is the exact Egg environment value (for example, `"0"` or `"1"`); the Persian/English `label` is display-only and must never be sent to Pterodactyl.
 
-Paymenter v1.5.9 interprets sequential PHP arrays as value lists. Numeric JSON object keys such as `"0"` and `"1"` can therefore be converted into their labels. The manifest now uses explicit option records to avoid that behavior.
+The extension adapts this canonical structure for each Paymenter v1.5.9 consumer:
+- Product settings pass explicit records to `FilamentInput`, which converts each record to its intended value/label option.
+- Customer Checkout converts the records to the keyed `egg_value => display_label` map expected by Paymenter's Livewire validator and default Blade template.
+
+This separation is required because Paymenter's Product settings and Checkout use different option consumers. It also prevents PHP's numeric-string array-key behavior from turning labels into stored values.
 
 Before provisioning, FragCityCS2 validates every select value against the manifest. Legacy values previously saved as labels are translated back to their exact Egg values. Unknown or invalid values stop provisioning before the inherited Pterodactyl API request. No Paymenter Core files are modified.
 
-The manifest is also validated at runtime: variable coverage, scope assignment, select value uniqueness, defaults, allowed Egg/storefront values, and boolean values (`0` / `1`) must all match the declared contract.
+The manifest is also validated at runtime: variable coverage, scope assignment, select value uniqueness, defaults, allowed Egg/storefront values, and boolean values (`0` / `1`) must all match the declared contract. The Checkout adapter output is checked against Paymenter v1.5.9's associative option-map contract.
 
 ## Important behavior
 
