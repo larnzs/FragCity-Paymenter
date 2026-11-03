@@ -46,6 +46,8 @@ For a test product, select **FragCity CS2** as its server extension. Its inherit
 
 Optional checkout inputs use Paymenter's server-extension checkout hook; they are not native Config Options. In Paymenter 1.5.9, native text/number Config Options are validated as required, which is unsuitable for optional GSLT/password/Workshop fields.
 
+**Credential storage note:** `STEAM_ACC` and `PASSWORD` are rendered as masked password inputs, but this extension does not encrypt their saved service-property values at rest. Restrict database, backup, and admin access accordingly. The GSLT is also stored by Pterodactyl as the Egg environment value.
+
 ## Source
 
 - Egg: https://github.com/larnzs/cs2-kus-addons/blob/integration/kus-monorepo/pterodactyl/egg-kitsune-lab-c-s2-go--k4ryuu-m-o-d-i-f-i-e-d.json
