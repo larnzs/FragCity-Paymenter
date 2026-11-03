@@ -268,7 +268,7 @@ class FragCityAPI extends Extension
             ], 503);
         }
 
-        $allowedIps = preg_split('/[,\s]+/', trim((string) $this->config('allowed_ips', ''))) ?: [];
+        $allowedIps = preg_split('/[,\s]+/', trim((string) ($this->config('allowed_ips') ?? ''))) ?: [];
         $allowedIps = array_values(array_filter($allowedIps, fn ($ip) => filter_var($ip, FILTER_VALIDATE_IP)));
 
         if ($allowedIps && !in_array((string) $request->ip(), $allowedIps, true)) {
