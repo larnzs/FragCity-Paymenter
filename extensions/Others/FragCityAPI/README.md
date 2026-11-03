@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.1.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -30,12 +30,12 @@ Request body:
   "email": "customer@example.com",
   "phone": "09123456789",
   "first_name": "Customer",
-  "last_name": "",
+  "last_name": "Example",
   "password": "customer-supplied-password"
 }
 ```
 
-The example values are placeholders. Password is accepted only over HTTPS inside the signed server-to-server request. It is never returned, logged or persisted as plaintext. Paymenter's User model hashes the password.
+The example values are placeholders. Both `first_name` and `last_name` are mandatory, non-empty after trimming, and limited to 191 characters. They are written to Paymenter's native User fields and are forwarded by Paymenter's official Pterodactyl server extension when it creates a Pterodactyl client user. Password is accepted only over HTTPS inside the signed server-to-server request. It is never returned, logged or persisted as plaintext. Paymenter's User model hashes the password.
 
 The mapping table `fragcity_user_links` enforces a unique Paymenter user per FragCity SteamID and a unique FragCity SteamID per Paymenter user. The phone and SteamID are also stored as Paymenter user properties. The endpoint is idempotent for a linked SteamID.
 
