@@ -276,6 +276,19 @@ class FragCityCS2 extends PterodactylExtension
                 if (is_array($expectedValues)) {
                     $expectedValues = array_map('strval', $expectedValues);
 
+                    // Nullable Egg variables may intentionally expose an empty
+                    // default in addition to their explicit "in:" values.
+                    $eggDefault = $eggVariable['default_value'] ?? null;
+                    if (
+                        $eggDefault !== null
+                        && str_contains((string) ($eggVariable['rules'] ?? ''), 'nullable')
+                    ) {
+                        $eggDefault = (string) $eggDefault;
+                        if (!in_array($eggDefault, $expectedValues, true)) {
+                            $expectedValues[] = $eggDefault;
+                        }
+                    }
+
                     if ($optionValues !== $expectedValues) {
                         throw new RuntimeException(
                             "Select options for {$name} do not match the declared Egg/storefront values."
