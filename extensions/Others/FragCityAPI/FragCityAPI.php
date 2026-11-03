@@ -125,6 +125,7 @@ class FragCityAPI extends Extension
 
         $data = $validator->validated();
         $steamId = $data['steamid64'];
+        $username = $data['username'];
         $email = mb_strtolower(trim($data['email']));
         $phone = trim($data['phone']);
         $firstName = trim($data['first_name']);
@@ -134,6 +135,7 @@ class FragCityAPI extends Extension
         try {
             $result = DB::transaction(function () use (
                 $steamId,
+                $username,
                 $email,
                 $phone,
                 $firstName,
