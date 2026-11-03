@@ -1,10 +1,10 @@
 <?php
 
-namespace Paymenter\\Extensions\\Servers\\FragCityCS2;
+namespace Paymenter\Extensions\Servers\FragCityCS2;
 
-use App\\Attributes\\ExtensionMeta;
-use App\\Models\\Product;
-use Paymenter\\Extensions\\Servers\\Pterodactyl\\Pterodactyl as PterodactylExtension;
+use App\Attributes\ExtensionMeta;
+use App\Models\Product;
+use Paymenter\Extensions\Servers\Pterodactyl\Pterodactyl as PterodactylExtension;
 use RuntimeException;
 
 /**
