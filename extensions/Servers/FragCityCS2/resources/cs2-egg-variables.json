@@ -1035,10 +1035,16 @@
         "label": "Tickrate سرور",
         "type": "select",
         "description": "Tickrate قابل انتخاب برای سرور.",
-        "options": {
-          "64": "64",
-          "128": "128"
-        },
+        "options": [
+          {
+            "value": "64",
+            "label": "64"
+          },
+          {
+            "value": "128",
+            "label": "128"
+          }
+        ],
         "default": "64",
         "required": true
       },
@@ -1047,42 +1053,144 @@
         "label": "حالت بازی (Game Mode CFG)",
         "type": "select",
         "description": "فایل CFG مربوط به GameModeManager. فقط مودهای تعریف‌شده در GameModes فهرست می‌شوند؛ فایل‌های Settings، Warmup و custom در دسترس Checkout نیستند.",
-        "options": {
-          "casual.cfg": "Casual — casual.cfg",
-          "gg.cfg": "Gun Game — gg.cfg",
-          "deathmatch.cfg": "Deathmatch — deathmatch.cfg",
-          "comp.cfg": "Competitive — comp.cfg",
-          "wingman.cfg": "Wingman — wingman.cfg",
-          "prac.cfg": "Practice Mode — prac.cfg",
-          "prefire.cfg": "Prefire — prefire.cfg",
-          "retake.cfg": "Retakes — retake.cfg",
-          "executes.cfg": "Executes — executes.cfg",
-          "awp.cfg": "Awp Only — awp.cfg",
-          "1v1.cfg": "1v1 Arenas — 1v1.cfg",
-          "aim.cfg": "Aim — aim.cfg",
-          "bhop.cfg": "Bhop — bhop.cfg",
-          "surf.cfg": "Surf — surf.cfg",
-          "kz.cfg": "Kreedz Climbing — kz.cfg",
-          "ctf.cfg": "Capture The Flag — ctf.cfg",
-          "hns.cfg": "Hide N Seek — hns.cfg",
-          "soccer.cfg": "Soccer — soccer.cfg",
-          "course.cfg": "Course — course.cfg",
-          "deathrun.cfg": "Deathrun — deathrun.cfg",
-          "minigames.cfg": "Minigames — minigames.cfg",
-          "scoutzknivez.cfg": "ScoutzKnivez — scoutzknivez.cfg",
-          "oitc.cfg": "One In The Chamber — oitc.cfg",
-          "battle.cfg": "Battle Ball — battle.cfg",
-          "br.cfg": "Battle Royale — br.cfg",
-          "Casual-1.6.cfg": "Casual (1.6) — Casual-1.6.cfg",
-          "valve-competitive.cfg": "Competitive (Valve) — valve-competitive.cfg",
-          "valve-deathmatch-freeforall.cfg": "Deathmatch FFA (Valve) — valve-deathmatch-freeforall.cfg",
-          "valve-armsrace.cfg": "Arms Race (Valve) — valve-armsrace.cfg",
-          "valve-wingman.cfg": "Wingman (Valve) — valve-wingman.cfg",
-          "casualw.cfg": "Casual Workshop — casualw.cfg",
-          "casual-active.cfg": "Casual Active — casual-active.cfg",
-          "valve-retake.cfg": "Retakes (Valve) — valve-retake.cfg",
-          "45.cfg": "Competitive 45° — 45.cfg"
-        },
+        "options": [
+          {
+            "value": "casual.cfg",
+            "label": "Casual — casual.cfg"
+          },
+          {
+            "value": "gg.cfg",
+            "label": "Gun Game — gg.cfg"
+          },
+          {
+            "value": "deathmatch.cfg",
+            "label": "Deathmatch — deathmatch.cfg"
+          },
+          {
+            "value": "comp.cfg",
+            "label": "Competitive — comp.cfg"
+          },
+          {
+            "value": "wingman.cfg",
+            "label": "Wingman — wingman.cfg"
+          },
+          {
+            "value": "prac.cfg",
+            "label": "Practice Mode — prac.cfg"
+          },
+          {
+            "value": "prefire.cfg",
+            "label": "Prefire — prefire.cfg"
+          },
+          {
+            "value": "retake.cfg",
+            "label": "Retakes — retake.cfg"
+          },
+          {
+            "value": "executes.cfg",
+            "label": "Executes — executes.cfg"
+          },
+          {
+            "value": "awp.cfg",
+            "label": "Awp Only — awp.cfg"
+          },
+          {
+            "value": "1v1.cfg",
+            "label": "1v1 Arenas — 1v1.cfg"
+          },
+          {
+            "value": "aim.cfg",
+            "label": "Aim — aim.cfg"
+          },
+          {
+            "value": "bhop.cfg",
+            "label": "Bhop — bhop.cfg"
+          },
+          {
+            "value": "surf.cfg",
+            "label": "Surf — surf.cfg"
+          },
+          {
+            "value": "kz.cfg",
+            "label": "Kreedz Climbing — kz.cfg"
+          },
+          {
+            "value": "ctf.cfg",
+            "label": "Capture The Flag — ctf.cfg"
+          },
+          {
+            "value": "hns.cfg",
+            "label": "Hide N Seek — hns.cfg"
+          },
+          {
+            "value": "soccer.cfg",
+            "label": "Soccer — soccer.cfg"
+          },
+          {
+            "value": "course.cfg",
+            "label": "Course — course.cfg"
+          },
+          {
+            "value": "deathrun.cfg",
+            "label": "Deathrun — deathrun.cfg"
+          },
+          {
+            "value": "minigames.cfg",
+            "label": "Minigames — minigames.cfg"
+          },
+          {
+            "value": "scoutzknivez.cfg",
+            "label": "ScoutzKnivez — scoutzknivez.cfg"
+          },
+          {
+            "value": "oitc.cfg",
+            "label": "One In The Chamber — oitc.cfg"
+          },
+          {
+            "value": "battle.cfg",
+            "label": "Battle Ball — battle.cfg"
+          },
+          {
+            "value": "br.cfg",
+            "label": "Battle Royale — br.cfg"
+          },
+          {
+            "value": "Casual-1.6.cfg",
+            "label": "Casual (1.6) — Casual-1.6.cfg"
+          },
+          {
+            "value": "valve-competitive.cfg",
+            "label": "Competitive (Valve) — valve-competitive.cfg"
+          },
+          {
+            "value": "valve-deathmatch-freeforall.cfg",
+            "label": "Deathmatch FFA (Valve) — valve-deathmatch-freeforall.cfg"
+          },
+          {
+            "value": "valve-armsrace.cfg",
+            "label": "Arms Race (Valve) — valve-armsrace.cfg"
+          },
+          {
+            "value": "valve-wingman.cfg",
+            "label": "Wingman (Valve) — valve-wingman.cfg"
+          },
+          {
+            "value": "casualw.cfg",
+            "label": "Casual Workshop — casualw.cfg"
+          },
+          {
+            "value": "casual-active.cfg",
+            "label": "Casual Active — casual-active.cfg"
+          },
+          {
+            "value": "valve-retake.cfg",
+            "label": "Retakes (Valve) — valve-retake.cfg"
+          },
+          {
+            "value": "45.cfg",
+            "label": "Competitive 45° — 45.cfg"
+          }
+        ],
         "default": "comp.cfg",
         "required": true
       },
@@ -1091,40 +1199,136 @@
         "label": "گروه نقشه (MAPGROUP)",
         "type": "select",
         "description": "شناسه Map Group مرتبط با مود بازی. مقادیر از MapGroups در GameModeManager خوانده شده‌اند.",
-        "options": {
-          "mg_active": "Casual — mg_active",
-          "mg_comp": "Casual / Competitive / Practice Mode — mg_comp",
-          "mg_gg": "Gun Game / One In The Chamber — mg_gg",
-          "mg_dm": "Deathmatch — mg_dm",
-          "mg_wingman": "Wingman — mg_wingman",
-          "mg_prefire": "Prefire — mg_prefire",
-          "mg_retake": "Retakes — mg_retake",
-          "mg_executes": "Executes — mg_executes",
-          "mg_awp": "Awp Only — mg_awp",
-          "mg_1v1": "1v1 Arenas — mg_1v1",
-          "mg_aim": "Aim — mg_aim",
-          "mg_bhop": "Bhop — mg_bhop",
-          "mg_surf": "Surf — mg_surf",
-          "mg_kz": "Kreedz Climbing — mg_kz",
-          "mg_ctf": "Capture The Flag — mg_ctf",
-          "mg_hns": "Hide N Seek — mg_hns",
-          "mg_soccer": "Soccer — mg_soccer",
-          "mg_course": "Course — mg_course",
-          "mg_deathrun": "Deathrun — mg_deathrun",
-          "mg_minigames": "Minigames — mg_minigames",
-          "mg_scoutzknivez": "ScoutzKnivez — mg_scoutzknivez",
-          "mg_battle": "Battle Ball — mg_battle",
-          "mg_battleroyale": "Battle Royale — mg_battleroyale",
-          "mg_casual-1.6": "Casual (1.6) — mg_casual-1.6",
-          "mg_valve_competitive": "Competitive (Valve) — mg_valve_competitive",
-          "mg_valve_deathmatch": "Deathmatch FFA (Valve) — mg_valve_deathmatch",
-          "mg_valve_arms_race": "Arms Race (Valve) — mg_valve_arms_race",
-          "mg_valve_wingman": "Wingman (Valve) — mg_valve_wingman",
-          "mg_casualw": "Casual Workshop — mg_casualw",
-          "mg_casuala": "Casual Active — mg_casuala",
-          "mg_valve_retakes": "Retakes (Valve) — mg_valve_retakes",
-          "mg_45": "Competitive 45° — mg_45"
-        },
+        "options": [
+          {
+            "value": "mg_active",
+            "label": "Casual — mg_active"
+          },
+          {
+            "value": "mg_comp",
+            "label": "Casual / Competitive / Practice Mode — mg_comp"
+          },
+          {
+            "value": "mg_gg",
+            "label": "Gun Game / One In The Chamber — mg_gg"
+          },
+          {
+            "value": "mg_dm",
+            "label": "Deathmatch — mg_dm"
+          },
+          {
+            "value": "mg_wingman",
+            "label": "Wingman — mg_wingman"
+          },
+          {
+            "value": "mg_prefire",
+            "label": "Prefire — mg_prefire"
+          },
+          {
+            "value": "mg_retake",
+            "label": "Retakes — mg_retake"
+          },
+          {
+            "value": "mg_executes",
+            "label": "Executes — mg_executes"
+          },
+          {
+            "value": "mg_awp",
+            "label": "Awp Only — mg_awp"
+          },
+          {
+            "value": "mg_1v1",
+            "label": "1v1 Arenas — mg_1v1"
+          },
+          {
+            "value": "mg_aim",
+            "label": "Aim — mg_aim"
+          },
+          {
+            "value": "mg_bhop",
+            "label": "Bhop — mg_bhop"
+          },
+          {
+            "value": "mg_surf",
+            "label": "Surf — mg_surf"
+          },
+          {
+            "value": "mg_kz",
+            "label": "Kreedz Climbing — mg_kz"
+          },
+          {
+            "value": "mg_ctf",
+            "label": "Capture The Flag — mg_ctf"
+          },
+          {
+            "value": "mg_hns",
+            "label": "Hide N Seek — mg_hns"
+          },
+          {
+            "value": "mg_soccer",
+            "label": "Soccer — mg_soccer"
+          },
+          {
+            "value": "mg_course",
+            "label": "Course — mg_course"
+          },
+          {
+            "value": "mg_deathrun",
+            "label": "Deathrun — mg_deathrun"
+          },
+          {
+            "value": "mg_minigames",
+            "label": "Minigames — mg_minigames"
+          },
+          {
+            "value": "mg_scoutzknivez",
+            "label": "ScoutzKnivez — mg_scoutzknivez"
+          },
+          {
+            "value": "mg_battle",
+            "label": "Battle Ball — mg_battle"
+          },
+          {
+            "value": "mg_battleroyale",
+            "label": "Battle Royale — mg_battleroyale"
+          },
+          {
+            "value": "mg_casual-1.6",
+            "label": "Casual (1.6) — mg_casual-1.6"
+          },
+          {
+            "value": "mg_valve_competitive",
+            "label": "Competitive (Valve) — mg_valve_competitive"
+          },
+          {
+            "value": "mg_valve_deathmatch",
+            "label": "Deathmatch FFA (Valve) — mg_valve_deathmatch"
+          },
+          {
+            "value": "mg_valve_arms_race",
+            "label": "Arms Race (Valve) — mg_valve_arms_race"
+          },
+          {
+            "value": "mg_valve_wingman",
+            "label": "Wingman (Valve) — mg_valve_wingman"
+          },
+          {
+            "value": "mg_casualw",
+            "label": "Casual Workshop — mg_casualw"
+          },
+          {
+            "value": "mg_casuala",
+            "label": "Casual Active — mg_casuala"
+          },
+          {
+            "value": "mg_valve_retakes",
+            "label": "Retakes (Valve) — mg_valve_retakes"
+          },
+          {
+            "value": "mg_45",
+            "label": "Competitive 45° — mg_45"
+          }
+        ],
         "default": "mg_comp",
         "required": true
       },
@@ -1133,10 +1337,16 @@
         "label": "اخراج بازیکنان دارای Cooldown",
         "type": "select",
         "description": "معادل sv_kick_players_with_cooldown.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1145,10 +1355,16 @@
         "label": "فعال‌سازی محافظ Bot Guard",
         "type": "select",
         "description": "افزونه محافظت در برابر بات‌ها و اتصال‌های مخرب. فعال‌سازی آن به‌عنوان افزونه پولی در سبد خرید FragCity محاسبه می‌شود.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال — افزونه پولی"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال — افزونه پولی"
+          }
+        ],
         "default": "0",
         "required": true,
         "billing": {
@@ -1179,10 +1395,16 @@
         "label": "Allow Tokenless Servers",
         "type": "select",
         "description": "تنظیم مدیریتی Egg برای اجازه اجرای سرور بدون GSLT.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1191,10 +1413,16 @@
         "label": "Disable Game Updates",
         "type": "select",
         "description": "تنظیم مدیریتی برای متوقف کردن به‌روزرسانی بازی.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1203,10 +1431,16 @@
         "label": "Validate Game Files",
         "type": "select",
         "description": "کنترل اعتبارسنجی فایل‌های بازی توسط SteamCMD.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1215,15 +1449,36 @@
         "label": "نوع بازی (Game Type)",
         "type": "select",
         "description": "مقدار Game Type در تنظیمات CS2.",
-        "options": {
-          "0": "0",
-          "1": "1",
-          "2": "2",
-          "3": "3",
-          "4": "4",
-          "5": "5",
-          "6": "6"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "0"
+          },
+          {
+            "value": "1",
+            "label": "1"
+          },
+          {
+            "value": "2",
+            "label": "2"
+          },
+          {
+            "value": "3",
+            "label": "3"
+          },
+          {
+            "value": "4",
+            "label": "4"
+          },
+          {
+            "value": "5",
+            "label": "5"
+          },
+          {
+            "value": "6",
+            "label": "6"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1232,13 +1487,28 @@
         "label": "حالت بازی (Game Mode)",
         "type": "select",
         "description": "مقدار Game Mode در تنظیمات CS2.",
-        "options": {
-          "0": "0",
-          "1": "1",
-          "2": "2",
-          "3": "3",
-          "4": "4"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "0"
+          },
+          {
+            "value": "1",
+            "label": "1"
+          },
+          {
+            "value": "2",
+            "label": "2"
+          },
+          {
+            "value": "3",
+            "label": "3"
+          },
+          {
+            "value": "4",
+            "label": "4"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1247,10 +1517,16 @@
         "label": "نصب MetaMod:Source",
         "type": "select",
         "description": "فریم‌ورک پایه افزونه‌ها؛ برای CounterStrikeSharp به‌صورت خودکار لازم است.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "1",
         "required": true
       },
@@ -1259,10 +1535,16 @@
         "label": "نصب CounterStrikeSharp",
         "type": "select",
         "description": "پلتفرم اجرای پلاگین‌های C#؛ در صورت فعال بودن، MetaMod نیز لازم می‌شود.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "1",
         "required": true
       },
@@ -1271,10 +1553,16 @@
         "label": "Install SwiftlyS2",
         "type": "select",
         "description": "فریم‌ورک مدیریتی؛ برای مشتری در Checkout نمایش داده نمی‌شود.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1283,10 +1571,16 @@
         "label": "نصب ModSharp",
         "type": "select",
         "description": "گزینه پیشرفته؛ طبق منطق Egg با CounterStrikeSharp و SwiftlyS2 سازگار نیست و Egg ناسازگاری را مدیریت می‌کند.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1295,10 +1589,16 @@
         "label": "دریافت نسخه‌های آزمایشی فریم‌ورک‌ها",
         "type": "select",
         "description": "فعال‌سازی دریافت نسخه‌های Beta/Prerelease برای فریم‌ورک‌ها؛ ممکن است ناپایدار باشند.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1307,11 +1607,20 @@
         "label": "Bot Guard Action",
         "type": "select",
         "description": "عملیات Guard در زمان تشخیص رفتار مشکوک.",
-        "options": {
-          "log": "Log only",
-          "kick": "Kick",
-          "block": "Block"
-        },
+        "options": [
+          {
+            "value": "log",
+            "label": "Log only"
+          },
+          {
+            "value": "kick",
+            "label": "Kick"
+          },
+          {
+            "value": "block",
+            "label": "Block"
+          }
+        ],
         "default": "block",
         "required": true
       },
@@ -1338,10 +1647,16 @@
         "label": "فیلتر پیام‌های کنسول",
         "type": "select",
         "description": "فیلتر پیام‌های ناخواسته؛ الگوها در /egg/configs/console-filter.json تنظیم می‌شوند.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "0",
         "required": true
       },
@@ -1350,10 +1665,16 @@
         "label": "پاک‌سازی خودکار فایل‌های قدیمی",
         "type": "select",
         "description": "پاک‌سازی خودکار لاگ‌ها، دموها و فایل‌های بکاپ بر اساس cleanup.json.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "1",
         "required": true
       },
@@ -1362,10 +1683,16 @@
         "label": "ماندگاری تاریخچه کامل کنسول",
         "type": "select",
         "description": "ذخیره خروجی کامل کنسول روی دیسک Node؛ نیازمند ماژول consolelog در cs2node است.",
-        "options": {
-          "0": "غیرفعال",
-          "1": "فعال"
-        },
+        "options": [
+          {
+            "value": "0",
+            "label": "غیرفعال"
+          },
+          {
+            "value": "1",
+            "label": "فعال"
+          }
+        ],
         "default": "1",
         "required": true
       },
@@ -1424,13 +1751,28 @@
         "label": "سطح لاگ کنسول",
         "type": "select",
         "description": "سطح نمایش پیام‌های کنسول. برای استفاده از مقدار logging.json، گزینه پیش‌فرض را انتخاب کنید. این مقدار در سطح Product تنظیم می‌شود.",
-        "options": {
-          "": "استفاده از logging.json (پیش‌فرض)",
-          "DEBUG": "DEBUG",
-          "INFO": "INFO",
-          "WARNING": "WARNING",
-          "ERROR": "ERROR"
-        },
+        "options": [
+          {
+            "value": "",
+            "label": "استفاده از logging.json (پیش‌فرض)"
+          },
+          {
+            "value": "DEBUG",
+            "label": "DEBUG"
+          },
+          {
+            "value": "INFO",
+            "label": "INFO"
+          },
+          {
+            "value": "WARNING",
+            "label": "WARNING"
+          },
+          {
+            "value": "ERROR",
+            "label": "ERROR"
+          }
+        ],
         "default": "",
         "required": false,
         "validation": [
