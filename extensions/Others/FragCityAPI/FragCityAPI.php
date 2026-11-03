@@ -95,6 +95,9 @@ class FragCityAPI extends Extension
 
         // The payload is decoded from the raw HMAC-signed body. Normalize
         // client names here so whitespace-only values cannot pass as names.
+        $payload['username'] = is_string($payload['username'] ?? null)
+            ? strtolower(trim($payload['username']))
+            : $payload['username'] ?? null;
         $payload['first_name'] = is_string($payload['first_name'] ?? null)
             ? trim($payload['first_name'])
             : $payload['first_name'] ?? null;
