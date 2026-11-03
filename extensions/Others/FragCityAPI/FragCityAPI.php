@@ -261,7 +261,7 @@ class FragCityAPI extends Extension
     private function authenticateBridgeRequest(Request $request): ?JsonResponse
     {
         $secret = (string) $this->config('shared_secret');
-        if (strlen($secret) < 64) {
+        if (!preg_match('/^[a-f0-9]{64,256}$/iD', $secret)) {
             return response()->json([
                 'success' => false,
                 'error' => 'bridge_not_configured',
@@ -282,6 +282,13 @@ class FragCityAPI extends Extension
         $nonce = (string) $request->header('X-FragCity-Nonce', '');
         $signature = strtolower((string) $request->header('X-FragCity-Signature', ''));
         $rawBody = $request->getContent();
+
+        if (strlen($rawBody) > 16384) {
+            return response()->json([
+                'success' => false,
+                'error' => 'request_too_large',
+            ], 413);
+        }
 
         if (
             !preg_match('/^[0-9]{10}$/D', $timestamp)
