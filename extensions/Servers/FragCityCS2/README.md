@@ -1,22 +1,45 @@
 # FragCity CS2 — Paymenter Server Extension
 
-Compatibility target: **Paymenter v1.5.9** (the version pinned by FragCity).
+Compatibility target: **Paymenter v1.5.9**.
 
-This extension inherits Paymenter's built-in Pterodactyl server implementation and reads its CS2 field definitions from `resources/cs2-egg-variables.json`.
+This extension inherits Paymenter's built-in Pterodactyl server implementation. It adds FragCity-specific Product settings and customer Checkout fields from `resources/cs2-egg-variables.json`.
 
-## What is generated
+## Egg coverage
 
-- **11 customer checkout fields**: GSLT, map, maximum players, tickrate, map group, cooldown policy, password, Workshop Collection, console log level, Bot Guard toggle and Bot Guard ban duration.
-- **18 admin product settings**: tokenless policy, update/validation controls, Game Type and Game Mode, plugin frameworks, prerelease policy, Bot Guard action and allow-lists, console filtering, automatic cleanup, log persistence custom startup parameters and the admin-only CFG filename (`EXEC`).
-- A manifest containing all **32 Egg variables**, their defaults, Egg validation rules, source access flags, allowed values, and explicit Paymenter routing.
-- **3 variables are intentionally not exposed**: fixed CS2 AppID, AUTHKEY and development-only GDB port.
+The manifest is audited against the source Egg:
 
-`ENABLE_GUARD` is a paid add-on toggle. Its selection is captured as a service property; the extra charge must be calculated by the FragCity Raw PHP checkout using the manifest's `fragcity_pricing` contract. Paymenter's checkout extension hook does not add a surcharge by itself.
+- **32 Egg environment variables** are represented in the manifest.
+- **11 variables** are routed to customer Checkout.
+- **18 variables** are routed to Product admin settings.
+- **3 variables** are intentionally not exposed: fixed `SRCDS_APPID`, secret `AUTHKEY`, and development-only `GDB_DEBUG_PORT`.
 
-`TICKRATE` is customer-selectable. The FragCity storefront should treat 64 as the base option and 128 as a priced upgrade using the same pricing contract. A future customer dashboard must also update the existing service's Egg environment when changing tickrate; changing a checkout value alone does not modify an already-provisioned server.
+The manifest preserves the Egg variable definitions and allowed values. The only deliberate source-data exception is that the secret `AUTHKEY` default is redacted from the FragCity repository.
 
-No rows need to be manually created in Paymenter's native Config Options screen.
-## Install
+## Field routing
+
+### Customer Checkout (11)
+
+`STEAM_ACC`, `SRCDS_MAP`, `SRCDS_MAXPLAYERS`, `TICKRATE`, `MAPGROUP`, `COOLDOWN`, `PASSWORD`, `WORKSHOP`, `CONSOLE_LOG_LEVEL`, `ENABLE_GUARD`, `GUARD_BAN_MINUTES`.
+
+### Product admin settings (18)
+
+`ALLOW_TOKENLESS`, `SRCDS_STOP_UPDATE`, `SRCDS_VALIDATE`, `GAME_TYPE`, `GAME_MODE`, `INSTALL_METAMOD`, `INSTALL_CSS`, `INSTALL_SWIFTLY`, `INSTALL_MODSHARP`, `PRERELEASE`, `GUARD_ACTION`, `GUARD_WHITELIST_STEAMIDS`, `GUARD_WHITELIST_IPS`, `ENABLE_FILTER`, `CLEANUP_ENABLED`, `ENABLE_LOG_FILES`, `CUSTOM_PARAMS`, `EXEC`.
+
+`EXEC` is an admin-only selector populated from the Egg's exact 233 allowed CFG values. Its default is `comp.cfg`. It is currently only passed as an Egg environment value: the present Egg startup command does not contain `+exec {{EXEC}}`, so selecting a CFG will not execute it until the Egg startup is intentionally updated.
+
+### Intentionally not exposed (3)
+
+- `SRCDS_APPID`: fixed to CS2 AppID 730.
+- `AUTHKEY`: secret Workshop download key; its source default is redacted in this repository.
+- `GDB_DEBUG_PORT`: development/debug-only port.
+
+## Pricing contract
+
+`ENABLE_GUARD` is a paid add-on toggle. Paymenter captures its selection as a service property; it does **not** calculate the surcharge. The FragCity Raw PHP checkout owns that pricing using the manifest's `fragcity_pricing` metadata.
+
+`TICKRATE` is customer-selectable. The FragCity storefront should treat 64 as the base option and 128 as a priced upgrade. Changing a Checkout value alone does not modify an already-provisioned server; a future customer dashboard must update that server's Egg environment through the relevant control flow.
+
+## Installation
 
 Copy this folder into the Paymenter installation:
 
@@ -32,28 +55,23 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Open Paymenter Admin → Extensions → Servers and enable **FragCity CS2**.
+Open **Paymenter Admin → Extensions → Servers**, enable **FragCity CS2**, and configure its Pterodactyl URL and Application API key. Paymenter stores settings separately for each server extension, so use the same host and API key as the built-in Pterodactyl connection.
 
-Configure its Pterodactyl URL and Application API key. Paymenter stores settings separately for each server extension, so enter the same host and API key currently used by the built-in Pterodactyl extension.
+For a test Product, select **FragCity CS2** as its server extension. Inherited Pterodactyl settings (node, location, nest, egg, allocations, resource limits, etc.) remain available alongside the FragCity CS2 Product settings.
 
-For a test product, select **FragCity CS2** as its server extension. Its inherited Pterodactyl product settings (node, location, nest, egg, allocations, resource limits, etc.) remain available. The CS2 admin settings appear alongside them.
+**Do not switch a production Product until a separate test Product has successfully provisioned a server.**
 
-**Do not switch a production product until a separate test product has successfully provisioned a server.** The extension implementation is inherited, but the FragCityCS2 extension record has its own credentials/settings record.
+No rows need to be manually created in Paymenter's native Config Options screen.
 
-## Field routing
+## Important behavior
 
-- Customer checkout: GSLT, map, game type/mode, selected frameworks, prerelease preference, console log level, console filter, cleanup, console log persistence, tickrate, map group, cooldown, server password, Workshop Collection.
-- Product admin settings: tokenless policy, max players, update/validation controls, SwiftlyS2, Egg Bot Guard and its action/allow-lists, and custom startup parameters.
-- Not exposed: fixed CS2 AppID, the secret `AUTHKEY` (its actual default is redacted), GDB development port, The `EXEC` variable is now exposed as an admin-only product setting, but it will not execute a CFG until `+exec {{EXEC}}` is added to the Egg startup command.
-
-`CUSTOM_PARAMS` is deliberately an **admin-only product setting** because it inserts free-form arguments into the startup command.
-
-Optional checkout inputs use Paymenter's server-extension checkout hook; they are not native Config Options. In Paymenter 1.5.9, native text/number Config Options are validated as required, which is unsuitable for optional GSLT/password/Workshop fields.
-
-**Credential storage note:** `STEAM_ACC` and `PASSWORD` are rendered as masked password inputs, but this extension does not encrypt their saved service-property values at rest. Restrict database, backup, and admin access accordingly. The GSLT is also stored by Pterodactyl as the Egg environment value.
+- `CUSTOM_PARAMS` is admin-only because it inserts free-form arguments into the startup command.
+- `EXEC` is restricted to the Egg's declared allow-list in the Product selector, but does not run until the Egg startup references it.
+- `ENABLE_GUARD` and `TICKRATE` pricing are not calculated by the Paymenter extension.
+- The current extension does not encrypt saved service-property values for masked Checkout fields at rest. Restrict database, backups, and admin access accordingly.
 
 ## Source
 
 - Egg: https://github.com/larnzs/cs2-kus-addons/blob/integration/kus-monorepo/pterodactyl/egg-kitsune-lab-c-s2-go--k4ryuu-m-o-d-i-f-i-e-d.json
-- Paymenter source compatibility: v1.5.9
+- Paymenter compatibility: v1.5.9
 - Manifest: `resources/cs2-egg-variables.json`
