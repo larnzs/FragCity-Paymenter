@@ -11,8 +11,8 @@
   "summary": {
     "total_egg_variables": 32,
     "checkout_fields": 11,
-    "product_admin_fields": 17,
-    "not_exposed": 4,
+    "product_admin_fields": 18,
+    "not_exposed": 3,
     "target_paymenter": "v1.5.9"
   },
   "variables": [
@@ -835,8 +835,9 @@
         "wingman.cfg"
       ],
       "paymenter": {
-        "status": "not_exposed",
-        "reason": "در startup فعلی Egg به {{EXEC}} یا +exec ارجاعی وجود ندارد؛ نمایش آن در Paymenter اثری روی راه‌اندازی ندارد."
+        "status": "product_setting",
+        "field_name": "EXEC",
+        "field_type": "text"
       }
     },
     {
@@ -1246,6 +1247,15 @@
         "default": "",
         "required": false,
         "validation": "nullable|string"
+      },
+      {
+        "name": "EXEC",
+        "label": "Admin CFG File (EXEC)",
+        "type": "text",
+        "description": "نام یا مسیر فایل CFG که برای این محصول تنظیم می‌شود. فقط مقدارهای مجاز تعریف‌شده در Egg قابل استفاده‌اند. تا زمانی که +exec {{EXEC}} به Startup اضافه نشود، این مقدار اجرا نخواهد شد.",
+        "default": "comp.cfg",
+        "required": true,
+        "validation": "required|string"
       }
     ]
   },
