@@ -441,7 +441,7 @@ class FragCityAPI extends Extension
                 'error' => 'panel_password_rate_limited',
             ], 429);
         }
-        RateLimiter::hit($rateLimitKey, 600);
+        RateLimiter::hit($rateLimitKey, 900);
 
         try {
             $link = DB::table('fragcity_user_links')
