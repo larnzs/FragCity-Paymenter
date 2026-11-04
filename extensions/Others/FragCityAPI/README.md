@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.11.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.4.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -11,17 +11,6 @@ Provides a narrow private server-to-server bridge for FragCity account synchroni
 - `POST /api/v1/fragcity/bridge/servers/list`
 - `POST /api/v1/fragcity/bridge/servers/password`
 - `POST /api/v1/fragcity/bridge/servers/username`
-- `POST /api/v1/fragcity/bridge/servers/client-api/connect`
-- `POST /api/v1/fragcity/bridge/servers/client-api/disconnect`
-- `POST /api/v1/fragcity/bridge/servers/console`
-- `POST /api/v1/fragcity/bridge/servers/files`
-- `POST /api/v1/fragcity/bridge/admin/lifecycle/list`
-- `POST /api/v1/fragcity/bridge/admin/lifecycle/detail`
-- `POST /api/v1/fragcity/bridge/admin/lifecycle/reconcile`
-- `POST /api/v1/fragcity/bridge/admin/lifecycle/authorize-recreation`
-- `POST /api/v1/fragcity/bridge/admin/lifecycle/revoke-recreation`
-- `POST /api/v1/fragcity/bridge/admin/lifecycle/acknowledge-paymenter-missing`
-- `POST /api/v1/fragcity/bridge/admin/lifecycle/verify-client-identity`
 
 All bridge routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are server-to-server endpoints; the browser must never call them directly.
 
@@ -64,57 +53,13 @@ FragCity requests the customer's services by the authenticated SteamID64. The br
 
 The server extension returns an allow-listed summary from the Pterodactyl Application API: service ID/status, server UUID/identifier/name, node ID, resource limits, dates, panel URL, panel username and email. Server ownership is verified by both the Pterodactyl `external_id` (Paymenter service ID) and Pterodactyl owner user ID before data is returned.
 
-The customer inventory read is strictly read-only with respect to Pterodactyl Client accounts. It uses only the already-approved Pterodactyl Client ID and durable customer UUID stored in the FragCity identity/service registry, then verifies that exact Client with a GET request. It never searches for a Client by email, creates a Client, or changes its username, email, name or `external_id`. A missing or conflicting mapping fails closed and requires administrator identity review; legacy numeric external IDs are not silently migrated by opening My Servers.
-
-Pterodactyl Client profile synchronization belongs only to explicit provisioning or account-management flows in the FragCityCS2 extension. The customer inventory endpoint itself only reads the approved mapping and records the observed service/server state in the local lifecycle registry.
+The inventory read also repairs a legacy Pterodactyl client identity when its email matches the linked Paymenter account and its `external_id` is empty or already matches that Paymenter user ID. It synchronizes the native Pterodactyl username, email, first/last name and `external_id`; a conflicting external ID or a username collision fails closed.
 
 The `servers/password` endpoint accepts a customer-selected Pterodactyl password only after the signed request is validated and the service is confirmed to belong to the linked Paymenter user. The server extension verifies the Pterodactyl server owner and updates only that user's password through the Pterodactyl Application API. Pterodactyl hashes the password. The bridge stores only a `fragcity_panel_password_set_at` timestamp property; it never stores or returns plaintext or a password hash.
 
 FragCity's website endpoint additionally requires an authenticated website session, CSRF token and successful re-entry of the current FragCity password. The website sends the new panel password to Paymenter only over the signed HTTPS bridge. Never expose the HMAC secret or Pterodactyl Application API key to browser JavaScript.
 
 The panel password is intentionally independent from FragCity and Paymenter passwords. It cannot be read back after setting; customers can set a new one through FragCity at any time.
-
-The `servers/username` endpoint updates the shared Pterodactyl Client username for the authenticated FragCity customer. It verifies ownership through the selected Paymenter service, writes the independent `fragcity_panel_username` Paymenter property and changes only the Pterodactyl Client username. A username collision is rejected; the FragCity login username is not changed.
-
-## Customer Client API, Console and File Manager
-
-The FragCity My Servers integration uses a separate Pterodactyl **Client API key created by the customer inside their own Pterodactyl account**. It is not the admin Application API key configured on the FragCity CS2 server extension.
-
-Customers connect the key from FragCity → My Servers → Access → Secure management tools. The website requires an authenticated FragCity session, CSRF validation and re-entry of the current FragCity password. Paymenter validates all of the following before accepting the key:
-
-1. The FragCity SteamID resolves to the linked Paymenter user.
-2. The selected Paymenter service belongs to that user and uses the FragCityCS2 server extension.
-3. The Pterodactyl Application API server has the expected Paymenter \`external_id\` and owner user ID.
-4. The Client API key can read that exact server and Pterodactyl reports \`meta.is_server_owner=true\`.
-5. The Client API server UUID and short identifier match the Application API record.
-
-Only after validation is the Client API key encrypted with Laravel \`Crypt::encryptString()\` in \`fragcity_client_api_credentials\`. A SHA-256 fingerprint is stored for identification; plaintext is never logged or returned to the website. The key is stored once per Paymenter user and revalidated against the specific owned server on every Console/File request. Disconnect removes the stored encrypted credential from Paymenter; it does not revoke the key from Pterodactyl. Customers must separately revoke the key under Pterodactyl Account → API Credentials to invalidate it.
-
-The Console endpoint returns only the short-lived WebSocket URL and token issued by Pterodactyl. The long-lived Client API key stays server-side. The website browser connects directly to the Pterodactyl/Wings WSS endpoint with the short-lived token. File Manager operations are allow-listed and proxied through the signed bridge. File paths are validated, file edits are size-limited, and Pterodactyl continues to enforce the account's server/file permissions.
-
-The direct file upload and WebSocket connections originate from the FragCity website browser. Configure the exact FragCity website origin in the Wings \`api.allowed_origins\` setting (for example, \`https://fragcity.ir\` only if that is the actual origin serving My Servers). Do not guess the origin or expose Wings credentials. Back up the Wings config before editing it, and restart Wings only during an approved maintenance window. If this origin is not allowed, Console WebSocket and/or browser uploads may fail due to browser CORS/origin checks, while server-side file list/read/write/download operations can still work.
-
-The Application API dashboard key remains separate and should retain only the read-only Application API permissions needed for the existing server summary: Servers, Allocations, Nodes, Locations, Nests and Eggs. Do not grant Client API or write privileges to that key.
-
-## Admin Lifecycle API
-
-These endpoints are called only by the FragCity Website backend. The website verifies the administrator session (role=admin) and CSRF token before making a signed HTTPS request. The HMAC secret must never be sent to the browser. Actor SteamID64 and username are audit metadata, not a substitute for website administrator authorization.
-
-- `admin/lifecycle/list`: paginated lifecycle inventory, state counts, last-reconciled timestamps and recovery authorization status.
-- `admin/lifecycle/detail`: one mapping, Paymenter/customer information, recovery authorization details and the latest 50 audit events.
-- `admin/lifecycle/reconcile`: verifies the Pterodactyl Client identity and exact Server external ID. When ownership is verified, it aligns an existing Server's suspend state with Paymenter's active/suspended status. It does not create a Client or Server and does not delete a Server.
-- `admin/lifecycle/authorize-recreation`: records a reasoned one-shot grant for one `missing_external` service. It does not dispatch CreateJob; an administrator must separately retry that exact Paymenter service's CreateJob.
-- `admin/lifecycle/revoke-recreation`: revokes an unconsumed grant with a mandatory reason. Consumed grants cannot be revoked.
-- `admin/lifecycle/acknowledge-paymenter-missing`: records an administrator's `preserve_external` decision for an out-of-band deleted Paymenter service. It never deletes or mutates a Pterodactyl resource.
-- `admin/lifecycle/verify-client-identity`: verifies one existing Pterodactyl Client by exact Paymenter email and records its approved Client ID/UUID mapping. It changes only the Client `external_id` from an empty or legacy numeric value to the durable customer UUID.
-
-Only an authoritative Pterodactyl 404 is treated as missing. Network errors, timeouts, 401/403 and 5xx remain retryable failures. A missing Pterodactyl Client, client UUID mismatch or Server owner mismatch becomes `review_required`; the bridge does not silently create or repair those identities during reconciliation.
-
-A directly deleted Paymenter service row is marked `paymenter_missing` for admin review only. This does not imply permission to delete an external Pterodactyl Server. The dashboard intentionally has no remote-delete control.
-
-The `verify-client-identity` endpoint provides the only administrator-assisted recovery for a missing or mismatched Client mapping. It requires an existing Client ID, exact Paymenter-email equality, a reasoned admin approval, and changes only the Client's `external_id` from an empty or numeric legacy value to the durable customer UUID. It rejects a different UUID, arbitrary non-numeric external ID, a live previously mapped Client ID, or a Client already mapped to another FragCity customer. Server ownership is rechecked separately by Lifecycle reconciliation.
-
-The administrator can acknowledge that review with a mandatory reason and the fixed decision `preserve_external`. This records the reviewer, timestamp, reason and a permanent audit event; it does not call Pterodactyl, delete a Server or Client, or authorize recreation. Acknowledgement is one-shot and cannot be silently overwritten.
 
 ## Installation
 
@@ -132,7 +77,7 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.11.1; its `upgraded()` hook runs pending additive migrations, including the lifecycle reconciliation, recovery-claim and Paymenter-missing review fields. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
+Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. The extension migration runs when it is installed. Do not uninstall the extension after creating user links unless the mapping table has been backed up.
 
 ## Security notes
 
@@ -140,17 +85,9 @@ Enable **FragCity API** in Paymenter Admin → Extensions → Others and configu
 - Headers: `X-FragCity-Timestamp`, `X-FragCity-Nonce`, `X-FragCity-Signature`.
 - Nonces are stored atomically in Laravel Cache for ten minutes to prevent replay.
 - Request bodies and passwords are never written to logs.
-- The Pterodactyl Application API key is never exposed to the website or browser. The customer's Client API key is encrypted at rest in the Paymenter database and decrypted only inside the CS2 extension for a specific owner-verified server operation.
+- Core API keys and Pterodactyl credentials are not used by this bridge.
 - The bridge creates no Pterodactyl users or servers; the FragCity CS2 server extension handles Pterodactyl client identity immediately before the official Paymenter server provisioner runs.
 
+## Customer panel username
 
-## Lifecycle reconciliation and recovery authorization (1.9.0)
-
-- Scheduled and administrator-triggered reconciliation use the dedicated `reconcileCustomerLifecycle` operation. It verifies the stored Pterodactyl Client identity and the exact Server external ID, then aligns only the Server suspend state with Paymenter (`active` / `suspended`). It never creates a missing Client or Server and never repairs Client profile fields.
-- Only an authoritative Pterodactyl 404 is treated as a missing resource. Authentication failures, timeouts and 5xx responses remain retryable failures.
-- A manually deleted Server remains `missing_external`; scheduled reconciliation checks for its return but never recreates it.
-- Recreation approval is stored independently from `desired_state`. It records a unique authorization ID, administrator SteamID64/username, reason, timestamp and consumed/revoked state. A grant is consumed only after the replacement Server is verified, so transient CreateJob failures do not silently consume it.
-- An unconsumed grant can be revoked with a reason; both grant and revoke actions are permanent audit events. A CreateJob must claim the grant using a two-hour lease before provisioning starts. Revocation is rejected while the lease is active; transient failures release the claim and process crashes allow the lease to expire.
-- `last_reconciled_at` records the latest inspection attempt. Failed attempts are retried and produce audit events.
-- A recreation CreateJob must atomically claim its pending authorization. The claim has a two-hour lease; active claims cannot be revoked. Failed attempts release the claim, while a process crash lets the lease expire before another retry or revocation.
-- Migration `2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php` and migration `2026_11_04_000004_add_recreation_authorization_claim_columns.php` are additive; earlier migration files remain unchanged.
+The `servers/username` endpoint updates the customer's Pterodactyl Client username for one owned CS2 service. The signed bridge resolves the SteamID64 to the linked Paymenter user, verifies service ownership, and delegates the operation to FragCityCS2. The website must authenticate the customer and protect the request with CSRF before sending it through the private HTTPS HMAC bridge.

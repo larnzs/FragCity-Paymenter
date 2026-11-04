@@ -1,4 +1,4 @@
-name: FragCity Lifecycle PHP Checks
+name: FragCity PHP Checks
 
 on:
   push:
@@ -20,7 +20,7 @@ permissions:
 
 jobs:
   php-syntax:
-    name: PHP 8.3 syntax and lifecycle contract
+    name: PHP 8.3 syntax and provisioning contract
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -32,7 +32,7 @@ jobs:
           php-version: "8.3"
           coverage: none
 
-      - name: Lint lifecycle PHP files
+      - name: Lint FragCity PHP files and retained migrations
         shell: bash
         run: |
           set -euo pipefail
@@ -52,58 +52,20 @@ jobs:
             php -l "$file"
           done < <(find "$migration_dir" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
 
-      - name: Verify lifecycle safety contracts
+      - name: Verify restored provisioning and bridge routes
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "version: '1.11.1'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "'version' => '1.11.1'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -q "function reconcileCustomerLifecycle" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "version: '1.7.1'" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "function claimRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "function releaseRecreationAuthorizationClaim" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "function consumeRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
-          ! grep -q "\$legacyPaymenterLink" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "adminLifecycleRevokeRecreation" extensions/Others/FragCityAPI/routes.php
-          grep -q "adminLifecycleAcknowledgePaymenterMissing" extensions/Others/FragCityAPI/routes.php
-          grep -q "adminLifecycleVerifyClientIdentity" extensions/Others/FragCityAPI/routes.php
-          grep -q "adminVerifyPterodactylClientIdentity" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "PATCH" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "admin_pterodactyl_client_identity_verified" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "paymenter_missing_reviewed_at" extensions/Others/FragCityAPI/database/migrations/2026_11_04_000005_add_paymenter_missing_review_fields.php
-          grep -q "fragcity_srv_claim_exp_idx" extensions/Others/FragCityAPI/database/migrations/2026_11_04_000004_add_recreation_authorization_claim_columns.php
-          grep -q "admin_paymenter_missing_reviewed" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -q "version: '1.4.0'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "'version' => '1.4.0'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -q "version: '1.4.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -Fq '$this->ensurePterodactylClientUser($service, true);' extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -Fq 'return parent::createServer($service, $settings, $properties);' extensions/Servers/FragCityCS2/FragCityCS2.php
+          ! grep -q "function reconcileCustomerLifecycle" extensions/Servers/FragCityCS2/FragCityCS2.php
+          ! grep -q "function connectClientApi" extensions/Others/FragCityAPI/FragCityAPI.php
 
-          summary="$(sed -n '/private function getCustomerPanelSummaryLocked/,/^    }/p' extensions/Servers/FragCityCS2/FragCityCS2.php)"
-          test -n "$summary"
-          grep -Fq '$this->getVerifiedPterodactylClientUserReadOnly(' <<< "$summary"
-          ! grep -Fq '$this->ensurePterodactylClientUser(' <<< "$summary"
-
-          read_only_client="$(sed -n '/private function getVerifiedPterodactylClientUserReadOnly/,/^    }/p' extensions/Servers/FragCityCS2/FragCityCS2.php)"
-          test -n "$read_only_client"
-          grep -Fq "requestApplicationApi('GET'" <<< "$read_only_client"
-          ! grep -Eq "requestApplicationApi\('(POST|DELETE)'" <<< "$read_only_client"
-          ! grep -Fq '$this->ensurePterodactylClientUser(' <<< "$read_only_client"
-          ! grep -Fq 'catch (Exception $e)' extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q 'identity_mapping_conflict' extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q 'assertPaymenterServiceOwnerMapping' extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q 'paymenter_service_owner_conflict' extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "DB::table('services')" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "'paymenter_missing_reviewed_at' => null" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "strtolower((string) (\$parts['scheme'] ?? '')) !== 'https'" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq 'mb_strlen($reason) < 8' extensions/Others/FragCityAPI/FragCityAPI.php
-          ! grep -Fq 'repairs legacy client usernames' extensions/Servers/FragCityCS2/FragCityCS2.php
-
-          grep -Fq "function runFragCityMigrations" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq 'if (!$request->isSecure())' extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "bridge_ip_allowlist_invalid" extensions/Others/FragCityAPI/FragCityAPI.php
-          context="$(sed -n '/private function getCustomerClientApiContext/,/^    }/p' extensions/Servers/FragCityCS2/FragCityCS2.php)"
-          grep -Fq 'getVerifiedPterodactylClientUserReadOnly(' <<< "$context"
-          ! grep -Fq 'ensurePterodactylClientUser(' <<< "$context"
           routes_count="$(grep -c "Route::post('/api/v1/fragcity/bridge/" extensions/Others/FragCityAPI/routes.php)"
           readme_count="$(grep -c -- '- `POST /api/v1/fragcity/bridge/' extensions/Others/FragCityAPI/README.md)"
-          test "$routes_count" -eq 16
+          test "$routes_count" -eq 5
           test "$readme_count" -eq "$routes_count"
           grep -Fq 'POST /api/v1/fragcity/bridge/servers/username' extensions/Others/FragCityAPI/README.md
-          ! grep -Fq '"desired_state" => "recreate_authorized"' docs/FRAGCITY-SERVICE-LIFECYCLE.md
-          grep -Fq 'Admin → Lifecycle' docs/FRAGCITY-SERVICE-LIFECYCLE.md

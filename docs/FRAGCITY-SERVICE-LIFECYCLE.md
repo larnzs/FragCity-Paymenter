@@ -1,3 +1,9 @@
+> **ARCHIVED — NOT ACTIVE IN THE CURRENT API RELEASE**
+>
+> This document describes the durable-identity and service-lifecycle bridge that was removed from the active FragCityAPI/FragCityCS2 code during the rollback to `63c742cbeb7fa343df5ddc210abe086421f8e258`. Keep it for historical reference only. Do not execute its lifecycle/admin API procedures or assume those endpoints are registered in the current release.
+
+---
+
 # FragCity Customer Identity & Service Lifecycle
 
 This document describes the FragCity-owned lifecycle layer for Paymenter 1.5.9 and Pterodactyl. It is implemented only in the custom `FragCityAPI` and `FragCityCS2` extensions. Paymenter Core, the official Pterodactyl extension, and Pterodactyl Core remain unmodified.
