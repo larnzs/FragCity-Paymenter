@@ -1111,7 +1111,10 @@ class FragCityCS2 extends PterodactylExtension
                     ->exists();
                 $mappingOwner = DB::table('fragcity_service_servers')
                     ->where('pterodactyl_user_id', $clientUserId)
-                    ->where('customer_uuid', '!=', $customerUuid)
+                    ->where(function ($query) use ($customerUuid): void {
+                        $query->whereNull('customer_uuid')
+                            ->orWhere('customer_uuid', '!=', $customerUuid);
+                    })
                     ->exists();
                 if ($identityOwner || $mappingOwner) {
                     throw new RuntimeException('admin_lifecycle_identity_conflict');
@@ -1151,6 +1154,13 @@ class FragCityCS2 extends PterodactylExtension
                     $currentExternalId
                 ) === 1;
                 if ($isUuidExternalId && !hash_equals($customerUuid, $currentExternalId)) {
+                    throw new RuntimeException('admin_lifecycle_identity_conflict');
+                }
+                if (
+                    $currentExternalId !== ''
+                    && !$isUuidExternalId
+                    && !preg_match('/^[0-9]{1,20}$/D', $currentExternalId)
+                ) {
                     throw new RuntimeException('admin_lifecycle_identity_conflict');
                 }
 

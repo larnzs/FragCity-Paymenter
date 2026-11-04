@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.10.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.11.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -20,6 +20,7 @@ Provides a narrow private server-to-server bridge for FragCity account synchroni
 - `POST /api/v1/fragcity/bridge/admin/lifecycle/authorize-recreation`
 - `POST /api/v1/fragcity/bridge/admin/lifecycle/revoke-recreation`
 - `POST /api/v1/fragcity/bridge/admin/lifecycle/acknowledge-paymenter-missing`
+- `POST /api/v1/fragcity/bridge/admin/lifecycle/verify-client-identity`
 
 All bridge routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are server-to-server endpoints; the browser must never call them directly.
 
@@ -106,6 +107,8 @@ Only an authoritative Pterodactyl 404 is treated as missing. Network errors, tim
 
 A directly deleted Paymenter service row is marked `paymenter_missing` for admin review only. This does not imply permission to delete an external Pterodactyl Server. The dashboard intentionally has no remote-delete control.
 
+The `verify-client-identity` endpoint provides the only administrator-assisted recovery for a missing or mismatched Client mapping. It requires an existing Client ID, exact Paymenter-email equality, a reasoned admin approval, and changes only the Client's `external_id` from an empty or numeric legacy value to the durable customer UUID. It rejects a different UUID, arbitrary non-numeric external ID, a live previously mapped Client ID, or a Client already mapped to another FragCity customer. Server ownership is rechecked separately by Lifecycle reconciliation.
+
 The administrator can acknowledge that review with a mandatory reason and the fixed decision `preserve_external`. This records the reviewer, timestamp, reason and a permanent audit event; it does not call Pterodactyl, delete a Server or Client, or authorize recreation. Acknowledgement is one-shot and cannot be silently overwritten.
 
 ## Installation
@@ -124,7 +127,7 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.10.0; its `upgraded()` hook runs pending additive migrations, including the lifecycle reconciliation, recovery-claim and Paymenter-missing review fields. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
+Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.11.0; its `upgraded()` hook runs pending additive migrations, including the lifecycle reconciliation, recovery-claim and Paymenter-missing review fields. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
 
 ## Security notes
 

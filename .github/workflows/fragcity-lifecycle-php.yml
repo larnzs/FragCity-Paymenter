@@ -54,14 +54,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "version: '1.10.0'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -q "version: '1.11.0'" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -q "function reconcileCustomerLifecycle" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "version: '1.7.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "function claimRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "function releaseRecreationAuthorizationClaim" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "function consumeRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
           ! grep -q "\$legacyPaymenterLink" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "adminLifecycleRevokeRecreation" extensions/Others/FragCityAPI/routes.php
           grep -q "adminLifecycleAcknowledgePaymenterMissing" extensions/Others/FragCityAPI/routes.php
+          grep -q "adminLifecycleVerifyClientIdentity" extensions/Others/FragCityAPI/routes.php
+          grep -q "adminVerifyPterodactylClientIdentity" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "PATCH" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "admin_pterodactyl_client_identity_verified" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "paymenter_missing_reviewed_at" extensions/Others/FragCityAPI/database/migrations/2026_11_04_000005_add_paymenter_missing_review_fields.php
           grep -q "admin_paymenter_missing_reviewed" extensions/Others/FragCityAPI/FragCityAPI.php
 
