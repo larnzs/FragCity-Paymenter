@@ -529,6 +529,7 @@ class FragCityCS2 extends PterodactylExtension
         $identifier = trim((string) ($server['identifier'] ?? ''));
         $previousLifecycleState = (string) ($existing->lifecycle_state ?? '');
         $previousDesiredState = (string) ($existing->desired_state ?? '');
+        $previousObservedState = (string) ($existing->observed_state ?? '');
 
         $values = [
             'paymenter_user_id' => (int) $service->user_id,
@@ -568,7 +569,8 @@ class FragCityCS2 extends PterodactylExtension
         }
 
         $stateChanged = $previousLifecycleState !== $lifecycleState
-            || $previousDesiredState !== $desiredState;
+            || $previousDesiredState !== $desiredState
+            || $previousObservedState !== $observedState;
 
         if ($stateChanged && Schema::hasTable('fragcity_service_lifecycle_events')) {
             DB::table('fragcity_service_lifecycle_events')->insert([

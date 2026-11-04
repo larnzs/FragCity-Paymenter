@@ -163,7 +163,7 @@ class FragCityAPI extends Extension
 
         $mappings = DB::table('fragcity_service_servers')
             ->whereNull('deleted_at')
-            ->whereNotIn('lifecycle_state', ['deleted', 'paymenter_missing'])
+            ->whereNotIn('lifecycle_state', ['deleted', 'paymenter_missing', 'missing_external'])
             ->where(function ($query): void {
                 $query->whereNull('next_reconcile_at')
                     ->orWhere('next_reconcile_at', '<=', now());
@@ -630,7 +630,9 @@ class FragCityAPI extends Extension
             throw new RuntimeException('customer_identity_storage_not_ready');
         }
 
-        return DB::transaction(function () use ($user, $steamId): string {
+        return Cache::lock('fragcity:customer-identity:' . hash('sha256', $steamId), 120)
+            ->block(20, function () use ($user, $steamId): string {
+                return DB::transaction(function () use ($user, $steamId): string {
             $identity = DB::table('fragcity_customer_identities')
                 ->where('steamid64', $steamId)
                 ->lockForUpdate()
@@ -697,8 +699,9 @@ class FragCityAPI extends Extension
                 ['name' => 'FragCity Customer UUID', 'value' => $customerUuid]
             );
 
-            return $customerUuid;
-        }, 3);
+                    return $customerUuid;
+                }, 3);
+            });
     }
 
     /**
