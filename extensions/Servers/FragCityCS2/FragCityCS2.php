@@ -906,75 +906,75 @@ class FragCityCS2 extends PterodactylExtension
             $lastError
         ): void {
             $existing = DB::table('fragcity_service_servers')
-            ->where('paymenter_service_id', (int) $service->id)
-            ->first();
+                ->where('paymenter_service_id', (int) $service->id)
+                ->first();
 
-        $identity = DB::table('fragcity_customer_identities')
-            ->where('paymenter_user_id', (int) $service->user_id)
-            ->first();
+            $identity = DB::table('fragcity_customer_identities')
+                ->where('paymenter_user_id', (int) $service->user_id)
+                ->first();
 
-        $serverId = (int) ($server['id'] ?? 0);
-        $identifier = trim((string) ($server['identifier'] ?? ''));
-        $previousLifecycleState = (string) ($existing->lifecycle_state ?? '');
-        $previousDesiredState = (string) ($existing->desired_state ?? '');
-        $previousObservedState = (string) ($existing->observed_state ?? '');
+            $serverId = (int) ($server['id'] ?? 0);
+            $identifier = trim((string) ($server['identifier'] ?? ''));
+            $previousLifecycleState = (string) ($existing->lifecycle_state ?? '');
+            $previousDesiredState = (string) ($existing->desired_state ?? '');
+            $previousObservedState = (string) ($existing->observed_state ?? '');
 
-        $values = [
-            'paymenter_user_id' => (int) $service->user_id,
-            'customer_uuid' => $identity->customer_uuid ?? ($existing->customer_uuid ?? null),
-            'pterodactyl_user_id' => $pterodactylUserId > 0
-                ? $pterodactylUserId
-                : ($existing->pterodactyl_user_id ?? null),
-            'pterodactyl_server_id' => $serverId > 0
-                ? $serverId
-                : ($existing->pterodactyl_server_id ?? null),
-            'server_identifier' => $identifier !== ''
-                ? $identifier
-                : ($existing->server_identifier ?? null),
-            'desired_state' => $desiredState,
-            'observed_state' => $observedState,
-            'lifecycle_state' => $lifecycleState,
-            'last_seen_at' => $server !== null ? now() : ($existing->last_seen_at ?? null),
-            'next_reconcile_at' => in_array($lifecycleState, ['deleted', 'missing_external'], true)
-                ? null
-                : now()->addMinutes(5),
-            'deleted_at' => $lifecycleState === 'deleted'
-                ? ($existing->deleted_at ?? now())
-                : null,
-            'last_error' => $lastError,
-            'updated_at' => now(),
-        ];
+            $values = [
+                'paymenter_user_id' => (int) $service->user_id,
+                'customer_uuid' => $identity->customer_uuid ?? ($existing->customer_uuid ?? null),
+                'pterodactyl_user_id' => $pterodactylUserId > 0
+                    ? $pterodactylUserId
+                    : ($existing->pterodactyl_user_id ?? null),
+                'pterodactyl_server_id' => $serverId > 0
+                    ? $serverId
+                    : ($existing->pterodactyl_server_id ?? null),
+                'server_identifier' => $identifier !== ''
+                    ? $identifier
+                    : ($existing->server_identifier ?? null),
+                'desired_state' => $desiredState,
+                'observed_state' => $observedState,
+                'lifecycle_state' => $lifecycleState,
+                'last_seen_at' => $server !== null ? now() : ($existing->last_seen_at ?? null),
+                'next_reconcile_at' => in_array($lifecycleState, ['deleted', 'missing_external'], true)
+                    ? null
+                    : now()->addMinutes(5),
+                'deleted_at' => $lifecycleState === 'deleted'
+                    ? ($existing->deleted_at ?? now())
+                    : null,
+                'last_error' => $lastError,
+                'updated_at' => now(),
+            ];
 
-        if ($existing) {
-            DB::table('fragcity_service_servers')
-                ->where('id', (int) $existing->id)
-                ->update($values);
-        } else {
-            DB::table('fragcity_service_servers')->insert(array_merge(
-                ['paymenter_service_id' => (int) $service->id, 'created_at' => now()],
-                $values
-            ));
-        }
+            if ($existing) {
+                DB::table('fragcity_service_servers')
+                    ->where('id', (int) $existing->id)
+                    ->update($values);
+            } else {
+                DB::table('fragcity_service_servers')->insert(array_merge(
+                    ['paymenter_service_id' => (int) $service->id, 'created_at' => now()],
+                    $values
+                ));
+            }
 
-        $stateChanged = $previousLifecycleState !== $lifecycleState
-            || $previousDesiredState !== $desiredState
-            || $previousObservedState !== $observedState;
+            $stateChanged = $previousLifecycleState !== $lifecycleState
+                || $previousDesiredState !== $desiredState
+                || $previousObservedState !== $observedState;
 
-        if ($stateChanged && Schema::hasTable('fragcity_service_lifecycle_events')) {
-            DB::table('fragcity_service_lifecycle_events')->insert([
-                'paymenter_service_id' => (int) $service->id,
-                'customer_uuid' => $values['customer_uuid'],
-                'event_key' => 'service_state_changed',
-                'from_state' => $previousLifecycleState !== '' ? $previousLifecycleState : null,
-                'to_state' => $lifecycleState,
-                'details' => json_encode([
-                    'desired_state' => $desiredState,
-                    'observed_state' => $observedState,
-                    'pterodactyl_server_id' => $values['pterodactyl_server_id'],
-                    'last_error' => $lastError,
-                ], JSON_THROW_ON_ERROR),
-                'occurred_at' => now(),
-            ]);
+            if ($stateChanged) {
+                DB::table('fragcity_service_lifecycle_events')->insert([
+                    'paymenter_service_id' => (int) $service->id,
+                    'customer_uuid' => $values['customer_uuid'],
+                    'event_key' => 'service_state_changed',
+                    'from_state' => $previousLifecycleState !== '' ? $previousLifecycleState : null,
+                    'to_state' => $lifecycleState,
+                    'details' => json_encode([
+                        'desired_state' => $desiredState,
+                        'observed_state' => $observedState,
+                        'pterodactyl_server_id' => $values['pterodactyl_server_id'],
+                        'last_error' => $lastError,
+                    ], JSON_THROW_ON_ERROR),
+                    'occurred_at' => now(),
+                ]);
             }
         }, 3);
     }
