@@ -135,12 +135,9 @@ class FragCityCS2 extends PterodactylExtension
             // Paymenter job lost its response. Never create a second Client.
             $existing = $this->findPterodactylServerByExternalId((int) $service->id);
             if ($existing !== null) {
-                $clientUser = $this->ensurePterodactylClientUser($service, false);
-                $clientUserId = (int) ($clientUser['id'] ?? 0);
-
-                if ($clientUserId < 1 || (int) ($existing['user'] ?? 0) !== $clientUserId) {
-                    throw new RuntimeException('The existing Pterodactyl server is linked to a different client account.');
-                }
+                // A retry may recover an already-created Server, but that is
+                // not permission to rewrite the associated Client profile.
+                $clientUserId = $this->assertPterodactylServerOwner($service, $existing);
 
                 $existingObservedState = !empty($existing['suspended']) ? 'suspended' : 'active';
                 $this->storeServiceLifecycle(
@@ -505,15 +502,12 @@ class FragCityCS2 extends PterodactylExtension
         }
 
         $explicitlyMapped = $knownPterodactylUserId === $pterodactylUserId;
-        $legacyPaymenterLink = $existingExternalId === (string) $paymenterUserId;
-
-        if (
-            $existingExternalId !== $externalId
-            && !$explicitlyMapped
-            && !$legacyPaymenterLink
-        ) {
+        // A legacy numeric external_id is never proof of identity by itself.
+        // Only an explicit durable Pterodactyl user mapping can authorize the
+        // transition from a previous external_id to the customer UUID.
+        if ($existingExternalId !== $externalId && !$explicitlyMapped) {
             throw new RuntimeException(
-                'The Pterodactyl email is already linked to a different external account. Admin verification is required.'
+                'The Pterodactyl email is linked to an account without an approved FragCity identity mapping. Admin verification is required; legacy numeric external IDs are not migrated automatically.'
             );
         }
 
@@ -988,13 +982,48 @@ class FragCityCS2 extends PterodactylExtension
      */
     private function assertPterodactylServerOwner(Service $service, array $server): int
     {
-        $clientUser = $this->ensurePterodactylClientUser($service, false);
-        $expectedUserId = (int) ($clientUser['id'] ?? 0);
+        $identity = DB::table('fragcity_customer_identities')
+            ->where('paymenter_user_id', (int) $service->user_id)
+            ->first();
+
+        $serviceMapping = DB::table('fragcity_service_servers')
+            ->where('paymenter_service_id', (int) $service->id)
+            ->first();
+
+        $customerUuid = trim((string) ($identity->customer_uuid ?? $serviceMapping->customer_uuid ?? ''));
+        $expectedUserId = (int) ($identity->pterodactyl_user_id ?? $serviceMapping->pterodactyl_user_id ?? 0);
+
+        if (
+            !preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $customerUuid)
+            || $expectedUserId < 1
+        ) {
+            throw new RuntimeException(
+                'FragCity has no approved Pterodactyl Client identity mapping for this service; administrator review is required.'
+            );
+        }
+
+        $clientResponse = $this->requestApplicationApi(
+            'GET',
+            '/api/application/users/' . $expectedUserId
+        );
+
+        if ($clientResponse === null) {
+            throw new RuntimeException(
+                'The mapped Pterodactyl Client account is missing; server lifecycle mutation is blocked pending administrator review.'
+            );
+        }
+
+        $clientAttributes = $clientResponse['attributes'] ?? null;
         $actualUserId = (int) ($server['user'] ?? 0);
 
-        if ($expectedUserId < 1 || $actualUserId !== $expectedUserId) {
+        if (
+            !is_array($clientAttributes)
+            || (int) ($clientAttributes['id'] ?? 0) !== $expectedUserId
+            || (string) ($clientAttributes['external_id'] ?? '') !== $customerUuid
+            || $actualUserId !== $expectedUserId
+        ) {
             throw new RuntimeException(
-                'Pterodactyl server ownership does not match the verified FragCity customer identity; lifecycle operation refused.'
+                'Pterodactyl Client UUID or Server ownership does not match the approved FragCity identity; lifecycle operation refused.'
             );
         }
 
