@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.3.0',
+    version: '1.4.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -433,12 +433,12 @@ class FragCityCS2 extends PterodactylExtension
                 return [];
             }
 
-            $attributes = $relationship['attributes'] ?? [];
+            $attributes = $relationship['attributes'] ?? null;
             if (is_array($attributes)) {
                 return $attributes;
             }
 
-            $dataAttributes = $relationship['data']['attributes'] ?? [];
+            $dataAttributes = $relationship['data']['attributes'] ?? null;
             return is_array($dataAttributes) ? $dataAttributes : [];
         };
 
