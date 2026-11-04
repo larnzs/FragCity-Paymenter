@@ -670,7 +670,6 @@ class FragCityCS2 extends PterodactylExtension
     public function suspendServer(Service $service, $settings, $properties): bool
     {
         return $this->withServiceLifecycleLock($service, function () use ($service): bool {
-            $this->storeServiceLifecycle($service, 0, null, 'suspended', 'unknown', 'suspending');
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
 
             if ($server === null) {
@@ -687,6 +686,7 @@ class FragCityCS2 extends PterodactylExtension
             }
 
             $expectedClientUserId = $this->assertPterodactylServerOwner($service, $server);
+            $this->storeServiceLifecycle($service, $expectedClientUserId, $server, 'suspended', 'suspended', 'suspending');
 
             if (empty($server['suspended'])) {
                 $result = $this->requestApplicationApi(
@@ -721,7 +721,6 @@ class FragCityCS2 extends PterodactylExtension
     public function unsuspendServer(Service $service, $settings, $properties): bool
     {
         return $this->withServiceLifecycleLock($service, function () use ($service): bool {
-            $this->storeServiceLifecycle($service, 0, null, 'active', 'unknown', 'unsuspending');
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
 
             if ($server === null) {
@@ -738,6 +737,7 @@ class FragCityCS2 extends PterodactylExtension
             }
 
             $expectedClientUserId = $this->assertPterodactylServerOwner($service, $server);
+            $this->storeServiceLifecycle($service, $expectedClientUserId, $server, 'active', 'suspended', 'unsuspending');
 
             if (!empty($server['suspended'])) {
                 $result = $this->requestApplicationApi(
