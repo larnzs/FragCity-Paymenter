@@ -68,6 +68,7 @@ jobs:
           grep -q "PATCH" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "admin_pterodactyl_client_identity_verified" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "paymenter_missing_reviewed_at" extensions/Others/FragCityAPI/database/migrations/2026_11_04_000005_add_paymenter_missing_review_fields.php
+          grep -q "fragcity_srv_claim_exp_idx" extensions/Others/FragCityAPI/database/migrations/2026_11_04_000004_add_recreation_authorization_claim_columns.php
           grep -q "admin_paymenter_missing_reviewed" extensions/Others/FragCityAPI/FragCityAPI.php
 
           summary="$(sed -n '/private function getCustomerPanelSummaryLocked/,/^    }/p' extensions/Servers/FragCityCS2/FragCityCS2.php)"
