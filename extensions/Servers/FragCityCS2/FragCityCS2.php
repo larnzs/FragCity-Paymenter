@@ -961,13 +961,37 @@ class FragCityCS2 extends PterodactylExtension
                     continue;
                 }
 
+                $isFile = (bool) ($attributes['is_file'] ?? false);
+                $isSymlink = (bool) ($attributes['is_symlink'] ?? false);
+                $mimetype = strtolower((string) ($attributes['mimetype'] ?? ''));
+                $size = max(0, (int) ($attributes['size'] ?? 0));
+                $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+                $editableExtensions = [
+                    'cfg', 'conf', 'ini', 'json', 'js', 'mjs', 'cjs', 'ts',
+                    'css', 'scss', 'html', 'htm', 'xml', 'yaml', 'yml',
+                    'toml', 'txt', 'log', 'md', 'php', 'sh', 'bash', 'sql',
+                    'env', 'vdf', 'kv', 'res', 'properties', 'cfg', 'gitignore',
+                    'htaccess', 'bat', 'ps1',
+                ];
+                $isKnownTextFile = str_starts_with($mimetype, 'text/')
+                    || in_array($mimetype, [
+                        'application/json',
+                        'application/javascript',
+                        'application/xml',
+                        'application/x-yaml',
+                        'application/toml',
+                        'application/x-httpd-php',
+                    ], true)
+                    || in_array($extension, $editableExtensions, true)
+                    || in_array(strtolower($name), ['.env', '.htaccess', '.gitignore', 'autoexec'], true);
+
                 $items[] = [
                     'name' => $name,
-                    'is_file' => (bool) ($attributes['is_file'] ?? false),
-                    'is_symlink' => (bool) ($attributes['is_symlink'] ?? false),
-                    'is_editable' => (bool) ($attributes['is_editable'] ?? false),
-                    'mimetype' => (string) ($attributes['mimetype'] ?? ''),
-                    'size' => max(0, (int) ($attributes['size'] ?? 0)),
+                    'is_file' => $isFile,
+                    'is_symlink' => $isSymlink,
+                    'is_editable' => $isFile && !$isSymlink && $size <= 262144 && $isKnownTextFile,
+                    'mimetype' => $mimetype,
+                    'size' => $size,
                     'mode' => (string) ($attributes['mode'] ?? ''),
                     'modified_at' => (string) ($attributes['modified_at'] ?? ''),
                 ];
