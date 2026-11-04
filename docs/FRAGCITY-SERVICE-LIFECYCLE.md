@@ -66,7 +66,7 @@ Only a confirmed 404 marks a Pterodactyl resource as missing. API errors and fai
 
 ## Reconciliation
 
-The extension registers a Laravel scheduled callback named `fragcity-service-lifecycle-reconcile`. It runs every five minutes, processes at most 40 due mappings, and uses `next_reconcile_at` to spread larger installations across executions.
+The extension registers a Laravel scheduled callback named `fragcity-service-lifecycle-reconcile`. It runs every five minutes, processes at most 10 due mappings, and uses `next_reconcile_at` to spread larger installations across executions.
 
 For each due mapping:
 

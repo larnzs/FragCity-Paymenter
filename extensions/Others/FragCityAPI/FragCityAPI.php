@@ -73,7 +73,7 @@ class FragCityAPI extends Extension
         })
             ->everyFiveMinutes()
             ->name('fragcity-service-lifecycle-reconcile')
-            ->withoutOverlapping(4);
+            ->withoutOverlapping(15);
 
         // Keep Paymenter Core untouched. The extension owns the cleanup
         // policy and blocks the Eloquent delete if the corresponding remote
@@ -169,7 +169,7 @@ class FragCityAPI extends Extension
                     ->orWhere('next_reconcile_at', '<=', now());
             })
             ->orderBy('id')
-            ->limit(40)
+            ->limit(10)
             ->get();
 
         foreach ($mappings as $mapping) {
