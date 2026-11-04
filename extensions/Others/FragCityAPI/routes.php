@@ -68,3 +68,8 @@ Route::post('/api/v1/fragcity/bridge/admin/lifecycle/authorize-recreation', [Fra
     ->middleware('throttle:5,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.admin.lifecycle.authorize-recreation');
+
+Route::post('/api/v1/fragcity/bridge/admin/lifecycle/revoke-recreation', [FragCityAPI::class, 'adminLifecycleRevokeRecreation'])
+    ->middleware('throttle:5,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.admin.lifecycle.revoke-recreation');
