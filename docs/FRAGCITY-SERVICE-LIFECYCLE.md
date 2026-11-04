@@ -67,7 +67,7 @@ Only a confirmed 404 for a previously verified Server (a stored Pterodactyl Serv
 
 ## Reconciliation
 
-The extension registers a Laravel scheduled callback named `fragcity-service-lifecycle-reconcile`. It runs every five minutes, processes at most 10 due mappings, and uses `next_reconcile_at` to spread larger installations across executions.
+The extension registers a Laravel scheduled callback named `fragcity-service-lifecycle-reconcile`. It runs every five minutes, processes at most 10 due mappings, and uses `next_reconcile_at` to spread larger installations across executions. The host must also run Laravel's standard `php artisan schedule:run` every minute; `schedule:list` proves registration only, not that the host scheduler is executing.
 
 For each due mapping:
 
@@ -78,27 +78,15 @@ For each due mapping:
 
 The website's My Servers request also verifies its own services on demand, so the customer sees current state even between scheduled runs.
 
-A service in `missing_external` is deliberately excluded from automatic retries. If an administrator decides that the same Paymenter service should receive a replacement Server, first review data loss/backup implications and then authorize that exact service:
+A service in `missing_external` is deliberately excluded from automatic retries. If an administrator decides that the same Paymenter service should receive a replacement Server, review backups/data-loss implications and use the FragCity Website **Admin → Lifecycle** dashboard:
 
-```bash
-cd /var/www/paymenter
+1. Open the exact service record and confirm the customer UUID, Paymenter service ID, Pterodactyl Client ID and previous Server mapping.
+2. Confirm the service is still active or suspended and the lifecycle state is `missing_external`.
+3. Submit **Authorize recreation** with a meaningful reason. The Bridge creates a unique, one-shot authorization ID and records the administrator, reason and timestamp.
+4. Retry only that exact Paymenter service's CreateJob. The extension atomically claims the grant with a two-hour lease, verifies the Client identity, creates the replacement Server and consumes the grant only after verifying the new Server.
+5. If the retry should not proceed, revoke the unused grant from the same dashboard. An active claim cannot be revoked; wait for the lease to expire or for the running job to release it.
 
-php artisan tinker --execute='
-$serviceId = 32; // Replace with the exact reviewed Paymenter service ID.
-$updated = \Illuminate\Support\Facades\DB::table("fragcity_service_servers")
-    ->where("paymenter_service_id", $serviceId)
-    ->where("lifecycle_state", "missing_external")
-    ->whereNull("deleted_at")
-    ->update([
-        "desired_state" => "recreate_authorized",
-        "updated_at" => now(),
-    ]);
-
-dump(["authorized_rows" => $updated]);
-'
-```
-
-Only when `authorized_rows` is `1` should the administrator retry that service's CreateJob. The extension records the approval in `fragcity_service_lifecycle_events`. A service already marked `deleted` cannot be reused; create a new Paymenter service instead.
+Never authorize recreation by changing `desired_state` or editing lifecycle tables directly. A service already marked `deleted` cannot be reused; create a new Paymenter service instead.
 
 The standard Laravel scheduler must be active on the host. Verify with:
 
@@ -112,8 +100,8 @@ The host must run Laravel's standard `php artisan schedule:run` every minute. If
 ## Deployment and migration
 
 1. Back up the Paymenter database and Pterodactyl database.
-2. Deploy the `larnzs/FragCity-Paymenter` `main` branch, including both extensions and the new migration.
-3. Upgrade the FragCityAPI extension from the Paymenter extension manager. Its `upgraded()` hook runs the extension migrations. Keep FragCityAPI enabled so its model listeners and scheduler are registered.
+2. Deploy the `larnzs/FragCity-Paymenter` `main` branch, including both extensions and all pending additive FragCityAPI migrations.
+3. Upgrade the FragCityAPI extension from the Paymenter extension manager. Its `upgraded()` hook runs the extension migrations and verifies that every migration file is recorded; an incomplete migration now fails the extension-upgrade command instead of silently reporting success. Keep FragCityAPI enabled so its model listeners and scheduler are registered.
 4. Verify the new tables:
 
 ```bash
@@ -130,50 +118,9 @@ dump([
 
 5. Deploy the website repository `main` branch. The website's account-sync client expects the bridge to return `customer_uuid`; deploy the Paymenter API first.
 6. Have each customer complete the normal authenticated website account-sync flow. The bridge creates/reuses the durable UUID.
-7. Review legacy Pterodactyl Client accounts. An account whose `external_id` exactly equals the customer's current Paymenter user ID can be upgraded using the known legacy mapping. A blank or different external ID is not claimed by email alone. An administrator must verify the Pterodactyl Client and explicitly set its ID in `fragcity_customer_identities.pterodactyl_user_id`. On the next verified My Servers read or provisioning attempt, the extension updates that verified Client's `external_id` to the durable UUID.
+7. Review legacy Pterodactyl Client accounts through the FragCity Website **Admin → Lifecycle** dashboard. For a service that Reconciliation marks `review_required` with `missing_client`, `client_identity_conflict` or `identity_mapping_conflict`, select the existing Pterodactyl Client ID and use **Verify Client Identity** with a mandatory reason. The Bridge verifies that the Client exists, its email exactly matches the Paymenter customer, its UUID is not assigned to another customer, and no live prior Client mapping conflicts. It changes only an empty or legacy numeric Client `external_id` to the durable customer UUID, updates the identity/service mappings and writes an audit event. Then run Reconcile again to verify the exact Server owner and state.
 
-For a manually verified legacy mapping, use a guarded update on the Paymenter database (replace IDs with the verified values):
-
-```bash
-cd /var/www/paymenter
-
-php artisan tinker --execute='
-$paymenterUserId = 10;
-$pterodactylUserId = 9;
-
-$identity = \\Illuminate\\Support\\Facades\\DB::table("fragcity_customer_identities")
-    ->where("paymenter_user_id", $paymenterUserId)
-    ->first();
-
-if (!$identity) {
-    throw new \\RuntimeException("Customer identity has not been created yet. Sign in to FragCity and open My Servers first.");
-}
-
-$alreadyOwned = \\Illuminate\\Support\\Facades\\DB::table("fragcity_customer_identities")
-    ->where("pterodactyl_user_id", $pterodactylUserId)
-    ->where("customer_uuid", "<>", $identity->customer_uuid)
-    ->exists();
-
-if ($alreadyOwned) {
-    throw new \\RuntimeException("Pterodactyl Client is already mapped to a different FragCity customer.");
-}
-
-$updated = \\Illuminate\\Support\\Facades\\DB::table("fragcity_customer_identities")
-    ->where("id", $identity->id)
-    ->where(function ($query) use ($pterodactylUserId): void {
-        $query->whereNull("pterodactyl_user_id")
-            ->orWhere("pterodactyl_user_id", $pterodactylUserId);
-    })
-    ->update([
-        "pterodactyl_user_id" => $pterodactylUserId,
-        "updated_at" => now(),
-    ]);
-
-dump(["updated_rows" => $updated, "customer_uuid" => $identity->customer_uuid]);
-'
-```
-
-Only run this after confirming in Pterodactyl that the selected Client account belongs to that exact customer. A subsequent verified bridge request changes that Client's `external_id` from the legacy Paymenter ID to the stored UUID.
+Do not directly update `fragcity_customer_identities` or the Pterodactyl `users.external_id` column with SQL. A different UUID, non-numeric external ID, mismatched email or conflicting live Client is a hard conflict and requires a separate ownership investigation. My Servers and Console/File Manager reads remain read-only and never perform legacy identity repair.
 
 8. Retry only the specific failed service job after its Client mapping is verified.
 
