@@ -3,6 +3,7 @@
 namespace Paymenter\Extensions\Servers\FragCityCS2;
 
 use App\Attributes\ExtensionMeta;
+use App\Helpers\ExtensionHelper;
 use App\Models\Product;
 use App\Models\Service;
 use Illuminate\Support\Facades\Cache;
@@ -318,6 +319,29 @@ class FragCityCS2 extends PterodactylExtension
         $identity = DB::table('fragcity_customer_identities')
             ->where('paymenter_user_id', $paymenterUserId)
             ->first();
+
+        if (!$identity) {
+            $steamId = trim((string) $orderUser->properties()
+                ->where('key', 'fragcity_steamid64')
+                ->value('value'));
+
+            if (!preg_match('/^[0-9]{17}$/D', $steamId)) {
+                throw new RuntimeException('FragCity customer identity is not registered and no verified SteamID64 is available.');
+            }
+
+            // The Bridge remains the single owner of identity generation and
+            // persistence; the CS2 extension never invents its own UUID.
+            $identityBridge = ExtensionHelper::getExtension('other', 'FragCityAPI');
+            if (!method_exists($identityBridge, 'ensureCustomerIdentity')) {
+                throw new RuntimeException('FragCityAPI identity bridge is unavailable.');
+            }
+
+            $identityBridge->ensureCustomerIdentity($orderUser, $steamId);
+
+            $identity = DB::table('fragcity_customer_identities')
+                ->where('paymenter_user_id', $paymenterUserId)
+                ->first();
+        }
 
         $customerUuid = trim((string) ($identity->customer_uuid ?? ''));
         $knownPterodactylUserId = (int) ($identity->pterodactyl_user_id ?? 0);

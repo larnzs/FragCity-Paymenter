@@ -645,6 +645,28 @@ class FragCityAPI extends Extension
      * platform's auto-increment user IDs. The registry intentionally survives
      * Paymenter user deletion and re-registration.
      */
+    /**
+     * Public bridge entry point used by FragCityCS2 lifecycle hooks to lazily
+     * migrate legacy Paymenter accounts before they are mutated in Pterodactyl.
+     * The SteamID must match the value already stored on this Paymenter user.
+     */
+    public function ensureCustomerIdentity(User $user, string $steamId): string
+    {
+        $steamId = trim($steamId);
+        $storedSteamId = trim((string) $user->properties()
+            ->where('key', 'fragcity_steamid64')
+            ->value('value'));
+
+        if (
+            !preg_match('/^[0-9]{17}$/D', $steamId)
+            || !hash_equals($storedSteamId, $steamId)
+        ) {
+            throw new RuntimeException('paymenter_user_identity_conflict');
+        }
+
+        return $this->syncCustomerIdentity($user, $steamId);
+    }
+
     private function syncCustomerIdentity(User $user, string $steamId): string
     {
         if (!Schema::hasTable('fragcity_customer_identities')) {
