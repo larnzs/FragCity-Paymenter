@@ -284,6 +284,30 @@ class FragCityCS2 extends PterodactylExtension
             throw new RuntimeException('FragCity CS2 provisioning requires a Paymenter user.');
         }
 
+        $steamId = trim((string) $orderUser->properties()
+            ->where('key', 'fragcity_steamid64')
+            ->value('value'));
+        $lockIdentity = preg_match('/^[0-9]{17}$/D', $steamId)
+            ? $steamId
+            : 'paymenter-user:' . (int) $orderUser->id;
+
+        // One customer-level lock serializes Pterodactyl Client resolution
+        // across different Paymenter services owned by the same customer.
+        return Cache::lock(
+            'fragcity:pterodactyl-client:' . hash('sha256', $lockIdentity),
+            120
+        )->block(20, function () use ($service, $allowCreate): array {
+            return $this->resolvePterodactylClientUser($service, $allowCreate);
+        });
+    }
+
+    private function resolvePterodactylClientUser(Service $service, bool $allowCreate): array
+    {
+        $orderUser = $service->user;
+        if (!$orderUser) {
+            throw new RuntimeException('FragCity CS2 provisioning requires a Paymenter user.');
+        }
+
         $paymenterUserId = (int) $orderUser->id;
         $email = mb_strtolower(trim((string) $orderUser->email));
         $firstName = trim((string) $orderUser->first_name);
