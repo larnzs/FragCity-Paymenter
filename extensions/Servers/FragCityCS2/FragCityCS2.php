@@ -127,6 +127,10 @@ class FragCityCS2 extends PterodactylExtension
                 throw new RuntimeException('This Paymenter service is already deleted in the FragCity lifecycle registry; create a new service instead.');
             }
 
+            $desiredState = (string) $service->status === Service::STATUS_SUSPENDED
+                ? 'suspended'
+                : 'active';
+
             // Retry-safe recovery for a Server that exists but whose previous
             // Paymenter job lost its response. Never create a second Client.
             $existing = $this->findPterodactylServerByExternalId((int) $service->id);
@@ -138,9 +142,6 @@ class FragCityCS2 extends PterodactylExtension
                     throw new RuntimeException('The existing Pterodactyl server is linked to a different client account.');
                 }
 
-                $desiredState = (string) $service->status === Service::STATUS_SUSPENDED
-                    ? 'suspended'
-                    : 'active';
                 $existingObservedState = !empty($existing['suspended']) ? 'suspended' : 'active';
                 $this->storeServiceLifecycle(
                     $service,
@@ -172,7 +173,7 @@ class FragCityCS2 extends PterodactylExtension
                     $service,
                     (int) ($mapping->pterodactyl_user_id ?? 0),
                     null,
-                    'active',
+                    $desiredState,
                     'missing',
                     'missing_external',
                     'Pterodactyl server is missing. Automatic recreation is blocked; admin approval is required.'
@@ -211,7 +212,7 @@ class FragCityCS2 extends PterodactylExtension
                     $service,
                     $clientUserId,
                     null,
-                    'active',
+                    $desiredState,
                     'unknown',
                     'provisioning'
                 );
@@ -233,7 +234,7 @@ class FragCityCS2 extends PterodactylExtension
                         'id' => $serverId,
                         'user' => $clientUserId,
                     ],
-                    'active',
+                    $desiredState,
                     'unknown',
                     'provisioning'
                 );
@@ -252,9 +253,6 @@ class FragCityCS2 extends PterodactylExtension
                     throw new RuntimeException('Pterodactyl server creation could not be verified against the Paymenter service.');
                 }
 
-                $desiredState = (string) $service->status === Service::STATUS_SUSPENDED
-                    ? 'suspended'
-                    : 'active';
                 $actualSuspended = (bool) ($attributes['suspended'] ?? false);
 
                 if ($desiredState === 'suspended' && !$actualSuspended) {
@@ -898,7 +896,16 @@ class FragCityCS2 extends PterodactylExtension
     ): void {
         $this->assertLifecycleStorageReady();
 
-        $existing = DB::table('fragcity_service_servers')
+        DB::transaction(function () use (
+            $service,
+            $pterodactylUserId,
+            $server,
+            $desiredState,
+            $observedState,
+            $lifecycleState,
+            $lastError
+        ): void {
+            $existing = DB::table('fragcity_service_servers')
             ->where('paymenter_service_id', (int) $service->id)
             ->first();
 
@@ -968,7 +975,8 @@ class FragCityCS2 extends PterodactylExtension
                 ], JSON_THROW_ON_ERROR),
                 'occurred_at' => now(),
             ]);
-        }
+            }
+        }, 3);
     }
 
     /**
