@@ -79,6 +79,8 @@ jobs:
           grep -q 'identity_mapping_conflict' extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q 'assertPaymenterServiceOwnerMapping' extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q 'paymenter_service_owner_conflict' extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "DB::table('services')" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "'paymenter_missing_reviewed_at' => null" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -Fq "strtolower((string) (\$parts['scheme'] ?? '')) !== 'https'" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq 'mb_strlen($reason) < 8' extensions/Others/FragCityAPI/FragCityAPI.php
           ! grep -Fq 'repairs legacy client usernames' extensions/Servers/FragCityCS2/FragCityCS2.php
