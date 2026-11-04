@@ -832,10 +832,16 @@ class FragCityAPI extends Extension
                 'client_api_key_must_belong_to_server_owner',
             ], true) ? $message : 'customer_console_unavailable';
 
+            $status = match ($safeError) {
+                'client_api_not_connected' => 409,
+                'client_api_permission_denied', 'client_api_key_must_belong_to_server_owner' => 403,
+                default => 502,
+            };
+
             return response()->json([
                 'success' => false,
                 'error' => $safeError,
-            ], $safeError === 'client_api_not_connected' ? 409 : 502);
+            ], $status);
         }
     }
 
@@ -912,10 +918,23 @@ class FragCityAPI extends Extension
                 'client_api_invalid_file_action',
             ], true) ? $message : 'customer_file_action_failed';
 
+            $status = match ($safeError) {
+                'client_api_not_connected' => 409,
+                'client_api_permission_denied', 'client_api_key_must_belong_to_server_owner' => 403,
+                'client_api_file_too_large_to_edit' => 413,
+                'client_api_file_not_editable',
+                'client_api_invalid_file_content',
+                'client_api_invalid_file_name',
+                'client_api_invalid_file_list',
+                'client_api_invalid_file_path',
+                'client_api_invalid_file_action' => 422,
+                default => 502,
+            };
+
             return response()->json([
                 'success' => false,
                 'error' => $safeError,
-            ], $safeError === 'client_api_not_connected' ? 409 : 502);
+            ], $status);
         }
     }
 
