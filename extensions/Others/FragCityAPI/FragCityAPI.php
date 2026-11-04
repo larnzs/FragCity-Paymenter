@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account synchronization bridge for FragCity.',
-    version: '1.3.0',
+    version: '1.4.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -75,7 +75,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.3.0',
+            'version' => '1.4.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -506,6 +506,136 @@ class FragCityAPI extends Extension
             return response()->json([
                 'success' => false,
                 'error' => 'panel_password_update_failed',
+            ], 502);
+        }
+    }
+
+    /**
+     * Update the customer's shared Pterodactyl client username.
+     * Ownership is checked through the signed SteamID link and service owner.
+     */
+    public function setPanelUsername(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        if (is_array($payload) && is_string($payload['username'] ?? null)) {
+            $payload['username'] = strtolower(trim($payload['username']));
+        }
+
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'service_id' => ['required', 'integer', 'min:1'],
+            'username' => [
+                'required',
+                'string',
+                'min:3',
+                'max:50',
+                'regex:/^[a-z0-9][a-z0-9_-]{1,48}[a-z0-9]$/',
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'validation_failed',
+                'fields' => $validator->errors()->keys(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $steamId = (string) $data['steamid64'];
+        $serviceId = (int) $data['service_id'];
+        $username = (string) $data['username'];
+
+        $rateLimitKey = 'fragcity_panel_username:' . hash('sha256', $steamId);
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'panel_username_rate_limited',
+            ], 429);
+        }
+        RateLimiter::hit($rateLimitKey, 900);
+
+        try {
+            $link = DB::table('fragcity_user_links')
+                ->where('steamid64', $steamId)
+                ->first();
+
+            if (!$link) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'service_not_found',
+                ], 404);
+            }
+
+            $user = User::query()->find((int) $link->user_id);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'linked_paymenter_user_missing',
+                ], 404);
+            }
+
+            $service = Service::query()
+                ->where('id', $serviceId)
+                ->where('user_id', (int) $user->id)
+                ->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue'])
+                ->first();
+
+            if (
+                !$service
+                || $service->status === Service::STATUS_CANCELLED
+                || $service->product?->server?->extension !== 'FragCityCS2'
+            ) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'service_not_found',
+                ], 404);
+            }
+
+            $result = ExtensionHelper::callService(
+                $service,
+                'setCustomerPanelUsername',
+                [$username]
+            );
+
+            RateLimiter::clear($rateLimitKey);
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'username_updated' => true,
+                    'username' => (string) ($result['username'] ?? $username),
+                ],
+            ]);
+        } catch (Throwable $e) {
+            if ($e->getMessage() === 'panel_username_already_in_use') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'panel_username_already_in_use',
+                ], 409);
+            }
+
+            if ($e->getMessage() === 'panel_username_invalid') {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'validation_failed',
+                ], 422);
+            }
+
+            Log::warning('FragCity Pterodactyl username update failed.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'service_id' => $serviceId,
+                'exception' => get_class($e),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'panel_username_update_failed',
             ], 502);
         }
     }
