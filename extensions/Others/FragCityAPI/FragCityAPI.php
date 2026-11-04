@@ -216,11 +216,43 @@ class FragCityAPI extends Extension
 
                 if ($link) {
                     $user = User::query()->lockForUpdate()->find($link->user_id);
-                    if (!$user) {
-                        throw new RuntimeException('linked_paymenter_user_missing');
-                    }
 
-                    if ($userByEmail && (int) $userByEmail->id !== (int) $user->id) {
+                    if (!$user) {
+                        // Retain the SteamID link after account deletion. The
+                        // same authenticated Steam identity may recreate or
+                        // securely reclaim its Paymenter account.
+                        if ($userByEmail) {
+                            $existingLink = DB::table('fragcity_user_links')
+                                ->where('user_id', $userByEmail->id)
+                                ->lockForUpdate()
+                                ->first();
+
+                            if ($existingLink && (string) $existingLink->steamid64 !== $steamId) {
+                                throw new RuntimeException('paymenter_user_already_linked_to_another_steam_account');
+                            }
+
+                            if (!Hash::check($password, (string) $userByEmail->password)) {
+                                throw new RuntimeException('email_already_in_use');
+                            }
+
+                            $user = $userByEmail;
+                        } else {
+                            $user = User::create([
+                                'first_name' => $firstName,
+                                'last_name' => $lastName !== '' ? $lastName : null,
+                                'email' => $email,
+                                'password' => $password,
+                            ]);
+                            $created = true;
+                        }
+
+                        DB::table('fragcity_user_links')
+                            ->where('steamid64', $steamId)
+                            ->update([
+                                'user_id' => (int) $user->id,
+                                'updated_at' => now(),
+                            ]);
+                    } elseif ($userByEmail && (int) $userByEmail->id !== (int) $user->id) {
                         throw new RuntimeException('email_already_linked_to_another_paymenter_user');
                     }
                 } elseif ($userByEmail) {
