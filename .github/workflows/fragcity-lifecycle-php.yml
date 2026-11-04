@@ -40,16 +40,17 @@ jobs:
             "extensions/Others/FragCityAPI/FragCityAPI.php"
             "extensions/Others/FragCityAPI/routes.php"
             "extensions/Servers/FragCityCS2/FragCityCS2.php"
-            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000001_create_fragcity_client_api_credentials_table.php"
-            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000002_create_fragcity_identity_and_service_lifecycle_tables.php"
-            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php"
-            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000004_add_recreation_authorization_claim_columns.php"
-            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000005_add_paymenter_missing_review_fields.php"
           )
           for file in "${files[@]}"; do
             test -f "$file"
             php -l "$file"
           done
+
+          migration_dir="extensions/Others/FragCityAPI/database/migrations"
+          test -d "$migration_dir"
+          while IFS= read -r -d '' file; do
+            php -l "$file"
+          done < <(find "$migration_dir" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
 
       - name: Verify lifecycle safety contracts
         shell: bash
