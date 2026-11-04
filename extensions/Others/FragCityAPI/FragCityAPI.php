@@ -6,6 +6,7 @@ use App\Attributes\ExtensionMeta;
 use App\Classes\Extension\Extension;
 use App\Helpers\ExtensionHelper;
 use App\Models\User;
+use App\Models\Service;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -19,7 +20,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account synchronization bridge for FragCity.',
-    version: '1.2.0',
+    version: '1.3.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -73,7 +74,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.2.0',
+            'version' => '1.3.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -288,6 +289,209 @@ class FragCityAPI extends Extension
                 'success' => false,
                 'error' => 'account_sync_failed',
             ], 500);
+        }
+    }
+
+    /**
+     * Return the authenticated customer's FragCity CS2 services and
+     * allow-listed Pterodactyl access details. No password is ever returned.
+     */
+    public function myServers(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'validation_failed',
+            ], 422);
+        }
+
+        $steamId = (string) $validator->validated()['steamid64'];
+
+        try {
+            $link = DB::table('fragcity_user_links')
+                ->where('steamid64', $steamId)
+                ->first();
+
+            if (!$link) {
+                return response()->json([
+                    'success' => true,
+                    'data' => ['servers' => []],
+                ]);
+            }
+
+            $user = User::query()->with('properties')->find((int) $link->user_id);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'linked_paymenter_user_missing',
+                ], 404);
+            }
+
+            $services = Service::query()
+                ->where('user_id', (int) $user->id)
+                ->where('status', '<>', Service::STATUS_CANCELLED)
+                ->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue'])
+                ->orderByDesc('id')
+                ->get();
+
+            $servers = [];
+
+            foreach ($services as $service) {
+                $serverExtension = $service->product?->server;
+                if (!$serverExtension || $serverExtension->extension !== 'FragCityCS2') {
+                    continue;
+                }
+
+                try {
+                    $summary = ExtensionHelper::callService($service, 'getCustomerPanelSummary');
+                    if (is_array($summary)) {
+                        $servers[] = $summary;
+                    }
+                } catch (Throwable $e) {
+                    Log::warning('FragCity customer server summary failed.', [
+                        'paymenter_user_id' => (int) $user->id,
+                        'service_id' => (int) $service->id,
+                        'exception' => get_class($e),
+                    ]);
+
+                    $servers[] = [
+                        'service_id' => (int) $service->id,
+                        'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
+                        'service_status' => (string) $service->status,
+                        'state' => 'unavailable',
+                        'panel' => null,
+                        'server' => null,
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => ['servers' => $servers],
+            ]);
+        } catch (Throwable $e) {
+            Log::error('FragCity customer server list failed.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'exception' => get_class($e),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'customer_servers_unavailable',
+            ], 500);
+        }
+    }
+
+    /**
+     * Change only the Pterodactyl password for one of the caller's CS2
+     * services. Ownership is established from the signed SteamID link and
+     * Paymenter service owner; the browser never receives an Application API key.
+     */
+    public function setPanelPassword(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'service_id' => ['required', 'integer', 'min:1'],
+            'password' => [
+                'required',
+                'string',
+                'min:12',
+                'max:128',
+                'regex:/^(?=.*\\p{L})(?=.*[0-9])\\S+$/u',
+            ],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'validation_failed',
+                'fields' => $validator->errors()->keys(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $steamId = (string) $data['steamid64'];
+        $serviceId = (int) $data['service_id'];
+        $password = (string) $data['password'];
+
+        try {
+            $link = DB::table('fragcity_user_links')
+                ->where('steamid64', $steamId)
+                ->first();
+
+            if (!$link) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'service_not_found',
+                ], 404);
+            }
+
+            $user = User::query()->find((int) $link->user_id);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'linked_paymenter_user_missing',
+                ], 404);
+            }
+
+            $service = Service::query()
+                ->where('id', $serviceId)
+                ->where('user_id', (int) $user->id)
+                ->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue'])
+                ->first();
+
+            if (!$service || $service->status === Service::STATUS_CANCELLED
+                || $service->product?->server?->extension !== 'FragCityCS2'
+            ) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'service_not_found',
+                ], 404);
+            }
+
+            ExtensionHelper::callService(
+                $service,
+                'setCustomerPanelPassword',
+                [$password]
+            );
+
+            // Store only a timestamp marker, never the password or its hash.
+            $user->properties()->updateOrCreate(
+                ['key' => 'fragcity_panel_password_set_at'],
+                ['name' => 'FragCity Panel Password Set At', 'value' => now()->toIso8601String()]
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => ['password_updated' => true],
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('FragCity Pterodactyl password update failed.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'service_id' => $serviceId,
+                'exception' => get_class($e),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'panel_password_update_failed',
+            ], 502);
         }
     }
 
