@@ -18,6 +18,7 @@ Provides a narrow private server-to-server bridge for FragCity account synchroni
 - `POST /api/v1/fragcity/bridge/admin/lifecycle/detail`
 - `POST /api/v1/fragcity/bridge/admin/lifecycle/reconcile`
 - `POST /api/v1/fragcity/bridge/admin/lifecycle/authorize-recreation`
+- `POST /api/v1/fragcity/bridge/admin/lifecycle/revoke-recreation`
 
 All bridge routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are server-to-server endpoints; the browser must never call them directly.
 
@@ -90,14 +91,18 @@ The Application API dashboard key remains separate and should retain only the re
 
 ## Admin Lifecycle API
 
-These endpoints are called only by the FragCity Website backend. The website verifies the administrator session (role=admin) and CSRF token before making a signed HTTPS request. The HMAC secret must never be sent to the browser. actor_steamid64 and actor_username are audit metadata, not a substitute for website administrator authorization.
+These endpoints are called only by the FragCity Website backend. The website verifies the administrator session (role=admin) and CSRF token before making a signed HTTPS request. The HMAC secret must never be sent to the browser. Actor SteamID64 and username are audit metadata, not a substitute for website administrator authorization.
 
-- admin/lifecycle/list: paginated lifecycle inventory, state counts and search.
-- admin/lifecycle/detail: one mapping, Paymenter/customer information and the latest 50 audit events.
-- admin/lifecycle/reconcile: explicitly re-reads one existing service through the CS2 extension. It never creates or deletes a Pterodactyl resource. If the Paymenter service is gone, it records paymenter_missing for administrator review.
-- admin/lifecycle/authorize-recreation: records a reasoned approval for one missing_external service. This does not dispatch a job; an administrator must separately retry that service's Paymenter CreateJob. Deleted/tombstoned services cannot be reused.
+- `admin/lifecycle/list`: paginated lifecycle inventory, state counts, last-reconciled timestamps and recovery authorization status.
+- `admin/lifecycle/detail`: one mapping, Paymenter/customer information, recovery authorization details and the latest 50 audit events.
+- `admin/lifecycle/reconcile`: verifies the Pterodactyl Client identity and exact Server external ID. When ownership is verified, it aligns an existing Server's suspend state with Paymenter's active/suspended status. It does not create a Client or Server and does not delete a Server.
+- `admin/lifecycle/authorize-recreation`: records a reasoned one-shot grant for one `missing_external` service. It does not dispatch CreateJob; an administrator must separately retry that exact Paymenter service's CreateJob.
+- `admin/lifecycle/revoke-recreation`: revokes an unconsumed grant with a mandatory reason. Consumed grants cannot be revoked.
 
-The dashboard deliberately has no remote-delete action. Removing an orphaned Pterodactyl server needs a separate reviewed workflow so a missing Paymenter row can never cause accidental data loss.
+Only an authoritative Pterodactyl 404 is treated as missing. Network errors, timeouts, 401/403 and 5xx remain retryable failures. A missing Pterodactyl Client, client UUID mismatch or Server owner mismatch becomes `review_required`; the bridge does not silently create or repair those identities during reconciliation.
+
+A directly deleted Paymenter service row is marked `paymenter_missing` for admin review only. This does not imply permission to delete an external Pterodactyl Server. The dashboard intentionally has no remote-delete control.
+
 ## Installation
 
 Copy this directory to:
