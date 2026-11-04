@@ -799,11 +799,18 @@ class FragCityCS2 extends PterodactylExtension
 
         if (
             !is_array($parts)
-            || !in_array(strtolower((string) ($parts['scheme'] ?? '')), ['https', 'http'], true)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
             || empty($parts['host'])
-            || $apiKey === ''
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || (isset($parts['path']) && $parts['path'] !== '' && $parts['path'] !== '/')
+            || strlen($apiKey) < 20
+            || strlen($apiKey) > 255
+            || preg_match('/[\\r\\n\\x00-\\x20\\x7F]/', $apiKey)
         ) {
-            throw new RuntimeException('FragCity Pterodactyl Application API configuration is invalid.');
+            throw new RuntimeException('FragCity Pterodactyl Application API configuration is invalid; HTTPS origin and a valid Application API key are required.');
         }
 
         $url = $baseUrl . '/' . ltrim($path, '/');
@@ -1591,8 +1598,8 @@ class FragCityCS2 extends PterodactylExtension
      * ensurePterodactylClientUser(), which may synchronize profile fields during
      * explicit provisioning/account-management operations.
      *
-     * A never-provisioned pending service may have no Client ID yet; it is
-     * returned as null so the customer UI can show its provisioning state.
+     * A never-provisioned service may have no Client ID yet; it is returned
+     * as null only when the exact Paymenter service external_id is also absent.
      *
      * @return array<string,mixed>|null
      */
@@ -1629,14 +1636,17 @@ class FragCityCS2 extends PterodactylExtension
 
         $clientUserId = $identityClientId > 0 ? $identityClientId : $mappingClientId;
         if ($clientUserId < 1) {
-            if (
-                (string) $service->status === Service::STATUS_PENDING
-                && !$this->mappingWasPreviouslyProvisioned($mapping)
-            ) {
-                return null;
+            if (!$this->mappingWasPreviouslyProvisioned($mapping)) {
+                // An active Paymenter service can still be waiting for its
+                // first CreateJob. Only treat it as provisioning when the
+                // exact external_id is also absent from Pterodactyl.
+                $unmappedServer = $this->findPterodactylServerByExternalId((int) $service->id);
+                if ($unmappedServer === null) {
+                    return null;
+                }
             }
 
-            throw new RuntimeException('No approved Pterodactyl Client ID is recorded for this customer; administrator identity review is required.');
+            throw new RuntimeException('No approved Pterodactyl Client ID is recorded for this customer; an existing or previously provisioned Server requires administrator identity review.');
         }
 
         $response = $this->requestApplicationApi('GET', '/api/application/users/' . $clientUserId);
@@ -1662,26 +1672,6 @@ class FragCityCS2 extends PterodactylExtension
      */
     private function getCustomerPanelSummaryLocked(Service $service): array
     {
-        // Customer inventory is a read path. Never resolve by email, create a
-        // Client, or synchronize Client profile fields while rendering My Servers.
-        $clientUser = $this->getVerifiedPterodactylClientUserReadOnly($service);
-
-        if ($clientUser === null) {
-            return [
-                'service_id' => (int) $service->id,
-                'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
-                'service_status' => (string) $service->status,
-                'state' => 'provisioning',
-                'panel' => null,
-                'server' => null,
-            ];
-        }
-
-        $clientUserId = (int) ($clientUser['id'] ?? 0);
-        if ($clientUserId < 1) {
-            throw new RuntimeException('Pterodactyl client identity could not be verified.');
-        }
-
         $previousMapping = DB::table('fragcity_service_servers')
             ->where('paymenter_service_id', (int) $service->id)
             ->first();
@@ -1701,6 +1691,26 @@ class FragCityCS2 extends PterodactylExtension
                 'panel' => null,
                 'server' => null,
             ];
+        }
+
+        // Customer inventory is a read path. Never resolve by email, create a
+        // Client, or synchronize Client profile fields while rendering My Servers.
+        $clientUser = $this->getVerifiedPterodactylClientUserReadOnly($service);
+
+        if ($clientUser === null) {
+            return [
+                'service_id' => (int) $service->id,
+                'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
+                'service_status' => (string) $service->status,
+                'state' => 'provisioning',
+                'panel' => null,
+                'server' => null,
+            ];
+        }
+
+        $clientUserId = (int) ($clientUser['id'] ?? 0);
+        if ($clientUserId < 1) {
+            throw new RuntimeException('Pterodactyl client identity could not be verified.');
         }
 
         try {
