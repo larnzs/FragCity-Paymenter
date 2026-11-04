@@ -546,6 +546,27 @@ class FragCityAPI extends Extension
                 ], 404);
             }
 
+            // Lazy migration for existing customers: the authenticated
+            // SteamID-to-Paymenter link is enough to create/recover the same
+            // durable UUID on the first My Servers request after deployment.
+            try {
+                $this->syncCustomerIdentity($user, $steamId);
+            } catch (RuntimeException $e) {
+                $safeIdentityErrors = [
+                    'paymenter_user_identity_conflict',
+                    'customer_identity_storage_not_ready',
+                ];
+
+                if (in_array($e->getMessage(), $safeIdentityErrors, true)) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => $e->getMessage(),
+                    ], $e->getMessage() === 'customer_identity_storage_not_ready' ? 503 : 409);
+                }
+
+                throw $e;
+            }
+
             $services = Service::query()
                 ->where('user_id', (int) $user->id)
                 ->where('status', '<>', Service::STATUS_CANCELLED)
