@@ -175,6 +175,21 @@ class FragCityCS2 extends PterodactylExtension
                 throw new RuntimeException('The Pterodactyl server for this service was previously provisioned but is now missing. Automatic recreation is blocked pending admin approval.');
             }
 
+            if ($wasPreviouslyProvisioned && $recreationAuthorized) {
+                DB::table('fragcity_service_lifecycle_events')->insert([
+                    'paymenter_service_id' => (int) $service->id,
+                    'customer_uuid' => $mapping->customer_uuid,
+                    'event_key' => 'admin_recreation_authorized',
+                    'from_state' => 'missing_external',
+                    'to_state' => 'provisioning',
+                    'details' => json_encode([
+                        'source' => 'admin_approved_mapping_flag',
+                        'approved' => true,
+                    ], JSON_THROW_ON_ERROR),
+                    'occurred_at' => now(),
+                ]);
+            }
+
             $clientUser = $this->ensurePterodactylClientUser($service, true);
             $clientUserId = (int) ($clientUser['id'] ?? 0);
 

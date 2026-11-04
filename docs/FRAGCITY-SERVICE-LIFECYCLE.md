@@ -77,6 +77,28 @@ For each due mapping:
 
 The website's My Servers request also verifies its own services on demand, so the customer sees current state even between scheduled runs.
 
+A service in `missing_external` is deliberately excluded from automatic retries. If an administrator decides that the same Paymenter service should receive a replacement Server, first review data loss/backup implications and then authorize that exact service:
+
+```bash
+cd /var/www/paymenter
+
+php artisan tinker --execute='
+$serviceId = 32; // Replace with the exact reviewed Paymenter service ID.
+$updated = \Illuminate\Support\Facades\DB::table("fragcity_service_servers")
+    ->where("paymenter_service_id", $serviceId)
+    ->where("lifecycle_state", "missing_external")
+    ->whereNull("deleted_at")
+    ->update([
+        "desired_state" => "recreate_authorized",
+        "updated_at" => now(),
+    ]);
+
+dump(["authorized_rows" => $updated]);
+'
+```
+
+Only when `authorized_rows` is `1` should the administrator retry that service's CreateJob. The extension records the approval in `fragcity_service_lifecycle_events`. A service already marked `deleted` cannot be reused; create a new Paymenter service instead.
+
 The standard Laravel scheduler must be active on the host. Verify with:
 
 ```bash
@@ -107,7 +129,7 @@ dump([
 
 5. Deploy the website repository `main` branch. The website's account-sync client expects the bridge to return `customer_uuid`; deploy the Paymenter API first.
 6. Have each customer complete the normal authenticated website account-sync flow. The bridge creates/reuses the durable UUID.
-7. Review legacy Pterodactyl Client accounts whose `external_id` is a previous Paymenter user ID. Do not auto-claim an account solely by email. An administrator must verify the Pterodactyl Client account and explicitly set its ID in `fragcity_customer_identities.pterodactyl_user_id`. On the next verified My Servers read or provisioning attempt, the extension updates that verified Client's `external_id` to the durable UUID.
+7. Review legacy Pterodactyl Client accounts. An account whose `external_id` exactly equals the customer's current Paymenter user ID can be upgraded using the known legacy mapping. A blank or different external ID is not claimed by email alone. An administrator must verify the Pterodactyl Client and explicitly set its ID in `fragcity_customer_identities.pterodactyl_user_id`. On the next verified My Servers read or provisioning attempt, the extension updates that verified Client's `external_id` to the durable UUID.
 8. Retry only the specific failed service job after its Client mapping is verified.
 
 Do not manually change Pterodactyl Server external IDs. They remain Paymenter service IDs.
