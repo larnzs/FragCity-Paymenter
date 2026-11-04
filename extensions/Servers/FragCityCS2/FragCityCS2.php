@@ -692,6 +692,476 @@ class FragCityCS2 extends PterodactylExtension
         ];
     }
 
+    /**
+     * Verify that a customer Client API key belongs to the actual owner of
+     * this exact FragCity service. A valid sub-user token is not sufficient.
+     *
+     * @return array{base_url:string,identifier:string,uuid:string}
+     */
+    private function getCustomerClientApiContext(Service $service, string $token): array
+    {
+        $token = trim($token);
+        if (
+            strlen($token) < 20
+            || strlen($token) > 255
+            || preg_match('/[\r\n\x00-\x20\x7F]/', $token)
+        ) {
+            throw new RuntimeException('client_api_key_invalid');
+        }
+
+        $baseUrl = rtrim(trim((string) $this->config('host')), '/');
+        $parts = parse_url($baseUrl);
+        if (
+            !is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || empty($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || (isset($parts['path']) && $parts['path'] !== '' && $parts['path'] !== '/')
+        ) {
+            throw new RuntimeException('Pterodactyl host must be a valid HTTPS origin.');
+        }
+
+        $clientUser = $this->ensurePterodactylClientUser($service, false);
+        $clientUserId = (int) ($clientUser['id'] ?? 0);
+        if ($clientUserId < 1) {
+            throw new RuntimeException('Pterodactyl client identity could not be verified.');
+        }
+
+        // Independently bind the Paymenter Service to its Pterodactyl server
+        // using the Application API. This prevents a client token for another
+        // server/account from being attached to this Paymenter service.
+        $applicationResponse = $this->requestCustomerDashboardDetails(
+            '/api/application/servers/external/' . (int) $service->id
+        );
+        $applicationAttributes = $applicationResponse['attributes'] ?? null;
+        if (!is_array($applicationAttributes)) {
+            throw new RuntimeException('Pterodactyl returned an invalid server record.');
+        }
+
+        $identifier = trim((string) ($applicationAttributes['identifier'] ?? ''));
+        $uuid = trim((string) ($applicationAttributes['uuid'] ?? ''));
+        if (
+            trim((string) ($applicationAttributes['external_id'] ?? '')) !== (string) $service->id
+            || (int) ($applicationAttributes['user'] ?? 0) !== $clientUserId
+            || $identifier === ''
+            || $uuid === ''
+        ) {
+            throw new RuntimeException('The Pterodactyl server ownership link does not match this Paymenter service.');
+        }
+
+        $response = Http::withToken($token)
+            ->acceptJson()
+            ->timeout(12)
+            ->withOptions(['allow_redirects' => false])
+            ->get($baseUrl . '/api/client/servers/' . rawurlencode($identifier));
+
+        if (in_array($response->status(), [401, 403], true)) {
+            throw new RuntimeException('client_api_key_invalid');
+        }
+        if (!$response->successful()) {
+            throw new RuntimeException('client_api_server_verification_failed');
+        }
+
+        $clientResponse = $response->json();
+        $clientAttributes = $clientResponse['attributes'] ?? null;
+        $meta = $clientResponse['meta'] ?? [];
+        if (
+            !is_array($clientAttributes)
+            || !is_array($meta)
+            || ($meta['is_server_owner'] ?? false) !== true
+            || trim((string) ($clientAttributes['uuid'] ?? '')) !== $uuid
+            || trim((string) ($clientAttributes['identifier'] ?? '')) !== $identifier
+        ) {
+            throw new RuntimeException('client_api_key_must_belong_to_server_owner');
+        }
+
+        return [
+            'base_url' => $baseUrl,
+            'identifier' => $identifier,
+            'uuid' => $uuid,
+        ];
+    }
+
+    /**
+     * Make a request to the Pterodactyl Client API only after confirming both
+     * the Application API ownership link and the Client API owner identity.
+     *
+     * @param array<string,mixed>|null $payload
+     * @param array<string,string|int|bool> $query
+     * @return array<string,mixed>|string
+     */
+    private function requestCustomerClientApi(
+        Service $service,
+        string $token,
+        string $method,
+        string $endpoint,
+        array $query = [],
+        ?array $payload = null,
+        ?string $rawBody = null
+    ): array|string {
+        $context = $this->getCustomerClientApiContext($service, $token);
+        $url = $context['base_url']
+            . '/api/client/servers/'
+            . rawurlencode($context['identifier'])
+            . '/'
+            . ltrim($endpoint, '/');
+
+        $request = Http::withToken($token)
+            ->acceptJson()
+            ->timeout(30)
+            ->withOptions(['allow_redirects' => false]);
+
+        $method = strtoupper($method);
+        if ($method === 'GET') {
+            $response = $request->get($url, $query);
+        } elseif ($rawBody !== null) {
+            if ($query !== []) {
+                $url .= '?' . http_build_query($query, '', '&', PHP_QUERY_RFC3986);
+            }
+            $response = $request->send($method, $url, [
+                'body' => $rawBody,
+                'headers' => ['Content-Type' => 'text/plain; charset=UTF-8'],
+            ]);
+        } else {
+            $response = match ($method) {
+                'POST' => $request->post($url, $payload ?? []),
+                'PUT' => $request->put($url, $payload ?? []),
+                'DELETE' => $request->delete($url, $payload ?? []),
+                default => throw new RuntimeException('Unsupported Pterodactyl Client API method.'),
+            };
+        }
+
+        if ($response->status() === 204) {
+            return ['success' => true];
+        }
+
+        if (!$response->successful()) {
+            if (in_array($response->status(), [401, 403], true)) {
+                throw new RuntimeException('client_api_permission_denied');
+            }
+            if ($response->status() === 404) {
+                throw new RuntimeException('client_api_resource_not_found');
+            }
+            throw new RuntimeException('client_api_request_failed');
+        }
+
+        $contentType = strtolower((string) $response->header('Content-Type', ''));
+        if (str_contains($contentType, 'application/json')) {
+            $decoded = $response->json();
+            if (!is_array($decoded)) {
+                throw new RuntimeException('client_api_invalid_response');
+            }
+
+            return $decoded;
+        }
+
+        return $response->body();
+    }
+
+    /**
+     * Validate a Client API token before it is stored by the FragCity Bridge.
+     */
+    public function verifyCustomerClientApiToken(
+        Service $service,
+        $settings,
+        $properties,
+        string $token
+    ): array {
+        $this->getCustomerClientApiContext($service, $token);
+
+        return ['verified' => true];
+    }
+
+    /**
+     * Generate a short-lived Pterodactyl WebSocket token for the customer's
+     * owned server. The long-lived Client API key is never returned.
+     *
+     * @return array{socket:string,token:string,expires_in:int,identifier:string}
+     */
+    public function getCustomerConsoleCredentials(
+        Service $service,
+        $settings,
+        $properties,
+        string $token
+    ): array {
+        $context = $this->getCustomerClientApiContext($service, $token);
+        $response = $this->requestCustomerClientApi(
+            $service,
+            $token,
+            'GET',
+            '/websocket'
+        );
+
+        $data = is_array($response) && is_array($response['data'] ?? null)
+            ? $response['data']
+            : [];
+        $socket = trim((string) ($data['socket'] ?? ''));
+        $shortLivedToken = trim((string) ($data['token'] ?? ''));
+        $socketParts = parse_url($socket);
+
+        if (
+            $shortLivedToken === ''
+            || !is_array($socketParts)
+            || strtolower((string) ($socketParts['scheme'] ?? '')) !== 'wss'
+            || empty($socketParts['host'])
+            || isset($socketParts['user'])
+            || isset($socketParts['pass'])
+        ) {
+            throw new RuntimeException('Pterodactyl returned invalid WebSocket credentials.');
+        }
+
+        return [
+            'socket' => $socket,
+            'token' => $shortLivedToken,
+            'expires_in' => 600,
+            'identifier' => $context['identifier'],
+        ];
+    }
+
+    /**
+     * Perform a narrowly allow-listed file-manager operation for this service.
+     * Pterodactyl still enforces the owner's per-server file permissions.
+     *
+     * @param array<string,mixed> $input
+     * @return array<string,mixed>
+     */
+    public function customerFileAction(
+        Service $service,
+        $settings,
+        $properties,
+        string $token,
+        array $input
+    ): array {
+        $action = strtolower(trim((string) ($input['file_action'] ?? '')));
+        $directory = $this->validateCustomerFilePath(
+            (string) ($input['directory'] ?? '/'),
+            true
+        );
+
+        if ($action === 'list') {
+            $response = $this->requestCustomerClientApi(
+                $service,
+                $token,
+                'GET',
+                '/files/list',
+                ['directory' => $directory]
+            );
+
+            $rows = is_array($response) && is_array($response['data'] ?? null)
+                ? $response['data']
+                : [];
+            $items = [];
+            foreach ($rows as $row) {
+                $attributes = is_array($row['attributes'] ?? null) ? $row['attributes'] : [];
+                $name = trim((string) ($attributes['name'] ?? ''));
+                if ($name === '' || $name === '.' || $name === '..') {
+                    continue;
+                }
+
+                $items[] = [
+                    'name' => $name,
+                    'is_file' => (bool) ($attributes['is_file'] ?? false),
+                    'is_symlink' => (bool) ($attributes['is_symlink'] ?? false),
+                    'is_editable' => (bool) ($attributes['is_editable'] ?? false),
+                    'mimetype' => (string) ($attributes['mimetype'] ?? ''),
+                    'size' => max(0, (int) ($attributes['size'] ?? 0)),
+                    'mode' => (string) ($attributes['mode'] ?? ''),
+                    'modified_at' => (string) ($attributes['modified_at'] ?? ''),
+                ];
+            }
+
+            return ['directory' => $directory, 'items' => $items];
+        }
+
+        if ($action === 'read') {
+            $file = $this->validateCustomerFilePath((string) ($input['file'] ?? ''), false);
+            $body = $this->requestCustomerClientApi(
+                $service,
+                $token,
+                'GET',
+                '/files/contents',
+                ['file' => $file]
+            );
+
+            if (!is_string($body) || strlen($body) > 262144) {
+                throw new RuntimeException('client_api_file_too_large_to_edit');
+            }
+
+            return ['file' => $file, 'content' => $body];
+        }
+
+        if ($action === 'write') {
+            $file = $this->validateCustomerFilePath((string) ($input['file'] ?? ''), false);
+            $content = $input['content'] ?? null;
+            if (!is_string($content) || strlen($content) > 262144) {
+                throw new RuntimeException('client_api_invalid_file_content');
+            }
+
+            $this->requestCustomerClientApi(
+                $service,
+                $token,
+                'POST',
+                '/files/write',
+                ['file' => $file],
+                null,
+                $content
+            );
+
+            return ['written' => true, 'file' => $file];
+        }
+
+        if ($action === 'create_folder') {
+            $name = trim((string) ($input['name'] ?? ''));
+            if (
+                $name === ''
+                || strlen($name) > 128
+                || str_contains($name, '/')
+                || str_contains($name, '\\')
+                || $name === '.'
+                || $name === '..'
+                || preg_match('/[\x00-\x1F\x7F]/', $name)
+            ) {
+                throw new RuntimeException('client_api_invalid_file_name');
+            }
+
+            $this->requestCustomerClientApi(
+                $service,
+                $token,
+                'POST',
+                '/files/create-folder',
+                [],
+                ['root' => $directory, 'name' => $name]
+            );
+
+            return ['created' => true, 'directory' => $directory, 'name' => $name];
+        }
+
+        if ($action === 'rename') {
+            $from = $this->validateCustomerFilePath((string) ($input['from'] ?? ''), false);
+            $to = trim((string) ($input['to'] ?? ''));
+            if (
+                $to === ''
+                || strlen($to) > 255
+                || str_contains($to, '/')
+                || str_contains($to, '\\')
+                || $to === '.'
+                || $to === '..'
+                || preg_match('/[\x00-\x1F\x7F]/', $to)
+            ) {
+                throw new RuntimeException('client_api_invalid_file_name');
+            }
+
+            $this->requestCustomerClientApi(
+                $service,
+                $token,
+                'PUT',
+                '/files/rename',
+                [],
+                ['root' => $directory, 'files' => [['from' => basename($from), 'to' => $to]]]
+            );
+
+            return ['renamed' => true];
+        }
+
+        if ($action === 'delete') {
+            $files = $input['files'] ?? null;
+            if (!is_array($files) || $files === [] || count($files) > 50) {
+                throw new RuntimeException('client_api_invalid_file_list');
+            }
+
+            $safeFiles = [];
+            foreach ($files as $file) {
+                $safePath = $this->validateCustomerFilePath((string) $file, false);
+                $safeFiles[] = ltrim($safePath, '/');
+            }
+
+            $this->requestCustomerClientApi(
+                $service,
+                $token,
+                'POST',
+                '/files/delete',
+                [],
+                ['root' => $directory, 'files' => $safeFiles]
+            );
+
+            return ['deleted' => true, 'count' => count($safeFiles)];
+        }
+
+        if ($action === 'download') {
+            $file = $this->validateCustomerFilePath((string) ($input['file'] ?? ''), false);
+            $response = $this->requestCustomerClientApi(
+                $service,
+                $token,
+                'GET',
+                '/files/download',
+                ['file' => $file]
+            );
+
+            $downloadUrl = trim((string) ($response['attributes']['url'] ?? ''));
+            $parts = parse_url($downloadUrl);
+            if (
+                !is_array($parts)
+                || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+                || empty($parts['host'])
+                || isset($parts['user'])
+                || isset($parts['pass'])
+            ) {
+                throw new RuntimeException('Pterodactyl returned an invalid download URL.');
+            }
+
+            return ['url' => $downloadUrl];
+        }
+
+        if ($action === 'upload_url') {
+            $response = $this->requestCustomerClientApi(
+                $service,
+                $token,
+                'GET',
+                '/files/upload'
+            );
+            $uploadUrl = trim((string) ($response['attributes']['url'] ?? ''));
+            $parts = parse_url($uploadUrl);
+            if (
+                !is_array($parts)
+                || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+                || empty($parts['host'])
+                || isset($parts['user'])
+                || isset($parts['pass'])
+            ) {
+                throw new RuntimeException('Pterodactyl returned an invalid upload URL.');
+            }
+
+            return ['url' => $uploadUrl, 'directory' => $directory];
+        }
+
+        throw new RuntimeException('client_api_invalid_file_action');
+    }
+
+    private function validateCustomerFilePath(string $path, bool $allowRoot): string
+    {
+        if (
+            strlen($path) > 2048
+            || str_contains($path, "\0")
+            || str_contains($path, "\\")
+            || preg_match('/[\r\n\x7F]/', $path)
+        ) {
+            throw new RuntimeException('client_api_invalid_file_path');
+        }
+
+        $path = trim($path);
+        if ($path === '' && $allowRoot) {
+            return '/';
+        }
+        if ($path === '' || preg_match('~(^|/)\.\.(/|$)~', $path)) {
+            throw new RuntimeException('client_api_invalid_file_path');
+        }
+
+        return '/' . ltrim($path, '/');
+    }
+
     private function normalizeSelectEnvironmentValues(
         array $values,
         array $manifest,
