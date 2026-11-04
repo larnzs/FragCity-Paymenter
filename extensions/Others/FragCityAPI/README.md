@@ -10,6 +10,7 @@ Provides a narrow private server-to-server bridge for FragCity account synchroni
 - `POST /api/v1/fragcity/bridge/users/sync`
 - `POST /api/v1/fragcity/bridge/servers/list`
 - `POST /api/v1/fragcity/bridge/servers/password`
+- `POST /api/v1/fragcity/bridge/servers/username`
 - `POST /api/v1/fragcity/bridge/servers/client-api/connect`
 - `POST /api/v1/fragcity/bridge/servers/client-api/disconnect`
 - `POST /api/v1/fragcity/bridge/servers/console`
@@ -73,6 +74,8 @@ FragCity's website endpoint additionally requires an authenticated website sessi
 
 The panel password is intentionally independent from FragCity and Paymenter passwords. It cannot be read back after setting; customers can set a new one through FragCity at any time.
 
+The `servers/username` endpoint updates the shared Pterodactyl Client username for the authenticated FragCity customer. It verifies ownership through the selected Paymenter service, writes the independent `fragcity_panel_username` Paymenter property and changes only the Pterodactyl Client username. A username collision is rejected; the FragCity login username is not changed.
+
 ## Customer Client API, Console and File Manager
 
 The FragCity My Servers integration uses a separate Pterodactyl **Client API key created by the customer inside their own Pterodactyl account**. It is not the admin Application API key configured on the FragCity CS2 server extension.
@@ -102,6 +105,8 @@ These endpoints are called only by the FragCity Website backend. The website ver
 - `admin/lifecycle/reconcile`: verifies the Pterodactyl Client identity and exact Server external ID. When ownership is verified, it aligns an existing Server's suspend state with Paymenter's active/suspended status. It does not create a Client or Server and does not delete a Server.
 - `admin/lifecycle/authorize-recreation`: records a reasoned one-shot grant for one `missing_external` service. It does not dispatch CreateJob; an administrator must separately retry that exact Paymenter service's CreateJob.
 - `admin/lifecycle/revoke-recreation`: revokes an unconsumed grant with a mandatory reason. Consumed grants cannot be revoked.
+- `admin/lifecycle/acknowledge-paymenter-missing`: records an administrator's `preserve_external` decision for an out-of-band deleted Paymenter service. It never deletes or mutates a Pterodactyl resource.
+- `admin/lifecycle/verify-client-identity`: verifies one existing Pterodactyl Client by exact Paymenter email and records its approved Client ID/UUID mapping. It changes only the Client `external_id` from an empty or legacy numeric value to the durable customer UUID.
 
 Only an authoritative Pterodactyl 404 is treated as missing. Network errors, timeouts, 401/403 and 5xx remain retryable failures. A missing Pterodactyl Client, client UUID mismatch or Server owner mismatch becomes `review_required`; the bridge does not silently create or repair those identities during reconciliation.
 
@@ -127,7 +132,7 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.11.0; its `upgraded()` hook runs pending additive migrations, including the lifecycle reconciliation, recovery-claim and Paymenter-missing review fields. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
+Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.11.1; its `upgraded()` hook runs pending additive migrations, including the lifecycle reconciliation, recovery-claim and Paymenter-missing review fields. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
 
 ## Security notes
 
