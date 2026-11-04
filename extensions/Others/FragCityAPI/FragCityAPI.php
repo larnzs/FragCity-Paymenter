@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use RuntimeException;
 use Throwable;
@@ -430,6 +431,18 @@ class FragCityAPI extends Extension
         $serviceId = (int) $data['service_id'];
         $password = (string) $data['password'];
 
+        // Bridge traffic originates from the website server, so the route's
+        // IP throttle is only a coarse ceiling. Apply the meaningful limit to
+        // the signed customer identity to avoid coupling different customers.
+        $rateLimitKey = 'fragcity_panel_password:' . hash('sha256', $steamId);
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'panel_password_rate_limited',
+            ], 429);
+        }
+        RateLimiter::hit($rateLimitKey, 600);
+
         try {
             $link = DB::table('fragcity_user_links')
                 ->where('steamid64', $steamId)
@@ -476,6 +489,8 @@ class FragCityAPI extends Extension
                 ['key' => 'fragcity_panel_password_set_at'],
                 ['name' => 'FragCity Panel Password Set At', 'value' => now()->toIso8601String()]
             );
+
+            RateLimiter::clear($rateLimitKey);
 
             return response()->json([
                 'success' => true,
