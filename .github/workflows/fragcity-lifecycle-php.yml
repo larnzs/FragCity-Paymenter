@@ -60,3 +60,14 @@ jobs:
           grep -q "function consumeRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
           ! grep -q "\$legacyPaymenterLink" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "adminLifecycleRevokeRecreation" extensions/Others/FragCityAPI/routes.php
+
+          summary="$(sed -n '/private function getCustomerPanelSummaryLocked/,/^    }/p' extensions/Servers/FragCityCS2/FragCityCS2.php)"
+          test -n "$summary"
+          grep -Fq '$this->getVerifiedPterodactylClientUserReadOnly(' <<< "$summary"
+          ! grep -Fq '$this->ensurePterodactylClientUser(' <<< "$summary"
+
+          read_only_client="$(sed -n '/private function getVerifiedPterodactylClientUserReadOnly/,/^    }/p' extensions/Servers/FragCityCS2/FragCityCS2.php)"
+          test -n "$read_only_client"
+          grep -Fq "requestApplicationApi('GET'" <<< "$read_only_client"
+          ! grep -Eq "requestApplicationApi\('(POST|DELETE)'" <<< "$read_only_client"
+          ! grep -Fq '$this->ensurePterodactylClientUser(' <<< "$read_only_client"

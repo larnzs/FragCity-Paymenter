@@ -61,7 +61,9 @@ FragCity requests the customer's services by the authenticated SteamID64. The br
 
 The server extension returns an allow-listed summary from the Pterodactyl Application API: service ID/status, server UUID/identifier/name, node ID, resource limits, dates, panel URL, panel username and email. Server ownership is verified by both the Pterodactyl `external_id` (Paymenter service ID) and Pterodactyl owner user ID before data is returned.
 
-The inventory read also repairs a legacy Pterodactyl client identity when its email matches the linked Paymenter account and its `external_id` is empty or already matches that Paymenter user ID. It synchronizes the native Pterodactyl username, email, first/last name and `external_id`; a conflicting external ID or a username collision fails closed.
+The customer inventory read is strictly read-only with respect to Pterodactyl Client accounts. It uses only the already-approved Pterodactyl Client ID and durable customer UUID stored in the FragCity identity/service registry, then verifies that exact Client with a GET request. It never searches for a Client by email, creates a Client, or changes its username, email, name or `external_id`. A missing or conflicting mapping fails closed and requires administrator identity review; legacy numeric external IDs are not silently migrated by opening My Servers.
+
+Pterodactyl Client profile synchronization belongs only to explicit provisioning or account-management flows in the FragCityCS2 extension. The customer inventory endpoint itself only reads the approved mapping and records the observed service/server state in the local lifecycle registry.
 
 The `servers/password` endpoint accepts a customer-selected Pterodactyl password only after the signed request is validated and the service is confirmed to belong to the linked Paymenter user. The server extension verifies the Pterodactyl server owner and updates only that user's password through the Pterodactyl Application API. Pterodactyl hashes the password. The bridge stores only a `fragcity_panel_password_set_at` timestamp property; it never stores or returns plaintext or a password hash.
 
@@ -131,7 +133,7 @@ Enable **FragCity API** in Paymenter Admin → Extensions → Others and configu
 - The bridge creates no Pterodactyl users or servers; the FragCity CS2 server extension handles Pterodactyl client identity immediately before the official Paymenter server provisioner runs.
 
 
-## Lifecycle reconciliation and recovery authorization (1.8.0)
+## Lifecycle reconciliation and recovery authorization (1.9.0)
 
 - Scheduled and administrator-triggered reconciliation use the dedicated `reconcileCustomerLifecycle` operation. It verifies the stored Pterodactyl Client identity and the exact Server external ID, then aligns only the Server suspend state with Paymenter (`active` / `suspended`). It never creates a missing Client or Server and never repairs Client profile fields.
 - Only an authoritative Pterodactyl 404 is treated as a missing resource. Authentication failures, timeouts and 5xx responses remain retryable failures.
@@ -140,4 +142,4 @@ Enable **FragCity API** in Paymenter Admin → Extensions → Others and configu
 - An unconsumed grant can be revoked with a reason; both grant and revoke actions are permanent audit events. A CreateJob must claim the grant using a two-hour lease before provisioning starts. Revocation is rejected while the lease is active; transient failures release the claim and process crashes allow the lease to expire.
 - `last_reconciled_at` records the latest inspection attempt. Failed attempts are retried and produce audit events.
 - A recreation CreateJob must atomically claim its pending authorization. The claim has a two-hour lease; active claims cannot be revoked. Failed attempts release the claim, while a process crash lets the lease expire before another retry or revocation.
-- Migration `2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php and `2026_11_04_000004_add_recreation_authorization_claim_columns.php`` is additive; earlier migration files remain unchanged.
+- Migration `2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php` and migration `2026_11_04_000004_add_recreation_authorization_claim_columns.php` are additive; earlier migration files remain unchanged.
