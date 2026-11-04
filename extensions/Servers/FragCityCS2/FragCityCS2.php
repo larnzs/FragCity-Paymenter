@@ -965,14 +965,6 @@ class FragCityCS2 extends PterodactylExtension
                 $isSymlink = (bool) ($attributes['is_symlink'] ?? false);
                 $mimetype = strtolower((string) ($attributes['mimetype'] ?? ''));
                 $size = max(0, (int) ($attributes['size'] ?? 0));
-                $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
-                $editableExtensions = [
-                    'cfg', 'conf', 'ini', 'json', 'js', 'mjs', 'cjs', 'ts',
-                    'css', 'scss', 'html', 'htm', 'xml', 'yaml', 'yml',
-                    'toml', 'txt', 'log', 'md', 'php', 'sh', 'bash', 'sql',
-                    'env', 'vdf', 'kv', 'res', 'properties', 'cfg', 'gitignore',
-                    'htaccess', 'bat', 'ps1',
-                ];
                 $isKnownTextFile = str_starts_with($mimetype, 'text/')
                     || in_array($mimetype, [
                         'application/json',
@@ -982,8 +974,7 @@ class FragCityCS2 extends PterodactylExtension
                         'application/toml',
                         'application/x-httpd-php',
                     ], true)
-                    || in_array($extension, $editableExtensions, true)
-                    || in_array(strtolower($name), ['.env', '.htaccess', '.gitignore', 'autoexec'], true);
+                    || $this->isCustomerEditableFilePath('/' . $name);
 
                 $items[] = [
                     'name' => $name,
@@ -1002,6 +993,10 @@ class FragCityCS2 extends PterodactylExtension
 
         if ($action === 'read') {
             $file = $this->validateCustomerFilePath((string) ($input['file'] ?? ''), false);
+            if (!$this->isCustomerEditableFilePath($file)) {
+                throw new RuntimeException('client_api_file_not_editable');
+            }
+
             $body = $this->requestCustomerClientApi(
                 $service,
                 $token,
@@ -1019,6 +1014,10 @@ class FragCityCS2 extends PterodactylExtension
 
         if ($action === 'write') {
             $file = $this->validateCustomerFilePath((string) ($input['file'] ?? ''), false);
+            if (!$this->isCustomerEditableFilePath($file)) {
+                throw new RuntimeException('client_api_file_not_editable');
+            }
+
             $content = $input['content'] ?? null;
             if (!is_string($content) || strlen($content) > 262144) {
                 throw new RuntimeException('client_api_invalid_file_content');
@@ -1162,6 +1161,21 @@ class FragCityCS2 extends PterodactylExtension
         }
 
         throw new RuntimeException('client_api_invalid_file_action');
+    }
+
+    private function isCustomerEditableFilePath(string $path): bool
+    {
+        $name = strtolower(basename($path));
+        $extension = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+        $editableExtensions = [
+            'cfg', 'conf', 'ini', 'json', 'js', 'mjs', 'cjs', 'ts',
+            'css', 'scss', 'html', 'htm', 'xml', 'yaml', 'yml',
+            'toml', 'txt', 'log', 'md', 'php', 'sh', 'bash', 'sql',
+            'vdf', 'kv', 'res', 'properties', 'bat', 'ps1',
+        ];
+
+        return in_array($extension, $editableExtensions, true)
+            || in_array($name, ['.env', '.htaccess', '.gitignore', 'autoexec'], true);
     }
 
     private function validateCustomerFilePath(string $path, bool $allowRoot): string
