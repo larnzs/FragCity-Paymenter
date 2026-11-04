@@ -246,7 +246,7 @@ class FragCityCS2 extends PterodactylExtension
 
         try {
             $serverResponse = $this->request(
-                '/api/application/servers/external/' . (int) $service->id,
+                '/api/application/servers/external/' . (int) $service->id . '?include=allocations',
                 'get'
             );
         } catch (Exception $e) {
@@ -288,6 +288,39 @@ class FragCityCS2 extends PterodactylExtension
             ? $attributes['feature_limits']
             : [];
 
+        $primaryAllocationId = (int) ($attributes['allocation'] ?? 0);
+        $allocationRows = $attributes['relationships']['allocations']['data'] ?? [];
+        $primaryAllocation = null;
+        if (is_array($allocationRows)) {
+            foreach ($allocationRows as $allocationRow) {
+                $allocationAttributes = is_array($allocationRow['attributes'] ?? null)
+                    ? $allocationRow['attributes']
+                    : [];
+                if ((int) ($allocationAttributes['id'] ?? 0) === $primaryAllocationId) {
+                    $primaryAllocation = $allocationAttributes;
+                    break;
+                }
+            }
+
+            if ($primaryAllocation === null) {
+                foreach ($allocationRows as $allocationRow) {
+                    $allocationAttributes = is_array($allocationRow['attributes'] ?? null)
+                        ? $allocationRow['attributes']
+                        : [];
+                    if (!empty($allocationAttributes['is_default'])) {
+                        $primaryAllocation = $allocationAttributes;
+                        break;
+                    }
+                }
+            }
+
+            if ($primaryAllocation === null && isset($allocationRows[0]['attributes'])
+                && is_array($allocationRows[0]['attributes'])) {
+                $primaryAllocation = $allocationRows[0]['attributes'];
+            }
+        }
+        $primaryAllocation = is_array($primaryAllocation) ? $primaryAllocation : [];
+
         $panelBaseUrl = rtrim((string) $this->config('host'), '/');
 
         return [
@@ -313,7 +346,10 @@ class FragCityCS2 extends PterodactylExtension
                 'suspended' => (bool) ($attributes['suspended'] ?? false),
                 'server_status' => (string) ($attributes['status'] ?? ''),
                 'node' => (int) ($attributes['node'] ?? 0),
-                'allocation' => (int) ($attributes['allocation'] ?? 0),
+                'allocation' => $primaryAllocationId,
+                'allocation_ip' => trim((string) ($primaryAllocation['ip'] ?? '')),
+                'allocation_port' => (int) ($primaryAllocation['port'] ?? 0),
+                'allocation_alias' => trim((string) ($primaryAllocation['alias'] ?? $primaryAllocation['ip_alias'] ?? '')),
                 'limits' => [
                     'memory' => (int) ($limits['memory'] ?? 0),
                     'swap' => (int) ($limits['swap'] ?? 0),
