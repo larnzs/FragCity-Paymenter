@@ -25,7 +25,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.6.0',
+    version: '1.7.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -837,7 +837,7 @@ class FragCityCS2 extends PterodactylExtension
         $method = strtoupper($method);
         if ($method === 'GET') {
             $response = $request->get($url, $payload);
-        } elseif ($method === 'DELETE' || $method === 'POST') {
+        } elseif (in_array($method, ['DELETE', 'POST', 'PATCH'], true)) {
             $response = $request->send($method, $url, $payload === [] ? [] : ['json' => $payload]);
         } else {
             throw new RuntimeException('Unsupported Pterodactyl Application API method.');
@@ -1024,6 +1024,279 @@ class FragCityCS2 extends PterodactylExtension
         }
 
         return $expectedUserId;
+    }
+
+    /**
+     * Administrator-assisted verification of an existing Pterodactyl Client.
+     *
+     * The selected Client must already exist and its email must exactly match
+     * the Paymenter customer. Only its external_id is changed, and only when
+     * the current value is empty or a legacy non-UUID identifier. Password,
+     * username and profile fields are never touched.
+     *
+     * @return array{verified:bool,client_user_id:int,affected_services:int,reconcile_required:bool}
+     */
+    public function adminVerifyPterodactylClientIdentity(
+        Service $service,
+        $settings,
+        $properties,
+        int $clientUserId,
+        string $actorSteamId,
+        string $actorUsername,
+        string $reason
+    ): array {
+        $this->assertLifecycleStorageReady();
+
+        $reason = trim($reason);
+        if (
+            $clientUserId < 1
+            || !preg_match('/^[0-9]{17}$/D', $actorSteamId)
+            || mb_strlen($reason) < 8
+            || mb_strlen($reason) > 500
+        ) {
+            throw new RuntimeException('validation_failed');
+        }
+
+        $mapping = DB::table('fragcity_service_servers')
+            ->where('paymenter_service_id', (int) $service->id)
+            ->first();
+        if (!$mapping) {
+            throw new RuntimeException('admin_lifecycle_record_not_found');
+        }
+        $this->assertPaymenterServiceOwnerMapping($service, $mapping);
+
+        $service->loadMissing('user');
+        $paymenterUser = $service->user;
+        if (!$paymenterUser || (int) $paymenterUser->id !== (int) $service->user_id) {
+            throw new RuntimeException('admin_lifecycle_identity_conflict');
+        }
+
+        $identity = DB::table('fragcity_customer_identities')
+            ->where('paymenter_user_id', (int) $service->user_id)
+            ->first();
+        if (!$identity) {
+            throw new RuntimeException('admin_lifecycle_identity_conflict');
+        }
+
+        $customerUuid = trim((string) ($identity->customer_uuid ?? ''));
+        $mappingUuid = trim((string) ($mapping->customer_uuid ?? ''));
+        if (
+            !preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $customerUuid)
+            || ($mappingUuid !== '' && !hash_equals($customerUuid, $mappingUuid))
+        ) {
+            throw new RuntimeException('admin_lifecycle_identity_conflict');
+        }
+
+        $paymenterEmail = mb_strtolower(trim((string) $paymenterUser->email));
+        if (!filter_var($paymenterEmail, FILTER_VALIDATE_EMAIL)) {
+            throw new RuntimeException('admin_lifecycle_identity_conflict');
+        }
+
+        return Cache::lock('fragcity:admin-client-identity:' . hash('sha256', $customerUuid), 120)
+            ->block(20, function () use (
+                $service,
+                $mapping,
+                $identity,
+                $customerUuid,
+                $paymenterUser,
+                $paymenterEmail,
+                $clientUserId,
+                $actorSteamId,
+                $actorUsername,
+                $reason
+            ): array {
+                $identityOwner = DB::table('fragcity_customer_identities')
+                    ->where('pterodactyl_user_id', $clientUserId)
+                    ->where('customer_uuid', '!=', $customerUuid)
+                    ->exists();
+                $mappingOwner = DB::table('fragcity_service_servers')
+                    ->where('pterodactyl_user_id', $clientUserId)
+                    ->where('customer_uuid', '!=', $customerUuid)
+                    ->exists();
+                if ($identityOwner || $mappingOwner) {
+                    throw new RuntimeException('admin_lifecycle_identity_conflict');
+                }
+
+                $previousClientId = (int) ($identity->pterodactyl_user_id ?? 0);
+                if ($previousClientId > 0 && $previousClientId !== $clientUserId) {
+                    $previousClient = $this->requestApplicationApi(
+                        'GET',
+                        '/api/application/users/' . $previousClientId
+                    );
+                    if ($previousClient !== null) {
+                        throw new RuntimeException('admin_lifecycle_identity_conflict');
+                    }
+                }
+
+                $clientResponse = $this->requestApplicationApi(
+                    'GET',
+                    '/api/application/users/' . $clientUserId
+                );
+                if ($clientResponse === null) {
+                    throw new RuntimeException('admin_pterodactyl_client_not_found');
+                }
+
+                $attributes = $clientResponse['attributes'] ?? null;
+                if (
+                    !is_array($attributes)
+                    || (int) ($attributes['id'] ?? 0) !== $clientUserId
+                    || mb_strtolower(trim((string) ($attributes['email'] ?? ''))) !== $paymenterEmail
+                ) {
+                    throw new RuntimeException('admin_lifecycle_identity_conflict');
+                }
+
+                $currentExternalId = trim((string) ($attributes['external_id'] ?? ''));
+                $isUuidExternalId = preg_match(
+                    '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD',
+                    $currentExternalId
+                ) === 1;
+                if ($isUuidExternalId && !hash_equals($customerUuid, $currentExternalId)) {
+                    throw new RuntimeException('admin_lifecycle_identity_conflict');
+                }
+
+                if ($currentExternalId !== $customerUuid) {
+                    $this->requestApplicationApi(
+                        'PATCH',
+                        '/api/application/users/' . $clientUserId,
+                        ['external_id' => $customerUuid]
+                    );
+                }
+
+                $verifiedResponse = $this->requestApplicationApi(
+                    'GET',
+                    '/api/application/users/' . $clientUserId
+                );
+                $verifiedAttributes = $verifiedResponse['attributes'] ?? null;
+                if (
+                    !is_array($verifiedAttributes)
+                    || (int) ($verifiedAttributes['id'] ?? 0) !== $clientUserId
+                    || (string) ($verifiedAttributes['external_id'] ?? '') !== $customerUuid
+                    || mb_strtolower(trim((string) ($verifiedAttributes['email'] ?? ''))) !== $paymenterEmail
+                ) {
+                    throw new RuntimeException('admin_lifecycle_identity_verification_failed');
+                }
+
+                return DB::transaction(function () use (
+                    $service,
+                    $identity,
+                    $customerUuid,
+                    $paymenterUser,
+                    $clientUserId,
+                    $previousClientId,
+                    $actorSteamId,
+                    $actorUsername,
+                    $reason
+                ): array {
+                    $lockedIdentity = DB::table('fragcity_customer_identities')
+                        ->where('id', (int) $identity->id)
+                        ->lockForUpdate()
+                        ->first();
+                    if (
+                        !$lockedIdentity
+                        || (string) $lockedIdentity->customer_uuid !== $customerUuid
+                        || (int) $lockedIdentity->paymenter_user_id !== (int) $paymenterUser->id
+                    ) {
+                        throw new RuntimeException('admin_lifecycle_identity_conflict');
+                    }
+
+                    $conflictingMapping = DB::table('fragcity_service_servers')
+                        ->where('customer_uuid', $customerUuid)
+                        ->whereNotNull('paymenter_user_id')
+                        ->where('paymenter_user_id', '!=', (int) $paymenterUser->id)
+                        ->exists();
+                    if ($conflictingMapping) {
+                        throw new RuntimeException('admin_lifecycle_identity_conflict');
+                    }
+
+                    $mappings = DB::table('fragcity_service_servers')
+                        ->where(function ($query) use ($customerUuid, $service): void {
+                            $query->where('customer_uuid', $customerUuid)
+                                ->orWhere('paymenter_service_id', (int) $service->id);
+                        })
+                        ->orderBy('id')
+                        ->lockForUpdate()
+                        ->get();
+
+                    if ($mappings->isEmpty()) {
+                        throw new RuntimeException('admin_lifecycle_record_not_found');
+                    }
+
+                    $affected = 0;
+                    foreach ($mappings as $serviceMapping) {
+                        if (
+                            (int) ($serviceMapping->paymenter_user_id ?? 0) > 0
+                            && (int) $serviceMapping->paymenter_user_id !== (int) $paymenterUser->id
+                        ) {
+                            throw new RuntimeException('admin_lifecycle_identity_conflict');
+                        }
+                        $serviceMappingUuid = trim((string) ($serviceMapping->customer_uuid ?? ''));
+                        if ($serviceMappingUuid !== '' && !hash_equals($customerUuid, $serviceMappingUuid)) {
+                            throw new RuntimeException('admin_lifecycle_identity_conflict');
+                        }
+
+                        $changes = [
+                            'paymenter_user_id' => (int) $paymenterUser->id,
+                            'customer_uuid' => $customerUuid,
+                            'pterodactyl_user_id' => $clientUserId,
+                            'updated_at' => now(),
+                        ];
+
+                        if (
+                            (string) $serviceMapping->lifecycle_state === 'review_required'
+                            && in_array((string) $serviceMapping->observed_state, [
+                                'missing_client',
+                                'client_identity_conflict',
+                                'identity_mapping_conflict',
+                            ], true)
+                        ) {
+                            $changes['observed_state'] = 'client_identity_verified';
+                            $changes['next_reconcile_at'] = now();
+                            $changes['last_error'] = null;
+                        }
+
+                        DB::table('fragcity_service_servers')
+                            ->where('id', (int) $serviceMapping->id)
+                            ->update($changes);
+
+                        DB::table('fragcity_service_lifecycle_events')->insert([
+                            'paymenter_service_id' => (int) $serviceMapping->paymenter_service_id,
+                            'customer_uuid' => $customerUuid,
+                            'event_key' => 'admin_pterodactyl_client_identity_verified',
+                            'from_state' => (string) $serviceMapping->lifecycle_state,
+                            'to_state' => (string) $serviceMapping->lifecycle_state,
+                            'details' => json_encode([
+                                'source' => 'admin_dashboard',
+                                'actor_steamid64' => $actorSteamId,
+                                'actor_username' => mb_substr(trim($actorUsername), 0, 64),
+                                'reason' => $reason,
+                                'pterodactyl_user_id' => $clientUserId,
+                                'previous_pterodactyl_user_id' => (int) ($serviceMapping->pterodactyl_user_id ?? 0),
+                                'previous_identity_pterodactyl_user_id' => $previousClientId,
+                                'external_id_verified' => true,
+                                'email_match_verified' => true,
+                            ], JSON_THROW_ON_ERROR),
+                            'occurred_at' => now(),
+                        ]);
+                        $affected++;
+                    }
+
+                    DB::table('fragcity_customer_identities')
+                        ->where('id', (int) $lockedIdentity->id)
+                        ->update([
+                            'pterodactyl_user_id' => $clientUserId,
+                            'status' => 'active',
+                            'last_verified_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+
+                    return [
+                        'verified' => true,
+                        'client_user_id' => $clientUserId,
+                        'affected_services' => $affected,
+                        'reconcile_required' => true,
+                    ];
+                }, 3);
+            });
     }
 
     /**

@@ -78,3 +78,8 @@ Route::post('/api/v1/fragcity/bridge/admin/lifecycle/acknowledge-paymenter-missi
     ->middleware('throttle:5,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.admin.lifecycle.acknowledge-paymenter-missing');
+
+Route::post('/api/v1/fragcity/bridge/admin/lifecycle/verify-client-identity', [FragCityAPI::class, 'adminLifecycleVerifyClientIdentity'])
+    ->middleware('throttle:5,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.admin.lifecycle.verify-client-identity');

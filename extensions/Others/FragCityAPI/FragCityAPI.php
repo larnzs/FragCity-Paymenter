@@ -25,7 +25,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed FragCity bridge for durable customer identity, CS2 service lifecycle, Client API, Console and File Manager.',
-    version: '1.10.0',
+    version: '1.11.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -2179,6 +2179,118 @@ class FragCityAPI extends Extension
         } catch (Throwable $e) {
             Log::error('FragCity administrator recreation revocation failed.', [
                 'service_id' => $serviceId,
+                'actor_steamid_hash' => substr(hash('sha256', (string) $data['actor_steamid64']), 0, 16),
+                'exception' => get_class($e),
+            ]);
+            return response()->json(['success' => false, 'error' => 'admin_lifecycle_unavailable'], 503);
+        }
+    }
+
+    /**
+     * Verify and bind one existing Pterodactyl Client after administrator
+     * review. The server extension validates the exact Client email and
+     * changes only its durable external_id when the current value is legacy.
+     */
+    public function adminLifecycleVerifyClientIdentity(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) return $authError;
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'actor_steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'actor_username' => ['nullable', 'string', 'max:64'],
+            'service_id' => ['required', 'integer', 'min:1'],
+            'pterodactyl_user_id' => ['required', 'integer', 'min:1'],
+            'reason' => ['required', 'string', 'min:8', 'max:500'],
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        if (
+            !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasTable('fragcity_customer_identities')
+            || !Schema::hasTable('fragcity_service_lifecycle_events')
+        ) {
+            return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
+        }
+
+        $data = $validator->validated();
+        $serviceId = (int) $data['service_id'];
+        $clientUserId = (int) $data['pterodactyl_user_id'];
+        $reason = trim((string) $data['reason']);
+        if (mb_strlen($reason) < 8 || mb_strlen($reason) > 500) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        try {
+            $service = Service::query()
+                ->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue', 'user'])
+                ->find($serviceId);
+            if (
+                !$service
+                || $service->product?->server?->extension !== 'FragCityCS2'
+            ) {
+                throw new RuntimeException('admin_lifecycle_action_not_allowed');
+            }
+
+            $mapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', $serviceId)
+                ->first();
+            if (!$mapping || (string) $mapping->lifecycle_state !== 'review_required' || $mapping->deleted_at !== null) {
+                throw new RuntimeException($mapping ? 'admin_lifecycle_action_not_allowed' : 'admin_lifecycle_record_not_found');
+            }
+
+            if (
+                !in_array((string) $mapping->observed_state, [
+                    'missing_client',
+                    'client_identity_conflict',
+                    'identity_mapping_conflict',
+                ], true)
+            ) {
+                throw new RuntimeException('admin_lifecycle_action_not_allowed');
+            }
+
+            $result = ExtensionHelper::callService(
+                $service,
+                'adminVerifyPterodactylClientIdentity',
+                [
+                    $clientUserId,
+                    (string) $data['actor_steamid64'],
+                    (string) ($data['actor_username'] ?? ''),
+                    $reason,
+                ]
+            );
+
+            return response()->json(['success' => true, 'data' => [
+                'result' => is_array($result) ? $result : [],
+                'detail' => $this->adminLifecycleDetailPayload($serviceId),
+            ]]);
+        } catch (RuntimeException $e) {
+            $status = match ($e->getMessage()) {
+                'admin_lifecycle_record_not_found',
+                'admin_pterodactyl_client_not_found' => 404,
+                'admin_lifecycle_action_not_allowed',
+                'admin_lifecycle_identity_conflict' => 409,
+                'admin_lifecycle_identity_verification_failed' => 502,
+                'validation_failed' => 422,
+                default => 503,
+            };
+            $safeError = in_array($e->getMessage(), [
+                'admin_lifecycle_record_not_found',
+                'admin_pterodactyl_client_not_found',
+                'admin_lifecycle_action_not_allowed',
+                'admin_lifecycle_identity_conflict',
+                'admin_lifecycle_identity_verification_failed',
+                'validation_failed',
+            ], true) ? $e->getMessage() : 'admin_lifecycle_unavailable';
+
+            return response()->json(['success' => false, 'error' => $safeError], $status);
+        } catch (Throwable $e) {
+            Log::error('FragCity administrator Client identity verification failed.', [
+                'service_id' => $serviceId,
+                'pterodactyl_user_id' => $clientUserId,
                 'actor_steamid_hash' => substr(hash('sha256', (string) $data['actor_steamid64']), 0, 16),
                 'exception' => get_class($e),
             ]);
