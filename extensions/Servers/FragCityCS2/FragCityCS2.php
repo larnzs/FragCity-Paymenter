@@ -303,21 +303,11 @@ class FragCityCS2 extends PterodactylExtension
                 }
 
                 throw $e;
-            }            return $created;
+            }
         });
     }
 
 
-    /**
-     * Create or update the Pterodactyl client identity before the official
-     * Paymenter provisioner looks it up by email and creates the server.
-     *
-     * The username is stored on the Paymenter user as the FragCity-owned
-     * "fragcity_username" property because Paymenter has no native username
-     * field. The two client names and email use Paymenter's native user fields.
-     * Pterodactyl allows a nullable password on Application API user creation;
-     * we intentionally do not invent or persist a second plaintext password.
-     */
     /**
      * Resolve the Pterodactyl client owned by this Paymenter account and
      * align its native username/name/email fields with FragCity.
@@ -790,7 +780,6 @@ class FragCityCS2 extends PterodactylExtension
     }
 
     /**
-     * Serialize all lifecycle mutations for one Paymenter service.    /**
      * Serialize all lifecycle mutations for one Paymenter service.
      *
      * @template T
