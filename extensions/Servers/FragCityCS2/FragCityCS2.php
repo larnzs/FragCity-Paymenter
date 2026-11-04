@@ -984,6 +984,17 @@ class FragCityCS2 extends PterodactylExtension
      */
     public function getCustomerPanelSummary(Service $service, $settings, $properties): array
     {
+        return $this->withServiceLifecycleLock($service, function () use ($service): array {
+            return $this->getCustomerPanelSummaryLocked($service);
+        });
+    }
+
+    /**
+     * Read and persist a server summary while holding the same per-service
+     * lock used by create, suspend, unsuspend and terminate operations.
+     */
+    private function getCustomerPanelSummaryLocked(Service $service): array
+    {
         try {
             $clientUser = $this->ensurePterodactylClientUser($service, false);
         } catch (RuntimeException $e) {
