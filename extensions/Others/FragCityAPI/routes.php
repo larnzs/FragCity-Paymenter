@@ -73,3 +73,8 @@ Route::post('/api/v1/fragcity/bridge/admin/lifecycle/revoke-recreation', [FragCi
     ->middleware('throttle:5,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.admin.lifecycle.revoke-recreation');
+
+Route::post('/api/v1/fragcity/bridge/admin/lifecycle/acknowledge-paymenter-missing', [FragCityAPI::class, 'adminLifecycleAcknowledgePaymenterMissing'])
+    ->middleware('throttle:5,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.admin.lifecycle.acknowledge-paymenter-missing');

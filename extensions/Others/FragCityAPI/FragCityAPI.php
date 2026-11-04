@@ -25,7 +25,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed FragCity bridge for durable customer identity, CS2 service lifecycle, Client API, Console and File Manager.',
-    version: '1.9.0',
+    version: '1.10.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -141,7 +141,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.9.0',
+            'version' => '1.10.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -1660,6 +1660,10 @@ class FragCityAPI extends Extension
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claimed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_by')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_reason')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_decision')
         ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
@@ -2065,6 +2069,134 @@ class FragCityAPI extends Extension
         }
     }
 
+    /**
+     * Acknowledge a Paymenter-missing tombstone without deleting or mutating
+     * any external Pterodactyl resource. The only supported decision is to
+     * retain the external mapping for audit/support follow-up.
+     */
+    public function adminLifecycleAcknowledgePaymenterMissing(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) return $authError;
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'actor_steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'actor_username' => ['nullable', 'string', 'max:64'],
+            'service_id' => ['required', 'integer', 'min:1'],
+            'reason' => ['required', 'string', 'min:8', 'max:500'],
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        $requiredColumns = [
+            'paymenter_missing_reviewed_at',
+            'paymenter_missing_reviewed_by',
+            'paymenter_missing_reviewed_username',
+            'paymenter_missing_review_reason',
+            'paymenter_missing_review_decision',
+        ];
+        if (
+            !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasTable('fragcity_service_lifecycle_events')
+            || collect($requiredColumns)->contains(
+                static fn (string $column): bool => !Schema::hasColumn('fragcity_service_servers', $column)
+            )
+        ) {
+            return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
+        }
+
+        $data = $validator->validated();
+        $serviceId = (int) $data['service_id'];
+        $reason = trim((string) $data['reason']);
+        if (mb_strlen($reason) < 8 || mb_strlen($reason) > 500) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        try {
+            $alreadyReviewed = DB::transaction(function () use ($data, $serviceId, $reason): bool {
+                $mapping = DB::table('fragcity_service_servers')
+                    ->where('paymenter_service_id', $serviceId)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$mapping) {
+                    throw new RuntimeException('admin_lifecycle_record_not_found');
+                }
+
+                if (
+                    (string) $mapping->lifecycle_state !== 'paymenter_missing'
+                    || $mapping->deleted_at !== null
+                    || Service::query()->where('id', $serviceId)->exists()
+                ) {
+                    throw new RuntimeException('admin_lifecycle_action_not_allowed');
+                }
+
+                if (!empty($mapping->paymenter_missing_reviewed_at)) {
+                    return true;
+                }
+
+                DB::table('fragcity_service_servers')
+                    ->where('paymenter_service_id', $serviceId)
+                    ->update([
+                        'paymenter_missing_reviewed_at' => now(),
+                        'paymenter_missing_reviewed_by' => (string) $data['actor_steamid64'],
+                        'paymenter_missing_reviewed_username' => (string) ($data['actor_username'] ?? ''),
+                        'paymenter_missing_review_reason' => $reason,
+                        'paymenter_missing_review_decision' => 'preserve_external',
+                        'last_reconciled_at' => now(),
+                        'next_reconcile_at' => null,
+                        'last_error' => 'Paymenter service is missing; administrator reviewed the orphan and chose to preserve the external resource.',
+                        'updated_at' => now(),
+                    ]);
+
+                DB::table('fragcity_service_lifecycle_events')->insert([
+                    'paymenter_service_id' => $serviceId,
+                    'customer_uuid' => $mapping->customer_uuid,
+                    'event_key' => 'admin_paymenter_missing_reviewed',
+                    'from_state' => 'paymenter_missing',
+                    'to_state' => 'paymenter_missing',
+                    'details' => json_encode([
+                        'source' => 'admin_dashboard',
+                        'decision' => 'preserve_external',
+                        'reason' => $reason,
+                        'actor_steamid64' => (string) $data['actor_steamid64'],
+                        'actor_username' => (string) ($data['actor_username'] ?? ''),
+                        'pterodactyl_server_id' => (int) ($mapping->pterodactyl_server_id ?? 0),
+                        'remote_action' => 'none',
+                    ], JSON_THROW_ON_ERROR),
+                    'occurred_at' => now(),
+                ]);
+
+                return false;
+            }, 3);
+
+            return response()->json(['success' => true, 'data' => [
+                'already_reviewed' => $alreadyReviewed,
+                'decision' => 'preserve_external',
+                'detail' => $this->adminLifecycleDetailPayload($serviceId),
+            ]]);
+        } catch (RuntimeException $e) {
+            $status = match ($e->getMessage()) {
+                'admin_lifecycle_record_not_found' => 404,
+                'admin_lifecycle_action_not_allowed' => 409,
+                default => 503,
+            };
+            return response()->json(['success' => false, 'error' => in_array($e->getMessage(), [
+                'admin_lifecycle_record_not_found',
+                'admin_lifecycle_action_not_allowed',
+            ], true) ? $e->getMessage() : 'admin_lifecycle_unavailable'], $status);
+        } catch (Throwable $e) {
+            Log::error('FragCity Paymenter-missing review acknowledgement failed.', [
+                'service_id' => $serviceId,
+                'actor_steamid_hash' => substr(hash('sha256', (string) $data['actor_steamid64']), 0, 16),
+                'exception' => get_class($e),
+            ]);
+            return response()->json(['success' => false, 'error' => 'admin_lifecycle_unavailable'], 503);
+        }
+    }
+
     /** @return array<string,mixed> */
     private function adminLifecycleDetailPayload(int $serviceId): array
     {
@@ -2125,6 +2257,11 @@ class FragCityAPI extends Extension
                 'recreation_authorization_revoked_at' => $mapping->recreation_authorization_revoked_at ?? null,
                 'recreation_authorization_revoked_by' => (string) ($mapping->recreation_authorization_revoked_by ?? ''),
                 'recreation_authorization_revoke_reason' => (string) ($mapping->recreation_authorization_revoke_reason ?? ''),
+                'paymenter_missing_reviewed_at' => $mapping->paymenter_missing_reviewed_at ?? null,
+                'paymenter_missing_reviewed_by' => (string) ($mapping->paymenter_missing_reviewed_by ?? ''),
+                'paymenter_missing_reviewed_username' => (string) ($mapping->paymenter_missing_reviewed_username ?? ''),
+                'paymenter_missing_review_reason' => (string) ($mapping->paymenter_missing_review_reason ?? ''),
+                'paymenter_missing_review_decision' => (string) ($mapping->paymenter_missing_review_decision ?? ''),
                 'recreation_authorization_status' => empty($mapping->recreation_authorized_at)
                     ? 'none'
                     : (!empty($mapping->recreation_authorization_revoked_at)
