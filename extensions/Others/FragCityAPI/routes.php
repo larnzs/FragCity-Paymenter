@@ -48,3 +48,23 @@ Route::post('/api/v1/fragcity/bridge/servers/files', [FragCityAPI::class, 'custo
     ->middleware('throttle:120,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.servers.files');
+
+Route::post('/api/v1/fragcity/bridge/admin/lifecycle/list', [FragCityAPI::class, 'adminLifecycleList'])
+    ->middleware('throttle:30,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.admin.lifecycle.list');
+
+Route::post('/api/v1/fragcity/bridge/admin/lifecycle/detail', [FragCityAPI::class, 'adminLifecycleDetail'])
+    ->middleware('throttle:60,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.admin.lifecycle.detail');
+
+Route::post('/api/v1/fragcity/bridge/admin/lifecycle/reconcile', [FragCityAPI::class, 'adminLifecycleReconcile'])
+    ->middleware('throttle:10,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.admin.lifecycle.reconcile');
+
+Route::post('/api/v1/fragcity/bridge/admin/lifecycle/authorize-recreation', [FragCityAPI::class, 'adminLifecycleAuthorizeRecreation'])
+    ->middleware('throttle:5,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.admin.lifecycle.authorize-recreation');

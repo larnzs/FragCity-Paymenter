@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.5.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.7.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -14,6 +14,10 @@ Provides a narrow private server-to-server bridge for FragCity account synchroni
 - `POST /api/v1/fragcity/bridge/servers/client-api/disconnect`
 - `POST /api/v1/fragcity/bridge/servers/console`
 - `POST /api/v1/fragcity/bridge/servers/files`
+- `POST /api/v1/fragcity/bridge/admin/lifecycle/list`
+- `POST /api/v1/fragcity/bridge/admin/lifecycle/detail`
+- `POST /api/v1/fragcity/bridge/admin/lifecycle/reconcile`
+- `POST /api/v1/fragcity/bridge/admin/lifecycle/authorize-recreation`
 
 All bridge routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are server-to-server endpoints; the browser must never call them directly.
 
@@ -84,6 +88,16 @@ The direct file upload and WebSocket connections originate from the FragCity web
 
 The Application API dashboard key remains separate and should retain only the read-only Application API permissions needed for the existing server summary: Servers, Allocations, Nodes, Locations, Nests and Eggs. Do not grant Client API or write privileges to that key.
 
+## Admin Lifecycle API
+
+These endpoints are called only by the FragCity Website backend. The website verifies the administrator session (role=admin) and CSRF token before making a signed HTTPS request. The HMAC secret must never be sent to the browser. actor_steamid64 and actor_username are audit metadata, not a substitute for website administrator authorization.
+
+- admin/lifecycle/list: paginated lifecycle inventory, state counts and search.
+- admin/lifecycle/detail: one mapping, Paymenter/customer information and the latest 50 audit events.
+- admin/lifecycle/reconcile: explicitly re-reads one existing service through the CS2 extension. It never creates or deletes a Pterodactyl resource. If the Paymenter service is gone, it records paymenter_missing for administrator review.
+- admin/lifecycle/authorize-recreation: records a reasoned approval for one missing_external service. This does not dispatch a job; an administrator must separately retry that service's Paymenter CreateJob. Deleted/tombstoned services cannot be reused.
+
+The dashboard deliberately has no remote-delete action. Removing an orphaned Pterodactyl server needs a separate reviewed workflow so a missing Paymenter row can never cause accidental data loss.
 ## Installation
 
 Copy this directory to:
@@ -100,7 +114,7 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.5.0; its `upgraded()` hook runs the pending migrations, including the encrypted Client API credential table. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
+Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.7.0; its `upgraded()` hook runs the pending migrations, including the encrypted Client API credential table. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
 
 ## Security notes
 
