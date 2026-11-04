@@ -704,6 +704,13 @@ class FragCityAPI extends Extension
                 [$apiToken]
             );
 
+            if (!Schema::hasTable('fragcity_client_api_credentials')) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'client_api_storage_not_ready',
+                ], 503);
+            }
+
             $now = now();
             DB::table('fragcity_client_api_credentials')->updateOrInsert(
                 ['user_id' => (int) $user->id],
@@ -769,9 +776,11 @@ class FragCityAPI extends Extension
             return response()->json(['success' => false, 'error' => 'service_not_found'], 404);
         }
 
-        DB::table('fragcity_client_api_credentials')
-            ->where('user_id', (int) $link->user_id)
-            ->delete();
+        if (Schema::hasTable('fragcity_client_api_credentials')) {
+            DB::table('fragcity_client_api_credentials')
+                ->where('user_id', (int) $link->user_id)
+                ->delete();
+        }
 
         return response()->json([
             'success' => true,
@@ -975,6 +984,10 @@ class FragCityAPI extends Extension
 
     private function getStoredCustomerClientApiToken(int $userId): string
     {
+        if (!Schema::hasTable('fragcity_client_api_credentials')) {
+            throw new RuntimeException('client_api_not_connected');
+        }
+
         $row = DB::table('fragcity_client_api_credentials')
             ->where('user_id', $userId)
             ->first();
