@@ -131,6 +131,50 @@ dump([
 5. Deploy the website repository `main` branch. The website's account-sync client expects the bridge to return `customer_uuid`; deploy the Paymenter API first.
 6. Have each customer complete the normal authenticated website account-sync flow. The bridge creates/reuses the durable UUID.
 7. Review legacy Pterodactyl Client accounts. An account whose `external_id` exactly equals the customer's current Paymenter user ID can be upgraded using the known legacy mapping. A blank or different external ID is not claimed by email alone. An administrator must verify the Pterodactyl Client and explicitly set its ID in `fragcity_customer_identities.pterodactyl_user_id`. On the next verified My Servers read or provisioning attempt, the extension updates that verified Client's `external_id` to the durable UUID.
+
+For a manually verified legacy mapping, use a guarded update on the Paymenter database (replace IDs with the verified values):
+
+```bash
+cd /var/www/paymenter
+
+php artisan tinker --execute='
+$paymenterUserId = 10;
+$pterodactylUserId = 9;
+
+$identity = \\Illuminate\\Support\\Facades\\DB::table("fragcity_customer_identities")
+    ->where("paymenter_user_id", $paymenterUserId)
+    ->first();
+
+if (!$identity) {
+    throw new \\RuntimeException("Customer identity has not been created yet. Sign in to FragCity and open My Servers first.");
+}
+
+$alreadyOwned = \\Illuminate\\Support\\Facades\\DB::table("fragcity_customer_identities")
+    ->where("pterodactyl_user_id", $pterodactylUserId)
+    ->where("customer_uuid", "<>", $identity->customer_uuid)
+    ->exists();
+
+if ($alreadyOwned) {
+    throw new \\RuntimeException("Pterodactyl Client is already mapped to a different FragCity customer.");
+}
+
+$updated = \\Illuminate\\Support\\Facades\\DB::table("fragcity_customer_identities")
+    ->where("id", $identity->id)
+    ->where(function ($query) use ($pterodactylUserId): void {
+        $query->whereNull("pterodactyl_user_id")
+            ->orWhere("pterodactyl_user_id", $pterodactylUserId);
+    })
+    ->update([
+        "pterodactyl_user_id" => $pterodactylUserId,
+        "updated_at" => now(),
+    ]);
+
+dump(["updated_rows" => $updated, "customer_uuid" => $identity->customer_uuid]);
+'
+```
+
+Only run this after confirming in Pterodactyl that the selected Client account belongs to that exact customer. A subsequent verified bridge request changes that Client's `external_id` from the legacy Paymenter ID to the stored UUID.
+
 8. Retry only the specific failed service job after its Client mapping is verified.
 
 Do not manually change Pterodactyl Server external IDs. They remain Paymenter service IDs.
