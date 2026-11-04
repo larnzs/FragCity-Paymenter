@@ -42,6 +42,7 @@ return new class extends Migration
             $table->string('lifecycle_state', 32)->default('pending');
 
             $table->timestamp('last_seen_at')->nullable();
+            $table->timestamp('next_reconcile_at')->nullable()->index();
             $table->timestamp('deleted_at')->nullable();
             $table->text('last_error')->nullable();
             $table->timestamps();

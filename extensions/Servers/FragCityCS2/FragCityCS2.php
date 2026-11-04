@@ -546,6 +546,9 @@ class FragCityCS2 extends PterodactylExtension
             'observed_state' => $observedState,
             'lifecycle_state' => $lifecycleState,
             'last_seen_at' => $server !== null ? now() : ($existing->last_seen_at ?? null),
+            'next_reconcile_at' => in_array($lifecycleState, ['deleted', 'missing_external'], true)
+                ? null
+                : now()->addMinutes(5),
             'deleted_at' => $lifecycleState === 'deleted'
                 ? ($existing->deleted_at ?? now())
                 : null,
