@@ -965,16 +965,7 @@ class FragCityCS2 extends PterodactylExtension
                 $isSymlink = (bool) ($attributes['is_symlink'] ?? false);
                 $mimetype = strtolower((string) ($attributes['mimetype'] ?? ''));
                 $size = max(0, (int) ($attributes['size'] ?? 0));
-                $isKnownTextFile = str_starts_with($mimetype, 'text/')
-                    || in_array($mimetype, [
-                        'application/json',
-                        'application/javascript',
-                        'application/xml',
-                        'application/x-yaml',
-                        'application/toml',
-                        'application/x-httpd-php',
-                    ], true)
-                    || $this->isCustomerEditableFilePath('/' . $name);
+                $isKnownTextFile = $this->isCustomerEditableFilePath('/' . $name);
 
                 $items[] = [
                     'name' => $name,
