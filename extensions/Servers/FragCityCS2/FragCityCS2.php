@@ -5,8 +5,11 @@ namespace Paymenter\Extensions\Servers\FragCityCS2;
 use App\Attributes\ExtensionMeta;
 use App\Models\Product;
 use App\Models\Service;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Paymenter\Extensions\Servers\Pterodactyl\Pterodactyl as PterodactylExtension;
 use RuntimeException;
 use Throwable;
@@ -106,10 +109,84 @@ class FragCityCS2 extends PterodactylExtension
             $service->id
         );
 
-        $this->ensurePterodactylClientUser($service, true);
+        $this->assertLifecycleStorageReady();
 
-        return parent::createServer($service, $settings, $properties);
+        return $this->withServiceLifecycleLock($service, function () use ($service, $settings, $properties): array {
+            $clientUser = $this->ensurePterodactylClientUser($service, true);
+            $clientUserId = (int) ($clientUser['id'] ?? 0);
+
+            if ($clientUserId < 1) {
+                throw new RuntimeException('Pterodactyl client identity could not be verified.');
+            }
+
+            // Retry-safe: if Pterodactyl created the server but Paymenter lost
+            // the job response, recover the existing server instead of creating
+            // a duplicate or failing with "Server already exists".
+            $existing = $this->findPterodactylServerByExternalId((int) $service->id);
+            if ($existing !== null) {
+                if ((int) ($existing['user'] ?? 0) !== $clientUserId) {
+                    throw new RuntimeException('The existing Pterodactyl server is linked to a different client account.');
+                }
+
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    $existing,
+                    'active',
+                    !empty($existing['suspended']) ? 'suspended' : 'active',
+                    'ready'
+                );
+
+                $identifier = trim((string) ($existing['identifier'] ?? ''));
+                return [
+                    'server' => (int) ($existing['id'] ?? 0),
+                    'link' => rtrim((string) $this->config('host'), '/') . '/server/' . rawurlencode($identifier),
+                ];
+            }
+
+            $this->storeServiceLifecycle(
+                $service,
+                $clientUserId,
+                null,
+                'active',
+                'unknown',
+                'provisioning'
+            );
+
+            $created = parent::createServer($service, $settings, $properties);
+            $serverId = (int) ($created['server'] ?? 0);
+
+            if ($serverId < 1) {
+                throw new RuntimeException('Paymenter returned an invalid Pterodactyl server ID.');
+            }
+
+            $serverResponse = $this->requestApplicationApi(
+                'GET',
+                '/api/application/servers/' . $serverId
+            );
+            $attributes = $serverResponse['attributes'] ?? null;
+
+            if (
+                !is_array($attributes)
+                || (string) ($attributes['external_id'] ?? '') !== (string) $service->id
+                || (int) ($attributes['user'] ?? 0) !== $clientUserId
+            ) {
+                throw new RuntimeException('Pterodactyl server creation could not be verified against the Paymenter service.');
+            }
+
+            $this->storeServiceLifecycle(
+                $service,
+                $clientUserId,
+                $attributes,
+                'active',
+                !empty($attributes['suspended']) ? 'suspended' : 'active',
+                'ready'
+            );
+
+            return $created;
+        });
     }
+
 
     /**
      * Create or update the Pterodactyl client identity before the official
@@ -168,19 +245,64 @@ class FragCityCS2 extends PterodactylExtension
             throw new RuntimeException('FragCity client last name is missing or invalid.');
         }
 
-        $externalId = (string) $paymenterUserId;
-        $users = $this->request('/api/application/users', 'get', [
-            'filter' => ['email' => $email],
-        ]);
-        $attributes = $users['data'][0]['attributes'] ?? null;
+        $this->assertLifecycleStorageReady();
 
-        // Email can change after provisioning; external_id remains the stable
-        // Paymenter-user-to-Pterodactyl-user link.
+        $identity = DB::table('fragcity_customer_identities')
+            ->where('paymenter_user_id', $paymenterUserId)
+            ->first();
+
+        $customerUuid = trim((string) ($identity->customer_uuid ?? ''));
+        $knownPterodactylUserId = (int) ($identity->pterodactyl_user_id ?? 0);
+
+        if (!preg_match(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD',
+            $customerUuid
+        )) {
+            throw new RuntimeException('FragCity customer identity is not registered. Sign in to FragCity again and retry.');
+        }
+
+        // The durable UUID, not Paymenter's mutable auto-increment ID, is the
+        // Pterodactyl Client external_id. Each server still uses its own
+        // Paymenter service ID as the Pterodactyl Server external_id.
+        $externalId = $customerUuid;
+        $attributes = null;
+
+        if ($knownPterodactylUserId > 0) {
+            $known = $this->requestApplicationApi(
+                'GET',
+                '/api/application/users/' . $knownPterodactylUserId
+            );
+            $knownAttributes = $known['attributes'] ?? null;
+
+            if (is_array($knownAttributes)) {
+                $attributes = $knownAttributes;
+            }
+        }
+
         if (!is_array($attributes)) {
-            $byExternalId = $this->request('/api/application/users', 'get', [
+            $byUuid = $this->request('/api/application/users', 'get', [
                 'filter' => ['external_id' => $externalId],
             ]);
-            $attributes = $byExternalId['data'][0]['attributes'] ?? null;
+            $uuidRows = $byUuid['data'] ?? [];
+
+            if (is_array($uuidRows) && count($uuidRows) > 1) {
+                throw new RuntimeException('The FragCity customer UUID is assigned to multiple Pterodactyl accounts.');
+            }
+
+            $attributes = $uuidRows[0]['attributes'] ?? null;
+        }
+
+        if (!is_array($attributes)) {
+            $byEmail = $this->request('/api/application/users', 'get', [
+                'filter' => ['email' => $email],
+            ]);
+            $emailRows = $byEmail['data'] ?? [];
+
+            if (is_array($emailRows) && count($emailRows) > 1) {
+                throw new RuntimeException('Multiple Pterodactyl client accounts use this customer email.');
+            }
+
+            $attributes = $emailRows[0]['attributes'] ?? null;
         }
 
         $clientData = [
@@ -198,11 +320,10 @@ class FragCityCS2 extends PterodactylExtension
 
             $created = $this->request('/api/application/users', 'post', $clientData);
             $attributes = $created['attributes'] ?? null;
+
             if (!is_array($attributes)) {
                 throw new RuntimeException('Pterodactyl did not return the created client account.');
             }
-
-            return $attributes;
         }
 
         $pterodactylUserId = (int) ($attributes['id'] ?? 0);
@@ -212,9 +333,25 @@ class FragCityCS2 extends PterodactylExtension
             throw new RuntimeException('Pterodactyl returned a client user without a valid ID.');
         }
 
-        if ($existingExternalId !== '' && $existingExternalId !== $externalId) {
+        if (
+            $knownPterodactylUserId > 0
+            && $knownPterodactylUserId !== $pterodactylUserId
+        ) {
+            throw new RuntimeException('FragCity identity registry and Pterodactyl client mapping do not match.');
+        }
+
+        $explicitlyMapped = $knownPterodactylUserId === $pterodactylUserId;
+        $legacyPaymenterLink = $existingExternalId === (string) $paymenterUserId;
+        $unclaimedAccount = $existingExternalId === '';
+
+        if (
+            $existingExternalId !== $externalId
+            && !$explicitlyMapped
+            && !$legacyPaymenterLink
+            && !$unclaimedAccount
+        ) {
             throw new RuntimeException(
-                'The Pterodactyl email is already linked to a different external account.'
+                'The Pterodactyl email is already linked to a different external account. Admin verification is required.'
             );
         }
 
@@ -234,7 +371,337 @@ class FragCityCS2 extends PterodactylExtension
             $attributes = $updated['attributes'] ?? array_merge($attributes, $clientData);
         }
 
+        DB::table('fragcity_customer_identities')
+            ->where('customer_uuid', $customerUuid)
+            ->update([
+                'pterodactyl_user_id' => $pterodactylUserId,
+                'last_verified_at' => now(),
+                'updated_at' => now(),
+            ]);
+
         return $attributes;
+    }
+
+
+    /**
+     * Verify the lifecycle registry is installed before provisioning or
+     * mutating a remote resource. This avoids creating untracked Pterodactyl
+     * servers during an incomplete deployment.
+     */
+    private function assertLifecycleStorageReady(): void
+    {
+        if (
+            !Schema::hasTable('fragcity_customer_identities')
+            || !Schema::hasTable('fragcity_service_servers')
+        ) {
+            throw new RuntimeException('FragCity lifecycle migrations are not installed.');
+        }
+    }
+
+    /**
+     * Serialize all lifecycle mutations for one Paymenter service.
+     *
+     * @template T
+     * @param callable():T $callback
+     * @return T
+     */
+    private function withServiceLifecycleLock(Service $service, callable $callback)
+    {
+        return Cache::lock('fragcity:service-lifecycle:' . (int) $service->id, 120)
+            ->block(20, $callback);
+    }
+
+    /**
+     * Call Pterodactyl's official Application API while preserving real HTTP
+     * status codes. Only an actual 404 is represented as null; network errors,
+     * authentication errors and 5xx responses remain failures.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function requestApplicationApi(string $method, string $path, array $payload = []): ?array
+    {
+        $baseUrl = rtrim(trim((string) $this->config('host')), '/');
+        $apiKey = trim((string) $this->config('api_key'));
+        $parts = parse_url($baseUrl);
+
+        if (
+            !is_array($parts)
+            || !in_array(strtolower((string) ($parts['scheme'] ?? '')), ['https', 'http'], true)
+            || empty($parts['host'])
+            || $apiKey === ''
+        ) {
+            throw new RuntimeException('FragCity Pterodactyl Application API configuration is invalid.');
+        }
+
+        $url = $baseUrl . '/' . ltrim($path, '/');
+        $request = Http::withToken($apiKey)
+            ->acceptJson()
+            ->timeout(25)
+            ->withOptions(['allow_redirects' => false]);
+
+        $method = strtoupper($method);
+        if ($method === 'GET') {
+            $response = $request->get($url, $payload);
+        } elseif ($method === 'DELETE' || $method === 'POST') {
+            $response = $request->send($method, $url, $payload === [] ? [] : ['json' => $payload]);
+        } else {
+            throw new RuntimeException('Unsupported Pterodactyl Application API method.');
+        }
+
+        if ($response->status() === 404) {
+            return null;
+        }
+
+        if (!$response->successful()) {
+            throw new RuntimeException(
+                'Pterodactyl Application API request failed with HTTP ' . $response->status() . '.'
+            );
+        }
+
+        if ($response->status() === 204 || trim($response->body()) === '') {
+            return [];
+        }
+
+        $decoded = $response->json();
+        if (!is_array($decoded)) {
+            throw new RuntimeException('Pterodactyl returned an invalid Application API response.');
+        }
+
+        return $decoded;
+    }
+
+    /**
+     * Return a server only when Pterodactyl confirms the exact Paymenter
+     * service external_id. Missing is distinct from API failure.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function findPterodactylServerByExternalId(int $serviceId): ?array
+    {
+        $response = $this->requestApplicationApi(
+            'GET',
+            '/api/application/servers/external/' . $serviceId
+        );
+
+        if ($response === null) {
+            return null;
+        }
+
+        $attributes = $response['attributes'] ?? null;
+        if (
+            !is_array($attributes)
+            || (string) ($attributes['external_id'] ?? '') !== (string) $serviceId
+            || (int) ($attributes['id'] ?? 0) < 1
+        ) {
+            throw new RuntimeException('Pterodactyl returned a server that does not match this Paymenter service.');
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Persist one service-to-server mapping without foreign keys to Paymenter
+     * rows. Existing server identifiers are retained when a manually deleted
+     * Pterodactyl resource can no longer be read.
+     *
+     * @param array<string,mixed>|null $server
+     */
+    private function storeServiceLifecycle(
+        Service $service,
+        int $pterodactylUserId,
+        ?array $server,
+        string $desiredState,
+        string $observedState,
+        string $lifecycleState,
+        ?string $lastError = null
+    ): void {
+        $this->assertLifecycleStorageReady();
+
+        $existing = DB::table('fragcity_service_servers')
+            ->where('paymenter_service_id', (int) $service->id)
+            ->first();
+
+        $identity = DB::table('fragcity_customer_identities')
+            ->where('paymenter_user_id', (int) $service->user_id)
+            ->first();
+
+        $serverId = (int) ($server['id'] ?? 0);
+        $identifier = trim((string) ($server['identifier'] ?? ''));
+
+        $values = [
+            'paymenter_user_id' => (int) $service->user_id,
+            'customer_uuid' => $identity->customer_uuid ?? ($existing->customer_uuid ?? null),
+            'pterodactyl_user_id' => $pterodactylUserId > 0
+                ? $pterodactylUserId
+                : ($existing->pterodactyl_user_id ?? null),
+            'pterodactyl_server_id' => $serverId > 0
+                ? $serverId
+                : ($existing->pterodactyl_server_id ?? null),
+            'server_identifier' => $identifier !== ''
+                ? $identifier
+                : ($existing->server_identifier ?? null),
+            'desired_state' => $desiredState,
+            'observed_state' => $observedState,
+            'lifecycle_state' => $lifecycleState,
+            'last_seen_at' => $server !== null ? now() : ($existing->last_seen_at ?? null),
+            'deleted_at' => $lifecycleState === 'deleted'
+                ? ($existing->deleted_at ?? now())
+                : null,
+            'last_error' => $lastError,
+            'updated_at' => now(),
+        ];
+
+        if ($existing) {
+            DB::table('fragcity_service_servers')
+                ->where('id', (int) $existing->id)
+                ->update($values);
+            return;
+        }
+
+        DB::table('fragcity_service_servers')->insert(array_merge(
+            ['paymenter_service_id' => (int) $service->id, 'created_at' => now()],
+            $values
+        ));
+    }
+
+    /**
+     * Suspend the exact Pterodactyl server associated with this service.
+     * Repeated calls are safe; a confirmed missing server is recorded rather
+     * than recreated.
+     */
+    public function suspendServer(Service $service, $settings, $properties): bool
+    {
+        return $this->withServiceLifecycleLock($service, function () use ($service): bool {
+            $this->storeServiceLifecycle($service, 0, null, 'suspended', 'unknown', 'suspending');
+            $server = $this->findPterodactylServerByExternalId((int) $service->id);
+
+            if ($server === null) {
+                $this->storeServiceLifecycle(
+                    $service,
+                    0,
+                    null,
+                    'suspended',
+                    'missing',
+                    'missing_external',
+                    'Pterodactyl server returned 404 during suspend.'
+                );
+                return true;
+            }
+
+            if (empty($server['suspended'])) {
+                $result = $this->requestApplicationApi(
+                    'POST',
+                    '/api/application/servers/' . (int) $server['id'] . '/suspend'
+                );
+
+                if ($result === null) {
+                    $this->storeServiceLifecycle(
+                        $service,
+                        0,
+                        null,
+                        'suspended',
+                        'missing',
+                        'missing_external',
+                        'Pterodactyl server disappeared during suspend.'
+                    );
+                    return true;
+                }
+            }
+
+            $server['suspended'] = true;
+            $this->storeServiceLifecycle($service, (int) ($server['user'] ?? 0), $server, 'suspended', 'suspended', 'suspended');
+            return true;
+        });
+    }
+
+    /**
+     * Unsuspend the existing server. This method never creates a replacement
+     * if the external server was manually deleted.
+     */
+    public function unsuspendServer(Service $service, $settings, $properties): bool
+    {
+        return $this->withServiceLifecycleLock($service, function () use ($service): bool {
+            $this->storeServiceLifecycle($service, 0, null, 'active', 'unknown', 'unsuspending');
+            $server = $this->findPterodactylServerByExternalId((int) $service->id);
+
+            if ($server === null) {
+                $this->storeServiceLifecycle(
+                    $service,
+                    0,
+                    null,
+                    'active',
+                    'missing',
+                    'missing_external',
+                    'Pterodactyl server returned 404 during unsuspend.'
+                );
+                return true;
+            }
+
+            if (!empty($server['suspended'])) {
+                $result = $this->requestApplicationApi(
+                    'POST',
+                    '/api/application/servers/' . (int) $server['id'] . '/unsuspend'
+                );
+
+                if ($result === null) {
+                    $this->storeServiceLifecycle(
+                        $service,
+                        0,
+                        null,
+                        'active',
+                        'missing',
+                        'missing_external',
+                        'Pterodactyl server disappeared during unsuspend.'
+                    );
+                    return true;
+                }
+            }
+
+            $server['suspended'] = false;
+            $this->storeServiceLifecycle($service, (int) ($server['user'] ?? 0), $server, 'active', 'active', 'active');
+            return true;
+        });
+    }
+
+    /**
+     * Delete only the server whose external_id is this Paymenter service ID.
+     * A 404 is an idempotent success; all other API failures abort the
+     * Paymenter Eloquent deletion hook so the service row is not lost.
+     */
+    public function terminateServer(Service $service, $settings, $properties): array
+    {
+        return $this->withServiceLifecycleLock($service, function () use ($service): array {
+            $server = $this->findPterodactylServerByExternalId((int) $service->id);
+            $this->storeServiceLifecycle(
+                $service,
+                (int) ($server['user'] ?? 0),
+                $server,
+                'deleted',
+                $server === null ? 'missing' : (!empty($server['suspended']) ? 'suspended' : 'active'),
+                'deleting'
+            );
+
+            if ($server !== null) {
+                $this->requestApplicationApi(
+                    'DELETE',
+                    '/api/application/servers/' . (int) $server['id']
+                );
+            }
+
+            $this->storeServiceLifecycle(
+                $service,
+                (int) ($server['user'] ?? 0),
+                null,
+                'deleted',
+                'deleted',
+                'deleted'
+            );
+
+            return [
+                'terminated' => true,
+                'server_id' => (int) ($server['id'] ?? 0),
+            ];
+        });
     }
 
     /**
@@ -354,12 +821,24 @@ class FragCityCS2 extends PterodactylExtension
             );
         } catch (Exception $e) {
             $message = strtolower($e->getMessage());
-            if (str_contains($message, 'not found') || str_contains($message, 'no query results')) {
+            if (str_contains($message, 'pterodactyl server not found')) {
+                $pending = (string) $service->status === Service::STATUS_PENDING;
+
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    null,
+                    $service->status === Service::STATUS_SUSPENDED ? 'suspended' : 'active',
+                    'missing',
+                    $pending ? 'provisioning' : 'missing_external',
+                    $pending ? null : 'Pterodactyl confirmed that this service server does not exist.'
+                );
+
                 return [
                     'service_id' => (int) $service->id,
                     'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
                     'service_status' => (string) $service->status,
-                    'state' => 'provisioning',
+                    'state' => $pending ? 'provisioning' : 'missing_external',
                     'panel' => null,
                     'server' => null,
                 ];
@@ -385,6 +864,16 @@ class FragCityCS2 extends PterodactylExtension
         if ($identifier === '' || $uuid === '') {
             throw new RuntimeException('Pterodactyl returned incomplete server identifiers.');
         }
+
+        $isSuspended = (bool) ($attributes['suspended'] ?? false);
+        $this->storeServiceLifecycle(
+            $service,
+            $clientUserId,
+            $attributes,
+            $service->status === Service::STATUS_SUSPENDED ? 'suspended' : 'active',
+            $isSuspended ? 'suspended' : 'active',
+            'ready'
+        );
 
         $limits = is_array($attributes['limits'] ?? null) ? $attributes['limits'] : [];
         $featureLimits = is_array($attributes['feature_limits'] ?? null)
