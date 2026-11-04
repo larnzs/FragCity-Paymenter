@@ -154,8 +154,7 @@ class FragCityCS2 extends PterodactylExtension
             }
 
             $wasPreviouslyProvisioned = $mapping && (
-                (string) $mapping->lifecycle_state === 'missing_external'
-                || (int) ($mapping->pterodactyl_server_id ?? 0) > 0
+                (int) ($mapping->pterodactyl_server_id ?? 0) > 0
                 || $mapping->last_seen_at !== null
             );
             $recreationAuthorized = $mapping
@@ -896,6 +895,10 @@ class FragCityCS2 extends PterodactylExtension
             throw new RuntimeException('Pterodactyl client identity could not be verified.');
         }
 
+        $previousMapping = DB::table('fragcity_service_servers')
+            ->where('paymenter_service_id', (int) $service->id)
+            ->first();
+
         try {
             $serverResponse = $this->requestCustomerDashboardDetails(
                 '/api/application/servers/external/' . (int) $service->id
@@ -904,23 +907,34 @@ class FragCityCS2 extends PterodactylExtension
         } catch (Exception $e) {
             $message = strtolower($e->getMessage());
             if (str_contains($message, 'pterodactyl server not found')) {
-                $pending = (string) $service->status === Service::STATUS_PENDING;
+                // A 404 is only "missing external" when FragCity has prior
+                // evidence that this Paymenter service owned a real Server.
+                // A never-provisioned service remains provisioning so a
+                // failed first CreateJob can be retried safely.
+                $wasPreviouslyProvisioned = $previousMapping && (
+                    (int) ($previousMapping->pterodactyl_server_id ?? 0) > 0
+                    || $previousMapping->last_seen_at !== null
+                );
+                $missingState = $wasPreviouslyProvisioned ? 'missing_external' : 'provisioning';
+                $desiredState = $service->status === Service::STATUS_SUSPENDED ? 'suspended' : 'active';
 
                 $this->storeServiceLifecycle(
                     $service,
                     $clientUserId,
                     null,
-                    $service->status === Service::STATUS_SUSPENDED ? 'suspended' : 'active',
+                    $desiredState,
                     'missing',
-                    $pending ? 'provisioning' : 'missing_external',
-                    $pending ? null : 'Pterodactyl confirmed that this service server does not exist.'
+                    $missingState,
+                    $wasPreviouslyProvisioned
+                        ? 'Pterodactyl confirmed that a previously verified service server no longer exists.'
+                        : null
                 );
 
                 return [
                     'service_id' => (int) $service->id,
                     'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
                     'service_status' => (string) $service->status,
-                    'state' => $pending ? 'provisioning' : 'missing_external',
+                    'state' => $missingState,
                     'panel' => null,
                     'server' => null,
                 ];

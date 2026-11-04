@@ -62,7 +62,7 @@ Direct SQL deletes bypass Eloquent model events by definition. Do not use raw SQ
 - `paymenter_missing`: the Paymenter service row is missing outside the supported Eloquent deletion path; admin review is required.
 - `review_required`: the current Paymenter service is no longer associated with the FragCityCS2 extension; do not mutate the external server automatically.
 
-Only a confirmed 404 marks a Pterodactyl resource as missing. API errors and failed authentication are operational errors, not missing resources.
+Only a confirmed 404 for a previously verified Server (a stored Pterodactyl Server ID or `last_seen_at`) marks it `missing_external`. A first-time service with no evidence of prior provisioning remains `provisioning`, allowing a failed first CreateJob to be retried. For services that existed before this registry was deployed, the first successful My Servers read seeds the mapping. If a legacy Server was already manually deleted before its first mapping could be seeded, no system can prove its prior existence from the new registry alone; review those legacy services during rollout before retrying old jobs. API errors and failed authentication are operational errors, not missing resources.
 
 ## Reconciliation
 
