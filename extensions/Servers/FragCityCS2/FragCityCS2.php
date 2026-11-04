@@ -789,6 +789,22 @@ class FragCityCS2 extends PterodactylExtension
     public function terminateServer(Service $service, $settings, $properties): array
     {
         return $this->withServiceLifecycleLock($service, function () use ($service): array {
+            $existingMapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->first();
+
+            if (
+                $existingMapping
+                && (string) $existingMapping->lifecycle_state === 'deleted'
+                && $existingMapping->deleted_at !== null
+            ) {
+                return [
+                    'terminated' => true,
+                    'server_id' => (int) ($existingMapping->pterodactyl_server_id ?? 0),
+                    'already_deleted' => true,
+                ];
+            }
+
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
             $expectedClientUserId = $server !== null
                 ? $this->assertPterodactylServerOwner($service, $server)
