@@ -25,7 +25,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.7.0',
+    version: '1.7.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -2496,7 +2496,14 @@ class FragCityCS2 extends PterodactylExtension
             throw new RuntimeException('Pterodactyl host must be a valid HTTPS origin.');
         }
 
-        $clientUser = $this->ensurePterodactylClientUser($service, false);
+        // Console, File Manager and Client API-key verification are read
+        // paths. Resolve only the already-approved identity with GET requests;
+        // never synchronize or PATCH the Pterodactyl Client profile here.
+        $clientUser = $this->getVerifiedPterodactylClientUserReadOnly($service);
+        if (!is_array($clientUser)) {
+            throw new RuntimeException('client_api_server_verification_failed');
+        }
+
         $clientUserId = (int) ($clientUser['id'] ?? 0);
         if ($clientUserId < 1) {
             throw new RuntimeException('Pterodactyl client identity could not be verified.');
