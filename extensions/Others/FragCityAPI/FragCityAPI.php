@@ -23,7 +23,7 @@ use Throwable;
 
 #[ExtensionMeta(
     name: 'FragCity API',
-    description: 'Private signed server-to-server account, Client API, Console and File Manager bridge for FragCity.',
+    description: 'Private signed FragCity bridge for durable customer identity, CS2 service lifecycle, Client API, Console and File Manager.',
     version: '1.6.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
@@ -106,6 +106,20 @@ class FragCityAPI extends Extension
 
                 ExtensionHelper::terminateServer($service);
             }
+        });
+
+        User::deleted(function (User $user): void {
+            if (!Schema::hasTable('fragcity_customer_identities')) {
+                return;
+            }
+
+            DB::table('fragcity_customer_identities')
+                ->where('paymenter_user_id', (int) $user->id)
+                ->update([
+                    'paymenter_user_id' => null,
+                    'status' => 'detached',
+                    'updated_at' => now(),
+                ]);
         });
     }
 
@@ -591,6 +605,21 @@ class FragCityAPI extends Extension
                         'last_error' => 'Paymenter service record is missing; external cleanup requires admin review.',
                         'updated_at' => now(),
                     ]);
+
+                if (Schema::hasTable('fragcity_service_lifecycle_events')) {
+                    DB::table('fragcity_service_lifecycle_events')->insert([
+                        'paymenter_service_id' => (int) $mapping->paymenter_service_id,
+                        'customer_uuid' => (string) $identity->customer_uuid,
+                        'event_key' => 'paymenter_service_missing',
+                        'from_state' => (string) $mapping->lifecycle_state,
+                        'to_state' => 'paymenter_missing',
+                        'details' => json_encode([
+                            'source' => 'website_reconciliation',
+                            'action' => 'admin_review_required',
+                        ], JSON_THROW_ON_ERROR),
+                        'occurred_at' => now(),
+                    ]);
+                }
             }
 
             $missing++;

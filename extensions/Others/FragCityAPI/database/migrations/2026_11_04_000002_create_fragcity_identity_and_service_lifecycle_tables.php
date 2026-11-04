@@ -49,10 +49,23 @@ return new class extends Migration
             $table->index(['customer_uuid', 'lifecycle_state']);
             $table->index(['paymenter_user_id', 'lifecycle_state']);
         });
+
+        Schema::create('fragcity_service_lifecycle_events', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('paymenter_service_id')->index();
+            $table->uuid('customer_uuid')->nullable()->index();
+            $table->string('event_key', 64);
+            $table->string('from_state', 32)->nullable();
+            $table->string('to_state', 32)->nullable();
+            $table->json('details')->nullable();
+            $table->timestamp('occurred_at')->useCurrent();
+            $table->index(['paymenter_service_id', 'occurred_at']);
+        });
     }
 
     public function down(): void
     {
+        Schema::dropIfExists('fragcity_service_lifecycle_events');
         Schema::dropIfExists('fragcity_service_servers');
         Schema::dropIfExists('fragcity_customer_identities');
     }

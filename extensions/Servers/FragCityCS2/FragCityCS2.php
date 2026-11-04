@@ -527,6 +527,8 @@ class FragCityCS2 extends PterodactylExtension
 
         $serverId = (int) ($server['id'] ?? 0);
         $identifier = trim((string) ($server['identifier'] ?? ''));
+        $previousLifecycleState = (string) ($existing->lifecycle_state ?? '');
+        $previousDesiredState = (string) ($existing->desired_state ?? '');
 
         $values = [
             'paymenter_user_id' => (int) $service->user_id,
@@ -555,13 +557,32 @@ class FragCityCS2 extends PterodactylExtension
             DB::table('fragcity_service_servers')
                 ->where('id', (int) $existing->id)
                 ->update($values);
-            return;
+        } else {
+            DB::table('fragcity_service_servers')->insert(array_merge(
+                ['paymenter_service_id' => (int) $service->id, 'created_at' => now()],
+                $values
+            ));
         }
 
-        DB::table('fragcity_service_servers')->insert(array_merge(
-            ['paymenter_service_id' => (int) $service->id, 'created_at' => now()],
-            $values
-        ));
+        $stateChanged = $previousLifecycleState !== $lifecycleState
+            || $previousDesiredState !== $desiredState;
+
+        if ($stateChanged && Schema::hasTable('fragcity_service_lifecycle_events')) {
+            DB::table('fragcity_service_lifecycle_events')->insert([
+                'paymenter_service_id' => (int) $service->id,
+                'customer_uuid' => $values['customer_uuid'],
+                'event_key' => 'service_state_changed',
+                'from_state' => $previousLifecycleState !== '' ? $previousLifecycleState : null,
+                'to_state' => $lifecycleState,
+                'details' => json_encode([
+                    'desired_state' => $desiredState,
+                    'observed_state' => $observedState,
+                    'pterodactyl_server_id' => $values['pterodactyl_server_id'],
+                    'last_error' => $lastError,
+                ], JSON_THROW_ON_ERROR),
+                'occurred_at' => now(),
+            ]);
+        }
     }
 
     /**
