@@ -212,6 +212,22 @@ class FragCityCS2 extends PterodactylExtension
                 throw new RuntimeException('Paymenter returned an invalid Pterodactyl server ID.');
             }
 
+            // Persist the server ID returned by the official provisioner
+            // before a second verification request. If that request times out
+            // or the process exits, a retry can recover this Server or block
+            // unsafe automatic recreation if it is later manually deleted.
+            $this->storeServiceLifecycle(
+                $service,
+                $clientUserId,
+                [
+                    'id' => $serverId,
+                    'user' => $clientUserId,
+                ],
+                'active',
+                'unknown',
+                'provisioning'
+            );
+
             $serverResponse = $this->requestApplicationApi(
                 'GET',
                 '/api/application/servers/' . $serverId
