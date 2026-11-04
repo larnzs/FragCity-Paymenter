@@ -5,6 +5,7 @@ namespace Paymenter\Extensions\Servers\FragCityCS2;
 use App\Attributes\ExtensionMeta;
 use App\Models\Product;
 use App\Models\Service;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Paymenter\Extensions\Servers\Pterodactyl\Pterodactyl as PterodactylExtension;
 use RuntimeException;
@@ -26,6 +27,25 @@ use Throwable;
 )]
 class FragCityCS2 extends PterodactylExtension
 {
+    /**
+     * Keep Paymenter's standard provisioning credentials separate from the
+     * dashboard's dedicated read-only Application API key.
+     */
+    public function getConfig($values = []): array
+    {
+        return array_merge(parent::getConfig($values), [
+            [
+                'name' => 'customer_api_key',
+                'label' => 'FragCity Customer Dashboard API Key (Read Only)',
+                'type' => 'password',
+                'description' => 'Dedicated Pterodactyl Application API key used only to read customer server details. Grant read-only access to Servers, Allocations, Nodes, Locations, Nests and Eggs. The key is encrypted by Paymenter and is never sent to the customer website. During migration, an empty value temporarily falls back to the existing Pterodactyl key.',
+                'required' => false,
+                'encrypted' => true,
+                'validation' => 'nullable|string|min:20|max:255',
+            ],
+        ]);
+    }
+
     public function getProductConfig($values = []): array
     {
         return array_merge(
@@ -218,6 +238,82 @@ class FragCityCS2 extends PterodactylExtension
     }
 
     /**
+     * Read one server through the dedicated dashboard Application API key.
+     *
+     * The read key is optional only to keep existing installations online
+     * during rollout. Once configured, it is used exclusively for this GET
+     * request; all existing provisioning and account-management operations
+     * continue to use Paymenter's inherited Pterodactyl integration key.
+     *
+     * @return array<string,mixed>
+     */
+    private function requestCustomerDashboardDetails(string $path): array
+    {
+        $apiKey = trim((string) $this->config('customer_api_key'));
+
+        if ($apiKey === '') {
+            return $this->request($path, 'get');
+        }
+
+        if (
+            strlen($apiKey) < 20
+            || strlen($apiKey) > 255
+            || preg_match('/[\\r\\n\\x00-\\x20\\x7F]/', $apiKey)
+        ) {
+            throw new RuntimeException('FragCity dashboard read-only API key is invalid.');
+        }
+
+        $baseUrl = trim((string) $this->config('host'));
+        $parts = parse_url($baseUrl);
+
+        if (
+            !is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || empty($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || (isset($parts['path']) && $parts['path'] !== '' && $parts['path'] !== '/')
+        ) {
+            throw new RuntimeException('Pterodactyl host must be a valid HTTPS origin.');
+        }
+
+        $url = rtrim($baseUrl, '/') . '/' . ltrim($path, '/');
+
+        $response = Http::withHeaders([
+            'Authorization' => 'Bearer ' . $apiKey,
+            'Accept' => 'application/json',
+        ])
+            ->timeout(15)
+            ->withOptions(['allow_redirects' => false])
+            ->get($url);
+
+        if (!$response->successful()) {
+            if ($response->status() === 404) {
+                throw new RuntimeException('Pterodactyl server not found.');
+            }
+
+            if (in_array($response->status(), [401, 403], true)) {
+                throw new RuntimeException(
+                    'FragCity dashboard API key is invalid or lacks the required read permissions.'
+                );
+            }
+
+            throw new RuntimeException(
+                'Pterodactyl dashboard details request failed with HTTP ' . $response->status() . '.'
+            );
+        }
+
+        $payload = $response->json();
+        if (!is_array($payload)) {
+            throw new RuntimeException('Pterodactyl returned an invalid dashboard details response.');
+        }
+
+        return $payload;
+    }
+
+    /**
      * Return an allow-listed server summary and panel login identity for the
      * authenticated owner. This also repairs legacy client usernames and
      * attaches a missing external_id, but never changes the user's password.
@@ -252,9 +348,9 @@ class FragCityCS2 extends PterodactylExtension
         }
 
         try {
-            $serverResponse = $this->request(
-                '/api/application/servers/external/' . (int) $service->id . '?include=allocations',
-                'get'
+            $serverResponse = $this->requestCustomerDashboardDetails(
+                '/api/application/servers/external/' . (int) $service->id
+                . '?include=allocations,node,location,egg,nest'
             );
         } catch (Exception $e) {
             $message = strtolower($e->getMessage());
@@ -295,8 +391,11 @@ class FragCityCS2 extends PterodactylExtension
             ? $attributes['feature_limits']
             : [];
 
+        $relationships = is_array($attributes['relationships'] ?? null)
+            ? $attributes['relationships']
+            : [];
         $primaryAllocationId = (int) ($attributes['allocation'] ?? 0);
-        $allocationRows = $attributes['relationships']['allocations']['data'] ?? [];
+        $allocationRows = $relationships['allocations']['data'] ?? [];
         $primaryAllocation = null;
         if (is_array($allocationRows)) {
             foreach ($allocationRows as $allocationRow) {
@@ -328,6 +427,62 @@ class FragCityCS2 extends PterodactylExtension
         }
         $primaryAllocation = is_array($primaryAllocation) ? $primaryAllocation : [];
 
+        $relationshipAttributes = static function (array $source, string $name): array {
+            $relationship = $source[$name] ?? [];
+            if (!is_array($relationship)) {
+                return [];
+            }
+
+            $attributes = $relationship['attributes'] ?? [];
+            if (is_array($attributes)) {
+                return $attributes;
+            }
+
+            $dataAttributes = $relationship['data']['attributes'] ?? [];
+            return is_array($dataAttributes) ? $dataAttributes : [];
+        };
+
+        $nodeAttributes = $relationshipAttributes($relationships, 'node');
+        $nodeRelationships = is_array($nodeAttributes['relationships'] ?? null)
+            ? $nodeAttributes['relationships']
+            : [];
+        $locationAttributes = $relationshipAttributes($relationships, 'location');
+        if ($locationAttributes === []) {
+            $locationAttributes = $relationshipAttributes($nodeRelationships, 'location');
+        }
+        $nestAttributes = $relationshipAttributes($relationships, 'nest');
+        $eggAttributes = $relationshipAttributes($relationships, 'egg');
+
+        $serverAllocations = [];
+        if (is_array($allocationRows)) {
+            foreach ($allocationRows as $allocationRow) {
+                $allocationAttributes = is_array($allocationRow['attributes'] ?? null)
+                    ? $allocationRow['attributes']
+                    : [];
+                $allocationId = (int) ($allocationAttributes['id'] ?? 0);
+                $allocationIp = trim((string) ($allocationAttributes['ip'] ?? ''));
+                $allocationAlias = trim((string) (
+                    $allocationAttributes['alias'] ?? $allocationAttributes['ip_alias'] ?? ''
+                ));
+                $allocationPort = (int) ($allocationAttributes['port'] ?? 0);
+
+                if ($allocationId < 1 || ($allocationIp === '' && $allocationAlias === '' && $allocationPort < 1)) {
+                    continue;
+                }
+
+                $serverAllocations[] = [
+                    'id' => $allocationId,
+                    'ip' => $allocationIp,
+                    'alias' => $allocationAlias,
+                    'port' => $allocationPort,
+                    'is_default' => $allocationId === $primaryAllocationId
+                        || !empty($allocationAttributes['is_default']),
+                ];
+            }
+        }
+
+        $container = is_array($attributes['container'] ?? null) ? $attributes['container'] : [];
+
         $panelBaseUrl = rtrim((string) $this->config('host'), '/');
 
         return [
@@ -357,6 +512,22 @@ class FragCityCS2 extends PterodactylExtension
                 'allocation_ip' => trim((string) ($primaryAllocation['ip'] ?? '')),
                 'allocation_port' => (int) ($primaryAllocation['port'] ?? 0),
                 'allocation_alias' => trim((string) ($primaryAllocation['alias'] ?? $primaryAllocation['ip_alias'] ?? '')),
+                'allocations' => $serverAllocations,
+                'node_name' => trim((string) ($nodeAttributes['name'] ?? '')),
+                'node_description' => trim((string) ($nodeAttributes['description'] ?? '')),
+                'node_maintenance_mode' => (bool) ($nodeAttributes['maintenance_mode'] ?? false),
+                'location_id' => (int) ($locationAttributes['id'] ?? $nodeAttributes['location_id'] ?? 0),
+                'location_short' => trim((string) ($locationAttributes['short'] ?? '')),
+                'location_long' => trim((string) ($locationAttributes['long'] ?? '')),
+                'nest_id' => (int) ($nestAttributes['id'] ?? $attributes['nest'] ?? 0),
+                'nest_name' => trim((string) ($nestAttributes['name'] ?? '')),
+                'egg_id' => (int) ($eggAttributes['id'] ?? $attributes['egg'] ?? 0),
+                'egg_name' => trim((string) ($eggAttributes['name'] ?? '')),
+                'docker_image' => trim((string) ($container['image'] ?? $attributes['docker_image'] ?? '')),
+                'installed' => array_key_exists('installed', $container)
+                    ? (bool) $container['installed']
+                    : null,
+                'updated_at' => (string) ($attributes['updated_at'] ?? ''),
                 'limits' => [
                     'memory' => (int) ($limits['memory'] ?? 0),
                     'swap' => (int) ($limits['swap'] ?? 0),
@@ -364,6 +535,7 @@ class FragCityCS2 extends PterodactylExtension
                     'cpu' => (int) ($limits['cpu'] ?? 0),
                     'io' => (int) ($limits['io'] ?? 0),
                     'threads' => $limits['threads'] ?? null,
+                    'oom_disabled' => (bool) ($limits['oom_disabled'] ?? false),
                 ],
                 'feature_limits' => [
                     'databases' => (int) ($featureLimits['databases'] ?? 0),
