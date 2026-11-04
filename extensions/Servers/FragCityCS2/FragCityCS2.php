@@ -982,44 +982,13 @@ class FragCityCS2 extends PterodactylExtension
      */
     private function assertPterodactylServerOwner(Service $service, array $server): int
     {
-        $identity = DB::table('fragcity_customer_identities')
-            ->where('paymenter_user_id', (int) $service->user_id)
-            ->first();
-
-        $serviceMapping = DB::table('fragcity_service_servers')
-            ->where('paymenter_service_id', (int) $service->id)
-            ->first();
-
-        $customerUuid = trim((string) ($identity->customer_uuid ?? $serviceMapping->customer_uuid ?? ''));
-        $expectedUserId = (int) ($identity->pterodactyl_user_id ?? $serviceMapping->pterodactyl_user_id ?? 0);
-
-        if (
-            !preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $customerUuid)
-            || $expectedUserId < 1
-        ) {
-            throw new RuntimeException(
-                'FragCity has no approved Pterodactyl Client identity mapping for this service; administrator review is required.'
-            );
-        }
-
-        $clientResponse = $this->requestApplicationApi(
-            'GET',
-            '/api/application/users/' . $expectedUserId
-        );
-
-        if ($clientResponse === null) {
-            throw new RuntimeException(
-                'The mapped Pterodactyl Client account is missing; server lifecycle mutation is blocked pending administrator review.'
-            );
-        }
-
-        $clientAttributes = $clientResponse['attributes'] ?? null;
+        $clientAttributes = $this->getVerifiedPterodactylClientUserReadOnly($service);
+        $expectedUserId = (int) ($clientAttributes['id'] ?? 0);
         $actualUserId = (int) ($server['user'] ?? 0);
 
         if (
             !is_array($clientAttributes)
-            || (int) ($clientAttributes['id'] ?? 0) !== $expectedUserId
-            || (string) ($clientAttributes['external_id'] ?? '') !== $customerUuid
+            || $expectedUserId < 1
             || $actualUserId !== $expectedUserId
         ) {
             throw new RuntimeException(
@@ -1593,29 +1562,95 @@ class FragCityCS2 extends PterodactylExtension
     }
 
     /**
+     * Resolve and verify the already-approved Pterodactyl Client mapping using
+     * GET requests only. This is intentionally separate from
+     * ensurePterodactylClientUser(), which may synchronize profile fields during
+     * explicit provisioning/account-management operations.
+     *
+     * A never-provisioned pending service may have no Client ID yet; it is
+     * returned as null so the customer UI can show its provisioning state.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function getVerifiedPterodactylClientUserReadOnly(Service $service): ?array
+    {
+        $identity = DB::table('fragcity_customer_identities')
+            ->where('paymenter_user_id', (int) $service->user_id)
+            ->first();
+
+        $mapping = DB::table('fragcity_service_servers')
+            ->where('paymenter_service_id', (int) $service->id)
+            ->first();
+
+        $identityUuid = trim((string) ($identity->customer_uuid ?? ''));
+        $mappingUuid = trim((string) ($mapping->customer_uuid ?? ''));
+
+        if ($identityUuid !== '' && $mappingUuid !== '' && !hash_equals($identityUuid, $mappingUuid)) {
+            throw new RuntimeException('FragCity customer UUID differs between identity and service mapping; administrator review is required.');
+        }
+
+        $customerUuid = $identityUuid !== '' ? $identityUuid : $mappingUuid;
+        if (!preg_match(
+            '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD',
+            $customerUuid
+        )) {
+            throw new RuntimeException('FragCity durable customer identity is missing or invalid.');
+        }
+
+        $identityClientId = (int) ($identity->pterodactyl_user_id ?? 0);
+        $mappingClientId = (int) ($mapping->pterodactyl_user_id ?? 0);
+        if ($identityClientId > 0 && $mappingClientId > 0 && $identityClientId !== $mappingClientId) {
+            throw new RuntimeException('FragCity Pterodactyl Client ID differs between identity and service mapping; administrator review is required.');
+        }
+
+        $clientUserId = $identityClientId > 0 ? $identityClientId : $mappingClientId;
+        if ($clientUserId < 1) {
+            if (
+                (string) $service->status === Service::STATUS_PENDING
+                && !$this->mappingWasPreviouslyProvisioned($mapping)
+            ) {
+                return null;
+            }
+
+            throw new RuntimeException('No approved Pterodactyl Client ID is recorded for this customer; administrator identity review is required.');
+        }
+
+        $response = $this->requestApplicationApi('GET', '/api/application/users/' . $clientUserId);
+        if ($response === null) {
+            throw new RuntimeException('The mapped Pterodactyl Client account is missing; automatic account recreation is blocked.');
+        }
+
+        $attributes = $response['attributes'] ?? null;
+        if (
+            !is_array($attributes)
+            || (int) ($attributes['id'] ?? 0) !== $clientUserId
+            || (string) ($attributes['external_id'] ?? '') !== $customerUuid
+        ) {
+            throw new RuntimeException('Pterodactyl Client identity does not match the approved FragCity customer UUID.');
+        }
+
+        return $attributes;
+    }
+
+    /**
      * Read and persist a server summary while holding the same per-service
      * lock used by create, suspend, unsuspend and terminate operations.
      */
     private function getCustomerPanelSummaryLocked(Service $service): array
     {
-        try {
-            $clientUser = $this->ensurePterodactylClientUser($service, false);
-        } catch (RuntimeException $e) {
-            if (
-                (string) $service->status === Service::STATUS_PENDING
-                && str_contains(strtolower($e->getMessage()), 'does not exist')
-            ) {
-                return [
-                    'service_id' => (int) $service->id,
-                    'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
-                    'service_status' => (string) $service->status,
-                    'state' => 'provisioning',
-                    'panel' => null,
-                    'server' => null,
-                ];
-            }
+        // Customer inventory is a read path. Never resolve by email, create a
+        // Client, or synchronize Client profile fields while rendering My Servers.
+        $clientUser = $this->getVerifiedPterodactylClientUserReadOnly($service);
 
-            throw $e;
+        if ($clientUser === null) {
+            return [
+                'service_id' => (int) $service->id,
+                'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
+                'service_status' => (string) $service->status,
+                'state' => 'provisioning',
+                'panel' => null,
+                'server' => null,
+            ];
         }
 
         $clientUserId = (int) ($clientUser['id'] ?? 0);
