@@ -108,5 +108,5 @@ Enable **FragCity API** in Paymenter Admin → Extensions → Others and configu
 - Headers: `X-FragCity-Timestamp`, `X-FragCity-Nonce`, `X-FragCity-Signature`.
 - Nonces are stored atomically in Laravel Cache for ten minutes to prevent replay.
 - Request bodies and passwords are never written to logs.
-- Core API keys and Pterodactyl credentials are not used by this bridge.
+- The Pterodactyl Application API key is never exposed to the website or browser. The customer's Client API key is encrypted at rest in the Paymenter database and decrypted only inside the CS2 extension for a specific owner-verified server operation.
 - The bridge creates no Pterodactyl users or servers; the FragCity CS2 server extension handles Pterodactyl client identity immediately before the official Paymenter server provisioner runs.
