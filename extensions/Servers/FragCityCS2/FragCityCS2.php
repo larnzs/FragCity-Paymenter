@@ -121,9 +121,15 @@ class FragCityCS2 extends PterodactylExtension
         $email = mb_strtolower(trim((string) $orderUser->email));
         $firstName = trim((string) $orderUser->first_name);
         $lastName = trim((string) $orderUser->last_name);
-        $username = strtolower(trim((string) $orderUser->properties()
-            ->where('key', 'fragcity_username')
-            ->value('value')));
+        $panelUsername = trim((string) $orderUser->properties()
+            ->where('key', 'fragcity_panel_username')
+            ->value('value'));
+        if ($panelUsername === '') {
+            $panelUsername = trim((string) $orderUser->properties()
+                ->where('key', 'fragcity_username')
+                ->value('value'));
+        }
+        $username = strtolower($panelUsername);
 
         if ($paymenterUserId < 1 || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
             throw new RuntimeException('FragCity CS2 provisioning found an invalid Paymenter client identity.');
@@ -428,6 +434,87 @@ class FragCityCS2 extends PterodactylExtension
             'updated' => true,
             'username' => (string) ($clientUser['username'] ?? ''),
             'email' => (string) ($clientUser['email'] ?? ''),
+        ];
+    }
+
+    /**
+     * Update the shared Pterodactyl client username for this FragCity account.
+     * The dedicated Paymenter property keeps the editable panel username
+     * independent from the user's primary FragCity username.
+     */
+    public function setCustomerPanelUsername(
+        Service $service,
+        $settings,
+        $properties,
+        string $username
+    ): array {
+        $username = strtolower(trim($username));
+        if (!preg_match('/^[a-z0-9][a-z0-9_-]{1,48}[a-z0-9]$/D', $username)) {
+            throw new RuntimeException('panel_username_invalid');
+        }
+
+        $clientUser = $this->ensurePterodactylClientUser($service, false);
+        $clientUserId = (int) ($clientUser['id'] ?? 0);
+        if ($clientUserId < 1) {
+            throw new RuntimeException('Pterodactyl client identity could not be verified.');
+        }
+
+        $serverResponse = $this->request(
+            '/api/application/servers/external/' . (int) $service->id,
+            'get'
+        );
+        $serverAttributes = $serverResponse['attributes'] ?? null;
+
+        if (
+            !is_array($serverAttributes)
+            || trim((string) ($serverAttributes['external_id'] ?? '')) !== (string) $service->id
+            || (int) ($serverAttributes['user'] ?? 0) !== $clientUserId
+        ) {
+            throw new RuntimeException('The Pterodactyl server ownership link does not match this Paymenter service.');
+        }
+
+        try {
+            $updated = $this->request(
+                '/api/application/users/' . $clientUserId,
+                'patch',
+                [
+                    'external_id' => (string) ($clientUser['external_id'] ?? ''),
+                    'email' => (string) ($clientUser['email'] ?? ''),
+                    'username' => $username,
+                    'first_name' => (string) ($clientUser['first_name'] ?? ''),
+                    'last_name' => (string) ($clientUser['last_name'] ?? ''),
+                ]
+            );
+        } catch (Throwable $e) {
+            $message = strtolower($e->getMessage());
+            if (
+                str_contains($message, 'username')
+                && (
+                    str_contains($message, 'taken')
+                    || str_contains($message, 'already')
+                    || str_contains($message, 'unique')
+                )
+            ) {
+                throw new RuntimeException('panel_username_already_in_use', 0, $e);
+            }
+
+            throw $e;
+        }
+
+        $orderUser = $service->user;
+        if (!$orderUser) {
+            throw new RuntimeException('FragCity CS2 service has no linked Paymenter user.');
+        }
+
+        $orderUser->properties()->updateOrCreate(
+            ['key' => 'fragcity_panel_username'],
+            ['name' => 'FragCity Pterodactyl Username', 'value' => $username]
+        );
+
+        $updatedAttributes = $updated['attributes'] ?? [];
+        return [
+            'updated' => true,
+            'username' => (string) ($updatedAttributes['username'] ?? $username),
         ];
     }
 
