@@ -10,6 +10,7 @@ use App\Models\Service;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -21,7 +22,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account synchronization bridge for FragCity.',
-    version: '1.4.0',
+    version: '1.5.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -345,6 +346,10 @@ class FragCityAPI extends Extension
                 ->orderByDesc('id')
                 ->get();
 
+            $clientApiConnected = DB::table('fragcity_client_api_credentials')
+                ->where('user_id', (int) $user->id)
+                ->exists();
+
             $servers = [];
 
             foreach ($services as $service) {
@@ -356,6 +361,9 @@ class FragCityAPI extends Extension
                 try {
                     $summary = ExtensionHelper::callService($service, 'getCustomerPanelSummary');
                     if (is_array($summary)) {
+                        if (is_array($summary['panel'] ?? null)) {
+                            $summary['panel']['client_api_connected'] = $clientApiConnected;
+                        }
                         $servers[] = $summary;
                     }
                 } catch (Throwable $e) {
@@ -640,7 +648,337 @@ class FragCityAPI extends Extension
         }
     }
 
-    private function authenticateBridgeRequest(Request $request): ?JsonResponse
+    /**
+     * Store a customer's Client API key only after Pterodactyl confirms that
+     * the key belongs to the owner of the selected FragCity server.
+     */
+    public function connectClientApi(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'service_id' => ['required', 'integer', 'min:1'],
+            'api_token' => ['required', 'string', 'min:20', 'max:255'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        $data = $validator->validated();
+        $steamId = (string) $data['steamid64'];
+        $serviceId = (int) $data['service_id'];
+        $apiToken = trim((string) $data['api_token']);
+
+        if (preg_match('/[\r\n\x00-\x20\x7F]/', $apiToken)) {
+            return response()->json(['success' => false, 'error' => 'client_api_key_invalid'], 422);
+        }
+
+        $rateLimitKey = 'fragcity_client_api_connect:' . hash('sha256', $steamId);
+        if (RateLimiter::tooManyAttempts($rateLimitKey, 5)) {
+            return response()->json(['success' => false, 'error' => 'client_api_connect_rate_limited'], 429);
+        }
+        RateLimiter::hit($rateLimitKey, 900);
+
+        try {
+            $resolved = $this->resolveCustomerService($steamId, $serviceId);
+            if (!$resolved) {
+                return response()->json(['success' => false, 'error' => 'service_not_found'], 404);
+            }
+
+            /** @var User $user */
+            $user = $resolved['user'];
+            /** @var Service $service */
+            $service = $resolved['service'];
+
+            ExtensionHelper::callService(
+                $service,
+                'verifyCustomerClientApiToken',
+                [$apiToken]
+            );
+
+            $now = now();
+            DB::table('fragcity_client_api_credentials')->updateOrInsert(
+                ['user_id' => (int) $user->id],
+                [
+                    'encrypted_token' => Crypt::encryptString($apiToken),
+                    'token_fingerprint' => hash('sha256', $apiToken),
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]
+            );
+
+            RateLimiter::clear($rateLimitKey);
+
+            return response()->json([
+                'success' => true,
+                'data' => ['client_api_connected' => true],
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('FragCity customer Client API connection failed.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'service_id' => $serviceId,
+                'exception' => get_class($e),
+            ]);
+
+            $message = $e->getMessage();
+            $safeError = in_array($message, [
+                'client_api_key_invalid',
+                'client_api_key_must_belong_to_server_owner',
+                'client_api_server_verification_failed',
+                'client_api_invalid_response',
+            ], true) ? $message : 'client_api_connection_failed';
+
+            return response()->json([
+                'success' => false,
+                'error' => $safeError,
+            ], $safeError === 'client_api_key_must_belong_to_server_owner' ? 403 : 422);
+        }
+    }
+
+    /**
+     * Disconnect the stored Client API credential. The customer can separately
+     * revoke the key from Pterodactyl Account -> API Credentials.
+     */
+    public function disconnectClientApi(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        $steamId = (string) $validator->validated()['steamid64'];
+        $link = DB::table('fragcity_user_links')->where('steamid64', $steamId)->first();
+        if (!$link) {
+            return response()->json(['success' => false, 'error' => 'service_not_found'], 404);
+        }
+
+        DB::table('fragcity_client_api_credentials')
+            ->where('user_id', (int) $link->user_id)
+            ->delete();
+
+        return response()->json([
+            'success' => true,
+            'data' => ['client_api_disconnected' => true],
+        ]);
+    }
+
+    /**
+     * Issue a fresh, short-lived WebSocket credential for one customer-owned
+     * CS2 server. The customer's long-lived Client API key stays in Paymenter.
+     */
+    public function customerConsole(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'service_id' => ['required', 'integer', 'min:1'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        $data = $validator->validated();
+
+        try {
+            $resolved = $this->resolveCustomerService((string) $data['steamid64'], (int) $data['service_id']);
+            if (!$resolved) {
+                return response()->json(['success' => false, 'error' => 'service_not_found'], 404);
+            }
+
+            $token = $this->getStoredCustomerClientApiToken((int) $resolved['user']->id);
+            $credentials = ExtensionHelper::callService(
+                $resolved['service'],
+                'getCustomerConsoleCredentials',
+                [$token]
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => $credentials,
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('FragCity customer console token request failed.', [
+                'service_id' => (int) $data['service_id'],
+                'exception' => get_class($e),
+            ]);
+
+            $message = $e->getMessage();
+            $safeError = in_array($message, [
+                'client_api_not_connected',
+                'client_api_permission_denied',
+                'client_api_key_must_belong_to_server_owner',
+            ], true) ? $message : 'customer_console_unavailable';
+
+            return response()->json([
+                'success' => false,
+                'error' => $safeError,
+            ], $safeError === 'client_api_not_connected' ? 409 : 502);
+        }
+    }
+
+    /**
+     * Proxy approved Client API file actions through the signed server-to-server
+     * bridge. File contents are bounded before they reach the Panel.
+     */
+    public function customerFiles(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request, 300000);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'service_id' => ['required', 'integer', 'min:1'],
+            'file_action' => ['required', 'string', 'in:list,read,write,create_folder,rename,delete,download,upload_url'],
+            'directory' => ['nullable', 'string', 'max:2048'],
+            'file' => ['nullable', 'string', 'max:2048'],
+            'content' => ['nullable', 'string', 'max:262144'],
+            'name' => ['nullable', 'string', 'max:128'],
+            'from' => ['nullable', 'string', 'max:2048'],
+            'to' => ['nullable', 'string', 'max:255'],
+            'files' => ['nullable', 'array', 'max:50'],
+            'files.*' => ['string', 'max:2048'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'validation_failed',
+                'fields' => $validator->errors()->keys(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        try {
+            $resolved = $this->resolveCustomerService((string) $data['steamid64'], (int) $data['service_id']);
+            if (!$resolved) {
+                return response()->json(['success' => false, 'error' => 'service_not_found'], 404);
+            }
+
+            $token = $this->getStoredCustomerClientApiToken((int) $resolved['user']->id);
+            $result = ExtensionHelper::callService(
+                $resolved['service'],
+                'customerFileAction',
+                [$token, $data]
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => is_array($result) ? $result : [],
+            ]);
+        } catch (Throwable $e) {
+            Log::warning('FragCity customer file action failed.', [
+                'service_id' => (int) $data['service_id'],
+                'file_action' => (string) $data['file_action'],
+                'exception' => get_class($e),
+            ]);
+
+            $message = $e->getMessage();
+            $safeError = in_array($message, [
+                'client_api_not_connected',
+                'client_api_permission_denied',
+                'client_api_key_must_belong_to_server_owner',
+                'client_api_file_too_large_to_edit',
+                'client_api_invalid_file_content',
+                'client_api_invalid_file_name',
+                'client_api_invalid_file_list',
+                'client_api_invalid_file_path',
+                'client_api_invalid_file_action',
+            ], true) ? $message : 'customer_file_action_failed';
+
+            return response()->json([
+                'success' => false,
+                'error' => $safeError,
+            ], $safeError === 'client_api_not_connected' ? 409 : 502);
+        }
+    }
+
+    /**
+     * Resolve a non-cancelled FragCity CS2 service owned by the linked Steam
+     * account. No client-supplied Paymenter user ID is ever trusted.
+     *
+     * @return array{user:User,service:Service}|null
+     */
+    private function resolveCustomerService(string $steamId, int $serviceId): ?array
+    {
+        $link = DB::table('fragcity_user_links')
+            ->where('steamid64', $steamId)
+            ->first();
+
+        if (!$link) {
+            return null;
+        }
+
+        $user = User::query()->find((int) $link->user_id);
+        if (!$user) {
+            return null;
+        }
+
+        $service = Service::query()
+            ->where('id', $serviceId)
+            ->where('user_id', (int) $user->id)
+            ->where('status', '<>', Service::STATUS_CANCELLED)
+            ->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue'])
+            ->first();
+
+        if (!$service || $service->product?->server?->extension !== 'FragCityCS2') {
+            return null;
+        }
+
+        return ['user' => $user, 'service' => $service];
+    }
+
+    private function getStoredCustomerClientApiToken(int $userId): string
+    {
+        $row = DB::table('fragcity_client_api_credentials')
+            ->where('user_id', $userId)
+            ->first();
+
+        if (!$row || !is_string($row->encrypted_token ?? null) || $row->encrypted_token === '') {
+            throw new RuntimeException('client_api_not_connected');
+        }
+
+        try {
+            $token = Crypt::decryptString($row->encrypted_token);
+        } catch (Throwable $e) {
+            Log::error('FragCity stored Client API credential could not be decrypted.', [
+                'paymenter_user_id' => $userId,
+                'exception' => get_class($e),
+            ]);
+            throw new RuntimeException('client_api_not_connected', 0, $e);
+        }
+
+        if ($token === '' || preg_match('/[\r\n\x00-\x20\x7F]/', $token)) {
+            throw new RuntimeException('client_api_not_connected');
+        }
+
+        return $token;
+    }
+
+    private function authenticateBridgeRequest(Request $request, int $maxBodyBytes = 16384): ?JsonResponse
     {
         $secret = (string) $this->config('shared_secret');
         if (!preg_match('/^[a-f0-9]{64,256}$/iD', $secret)) {
@@ -665,7 +1003,7 @@ class FragCityAPI extends Extension
         $signature = strtolower((string) $request->header('X-FragCity-Signature', ''));
         $rawBody = $request->getContent();
 
-        if (strlen($rawBody) > 16384) {
+        if ($maxBodyBytes < 1 || strlen($rawBody) > $maxBodyBytes) {
             return response()->json([
                 'success' => false,
                 'error' => 'request_too_large',
