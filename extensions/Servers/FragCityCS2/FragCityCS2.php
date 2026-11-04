@@ -1680,14 +1680,26 @@ class FragCityCS2 extends PterodactylExtension
             throw new RuntimeException('Pterodactyl returned incomplete server identifiers.');
         }
 
+        $desiredState = (string) $service->status === Service::STATUS_SUSPENDED
+            ? 'suspended'
+            : 'active';
         $isSuspended = (bool) ($attributes['suspended'] ?? false);
+        $observedState = $isSuspended ? 'suspended' : 'active';
+        $stateMatches = $desiredState === $observedState;
+        $lifecycleState = $stateMatches
+            ? ($isSuspended ? 'suspended' : 'ready')
+            : 'review_required';
+
         $this->storeServiceLifecycle(
             $service,
             $clientUserId,
             $attributes,
-            $service->status === Service::STATUS_SUSPENDED ? 'suspended' : 'active',
-            $isSuspended ? 'suspended' : 'active',
-            'ready'
+            $desiredState,
+            $observedState,
+            $lifecycleState,
+            $stateMatches
+                ? null
+                : 'Pterodactyl Server suspend state differs from Paymenter service status; lifecycle reconciliation is required.'
         );
 
         $limits = is_array($attributes['limits'] ?? null) ? $attributes['limits'] : [];
@@ -1793,7 +1805,7 @@ class FragCityCS2 extends PterodactylExtension
             'service_id' => (int) $service->id,
             'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
             'service_status' => (string) $service->status,
-            'state' => 'ready',
+            'state' => $lifecycleState,
             'panel' => [
                 'base_url' => $panelBaseUrl,
                 'server_url' => $panelBaseUrl . '/server/' . rawurlencode($identifier),
