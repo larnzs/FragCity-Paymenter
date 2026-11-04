@@ -60,7 +60,7 @@ return new class extends Migration
             $table->string('to_state', 32)->nullable();
             $table->json('details')->nullable();
             $table->timestamp('occurred_at')->useCurrent();
-            $table->index(['paymenter_service_id', 'occurred_at']);
+            $table->index(['paymenter_service_id', 'occurred_at'], 'fragcity_srv_event_time_idx');
         });
     }
 
