@@ -219,7 +219,26 @@ class FragCityCS2 extends PterodactylExtension
      */
     public function getCustomerPanelSummary(Service $service, $settings, $properties): array
     {
-        $clientUser = $this->ensurePterodactylClientUser($service, false);
+        try {
+            $clientUser = $this->ensurePterodactylClientUser($service, false);
+        } catch (RuntimeException $e) {
+            if (
+                (string) $service->status === Service::STATUS_PENDING
+                && str_contains(strtolower($e->getMessage()), 'does not exist')
+            ) {
+                return [
+                    'service_id' => (int) $service->id,
+                    'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
+                    'service_status' => (string) $service->status,
+                    'state' => 'provisioning',
+                    'panel' => null,
+                    'server' => null,
+                ];
+            }
+
+            throw $e;
+        }
+
         $clientUserId = (int) ($clientUser['id'] ?? 0);
         if ($clientUserId < 1) {
             throw new RuntimeException('Pterodactyl client identity could not be verified.');
@@ -292,6 +311,7 @@ class FragCityCS2 extends PterodactylExtension
                 'name' => (string) ($attributes['name'] ?? ''),
                 'description' => (string) ($attributes['description'] ?? ''),
                 'suspended' => (bool) ($attributes['suspended'] ?? false),
+                'server_status' => (string) ($attributes['status'] ?? ''),
                 'node' => (int) ($attributes['node'] ?? 0),
                 'allocation' => (int) ($attributes['allocation'] ?? 0),
                 'limits' => [
