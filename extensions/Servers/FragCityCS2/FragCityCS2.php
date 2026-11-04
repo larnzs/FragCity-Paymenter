@@ -19,7 +19,7 @@ use RuntimeException;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.1.0',
+    version: '1.2.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -85,7 +85,7 @@ class FragCityCS2 extends PterodactylExtension
             $service->id
         );
 
-        $this->ensurePterodactylClientUser($service);
+        $this->ensurePterodactylClientUser($service, true);
 
         return parent::createServer($service, $settings, $properties);
     }
@@ -100,7 +100,17 @@ class FragCityCS2 extends PterodactylExtension
      * Pterodactyl allows a nullable password on Application API user creation;
      * we intentionally do not invent or persist a second plaintext password.
      */
-    private function ensurePterodactylClientUser(Service $service): void
+    /**
+     * Resolve the Pterodactyl client owned by this Paymenter account and
+     * align its native username/name/email fields with FragCity.
+     *
+     * When called during server provisioning, a missing Pterodactyl client
+     * may be created. Customer account-management actions must pass false so
+     * they can never create an orphan panel account.
+     *
+     * @return array<string,mixed> Pterodactyl user attributes.
+     */
+    private function ensurePterodactylClientUser(Service $service, bool $allowCreate): array
     {
         $orderUser = $service->user;
         if (!$orderUser) {
@@ -137,8 +147,8 @@ class FragCityCS2 extends PterodactylExtension
         ]);
         $attributes = $users['data'][0]['attributes'] ?? null;
 
-        // An email may have changed after a previous successful provisioning.
-        // external_id is the stable Paymenter-user-to-Pterodactyl-user link.
+        // Email can change after provisioning; external_id remains the stable
+        // Paymenter-user-to-Pterodactyl-user link.
         if (!is_array($attributes)) {
             $byExternalId = $this->request('/api/application/users', 'get', [
                 'filter' => ['external_id' => $externalId],
@@ -154,39 +164,205 @@ class FragCityCS2 extends PterodactylExtension
             'last_name' => $lastName,
         ];
 
-        if (is_array($attributes)) {
-            $pterodactylUserId = (int) ($attributes['id'] ?? 0);
-            $existingExternalId = trim((string) ($attributes['external_id'] ?? ''));
-
-            if ($pterodactylUserId < 1) {
-                throw new RuntimeException('Pterodactyl returned a client user without a valid ID.');
+        if (!is_array($attributes)) {
+            if (!$allowCreate) {
+                throw new RuntimeException('The Pterodactyl client account for this service does not exist.');
             }
 
-            if ($existingExternalId !== '' && $existingExternalId !== $externalId) {
-                throw new RuntimeException(
-                    'The Pterodactyl email is already linked to a different external account.'
-                );
+            $created = $this->request('/api/application/users', 'post', $clientData);
+            $attributes = $created['attributes'] ?? null;
+            if (!is_array($attributes)) {
+                throw new RuntimeException('Pterodactyl did not return the created client account.');
             }
 
-            $needsUpdate =
-                $existingExternalId !== $externalId
-                || strtolower((string) ($attributes['email'] ?? '')) !== $email
-                || strtolower((string) ($attributes['username'] ?? '')) !== $username
-                || trim((string) ($attributes['first_name'] ?? '')) !== $firstName
-                || trim((string) ($attributes['last_name'] ?? '')) !== $lastName;
-
-            if ($needsUpdate) {
-                $this->request(
-                    '/api/application/users/' . $pterodactylUserId,
-                    'patch',
-                    $clientData
-                );
-            }
-
-            return;
+            return $attributes;
         }
 
-        $this->request('/api/application/users', 'post', $clientData);
+        $pterodactylUserId = (int) ($attributes['id'] ?? 0);
+        $existingExternalId = trim((string) ($attributes['external_id'] ?? ''));
+
+        if ($pterodactylUserId < 1) {
+            throw new RuntimeException('Pterodactyl returned a client user without a valid ID.');
+        }
+
+        if ($existingExternalId !== '' && $existingExternalId !== $externalId) {
+            throw new RuntimeException(
+                'The Pterodactyl email is already linked to a different external account.'
+            );
+        }
+
+        $needsUpdate =
+            $existingExternalId !== $externalId
+            || strtolower((string) ($attributes['email'] ?? '')) !== $email
+            || strtolower((string) ($attributes['username'] ?? '')) !== $username
+            || trim((string) ($attributes['first_name'] ?? '')) !== $firstName
+            || trim((string) ($attributes['last_name'] ?? '')) !== $lastName;
+
+        if ($needsUpdate) {
+            $updated = $this->request(
+                '/api/application/users/' . $pterodactylUserId,
+                'patch',
+                $clientData
+            );
+            $attributes = $updated['attributes'] ?? array_merge($attributes, $clientData);
+        }
+
+        return $attributes;
+    }
+
+    /**
+     * Return an allow-listed server summary and panel login identity for the
+     * authenticated owner. This also repairs legacy client usernames and
+     * attaches a missing external_id, but never changes the user's password.
+     *
+     * @return array<string,mixed>
+     */
+    public function getCustomerPanelSummary(Service $service, $settings, $properties): array
+    {
+        $clientUser = $this->ensurePterodactylClientUser($service, false);
+        $clientUserId = (int) ($clientUser['id'] ?? 0);
+        if ($clientUserId < 1) {
+            throw new RuntimeException('Pterodactyl client identity could not be verified.');
+        }
+
+        try {
+            $serverResponse = $this->request(
+                '/api/application/servers/external/' . (int) $service->id,
+                'get'
+            );
+        } catch (Exception $e) {
+            $message = strtolower($e->getMessage());
+            if (str_contains($message, 'not found') || str_contains($message, 'no query results')) {
+                return [
+                    'service_id' => (int) $service->id,
+                    'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
+                    'service_status' => (string) $service->status,
+                    'state' => 'provisioning',
+                    'panel' => null,
+                    'server' => null,
+                ];
+            }
+
+            throw $e;
+        }
+
+        $attributes = $serverResponse['attributes'] ?? null;
+        if (!is_array($attributes)) {
+            throw new RuntimeException('Pterodactyl returned an invalid server record.');
+        }
+
+        $serverExternalId = trim((string) ($attributes['external_id'] ?? ''));
+        $ownerUserId = (int) ($attributes['user'] ?? 0);
+        $identifier = trim((string) ($attributes['identifier'] ?? ''));
+        $uuid = trim((string) ($attributes['uuid'] ?? ''));
+
+        if ($serverExternalId !== (string) $service->id || $ownerUserId !== $clientUserId) {
+            throw new RuntimeException('The Pterodactyl server ownership link does not match this Paymenter service.');
+        }
+
+        if ($identifier === '' || $uuid === '') {
+            throw new RuntimeException('Pterodactyl returned incomplete server identifiers.');
+        }
+
+        $limits = is_array($attributes['limits'] ?? null) ? $attributes['limits'] : [];
+        $featureLimits = is_array($attributes['feature_limits'] ?? null)
+            ? $attributes['feature_limits']
+            : [];
+
+        $panelBaseUrl = rtrim((string) $this->config('host'), '/');
+
+        return [
+            'service_id' => (int) $service->id,
+            'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
+            'service_status' => (string) $service->status,
+            'state' => 'ready',
+            'panel' => [
+                'base_url' => $panelBaseUrl,
+                'server_url' => $panelBaseUrl . '/server/' . rawurlencode($identifier),
+                'username' => (string) ($clientUser['username'] ?? ''),
+                'email' => (string) ($clientUser['email'] ?? ''),
+                'password_set' => (bool) $service->user?->properties()
+                    ->where('key', 'fragcity_panel_password_set_at')
+                    ->exists(),
+            ],
+            'server' => [
+                'id' => (int) ($attributes['id'] ?? 0),
+                'uuid' => $uuid,
+                'identifier' => $identifier,
+                'name' => (string) ($attributes['name'] ?? ''),
+                'description' => (string) ($attributes['description'] ?? ''),
+                'suspended' => (bool) ($attributes['suspended'] ?? false),
+                'node' => (int) ($attributes['node'] ?? 0),
+                'allocation' => (int) ($attributes['allocation'] ?? 0),
+                'limits' => [
+                    'memory' => (int) ($limits['memory'] ?? 0),
+                    'swap' => (int) ($limits['swap'] ?? 0),
+                    'disk' => (int) ($limits['disk'] ?? 0),
+                    'cpu' => (int) ($limits['cpu'] ?? 0),
+                    'io' => (int) ($limits['io'] ?? 0),
+                    'threads' => $limits['threads'] ?? null,
+                ],
+                'feature_limits' => [
+                    'databases' => (int) ($featureLimits['databases'] ?? 0),
+                    'allocations' => (int) ($featureLimits['allocations'] ?? 0),
+                    'backups' => (int) ($featureLimits['backups'] ?? 0),
+                ],
+                'created_at' => (string) ($attributes['created_at'] ?? ''),
+                'service_created_at' => $service->created_at?->toIso8601String(),
+                'expires_at' => $service->expires_at?->toIso8601String(),
+            ],
+        ];
+    }
+
+    /**
+     * Set or replace the customer-controlled Pterodactyl password.
+     * Plaintext exists only for this request and is never returned or logged.
+     */
+    public function setCustomerPanelPassword(
+        Service $service,
+        $settings,
+        $properties,
+        string $password
+    ): array {
+        if (strlen($password) < 12 || strlen($password) > 128
+            || preg_match('/\\s/', $password)
+            || preg_match('/\\p{L}/u', $password) !== 1
+            || preg_match('/[0-9]/', $password) !== 1
+        ) {
+            throw new RuntimeException('The panel password does not meet the required policy.');
+        }
+
+        $clientUser = $this->ensurePterodactylClientUser($service, false);
+        $clientUserId = (int) ($clientUser['id'] ?? 0);
+        if ($clientUserId < 1) {
+            throw new RuntimeException('Pterodactyl client identity could not be verified.');
+        }
+
+        $serverResponse = $this->request(
+            '/api/application/servers/external/' . (int) $service->id,
+            'get'
+        );
+        $attributes = $serverResponse['attributes'] ?? null;
+
+        if (
+            !is_array($attributes)
+            || trim((string) ($attributes['external_id'] ?? '')) !== (string) $service->id
+            || (int) ($attributes['user'] ?? 0) !== $clientUserId
+        ) {
+            throw new RuntimeException('The Pterodactyl server ownership link does not match this Paymenter service.');
+        }
+
+        $this->request(
+            '/api/application/users/' . $clientUserId,
+            'patch',
+            ['password' => $password]
+        );
+
+        return [
+            'updated' => true,
+            'username' => (string) ($clientUser['username'] ?? ''),
+            'email' => (string) ($clientUser['email'] ?? ''),
+        ];
     }
 
     private function normalizeSelectEnvironmentValues(
