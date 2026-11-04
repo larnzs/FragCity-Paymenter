@@ -352,7 +352,7 @@ class FragCityCS2 extends PterodactylExtension
                 '/api/application/servers/external/' . (int) $service->id
                 . '?include=allocations,node,location,egg,nest'
             );
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $message = strtolower($e->getMessage());
             if (str_contains($message, 'not found') || str_contains($message, 'no query results')) {
                 return [
