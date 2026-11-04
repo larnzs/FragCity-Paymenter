@@ -283,7 +283,7 @@ class FragCityAPI extends Extension
         }
     }
 
-    public function syncUser(    public function syncUser(Request $request): JsonResponse
+    public function syncUser(Request $request): JsonResponse
     {
         $authError = $this->authenticateBridgeRequest($request);
         if ($authError) {
@@ -1997,7 +1997,7 @@ class FragCityAPI extends Extension
     }
 
     /** @return array<string,mixed> */
-    private function adminLifecycleDetailPayload    /** @return array<string,mixed> */
+    /** @return array<string,mixed> */
     private function adminLifecycleDetailPayload(int $serviceId): array
     {
         $mapping = DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->first();
