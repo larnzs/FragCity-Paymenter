@@ -641,6 +641,28 @@ class FragCityCS2 extends PterodactylExtension
     }
 
     /**
+     * Verify that an external Server belongs to the durable FragCity customer
+     * identity associated with this Paymenter service. Never mutate a Server
+     * based on external_id alone.
+     *
+     * @param array<string,mixed> $server
+     */
+    private function assertPterodactylServerOwner(Service $service, array $server): int
+    {
+        $clientUser = $this->ensurePterodactylClientUser($service, false);
+        $expectedUserId = (int) ($clientUser['id'] ?? 0);
+        $actualUserId = (int) ($server['user'] ?? 0);
+
+        if ($expectedUserId < 1 || $actualUserId !== $expectedUserId) {
+            throw new RuntimeException(
+                'Pterodactyl server ownership does not match the verified FragCity customer identity; lifecycle operation refused.'
+            );
+        }
+
+        return $expectedUserId;
+    }
+
+    /**
      * Suspend the exact Pterodactyl server associated with this service.
      * Repeated calls are safe; a confirmed missing server is recorded rather
      * than recreated.
@@ -664,6 +686,8 @@ class FragCityCS2 extends PterodactylExtension
                 return true;
             }
 
+            $expectedClientUserId = $this->assertPterodactylServerOwner($service, $server);
+
             if (empty($server['suspended'])) {
                 $result = $this->requestApplicationApi(
                     'POST',
@@ -685,7 +709,7 @@ class FragCityCS2 extends PterodactylExtension
             }
 
             $server['suspended'] = true;
-            $this->storeServiceLifecycle($service, (int) ($server['user'] ?? 0), $server, 'suspended', 'suspended', 'suspended');
+            $this->storeServiceLifecycle($service, $expectedClientUserId, $server, 'suspended', 'suspended', 'suspended');
             return true;
         });
     }
@@ -713,6 +737,8 @@ class FragCityCS2 extends PterodactylExtension
                 return true;
             }
 
+            $expectedClientUserId = $this->assertPterodactylServerOwner($service, $server);
+
             if (!empty($server['suspended'])) {
                 $result = $this->requestApplicationApi(
                     'POST',
@@ -734,7 +760,7 @@ class FragCityCS2 extends PterodactylExtension
             }
 
             $server['suspended'] = false;
-            $this->storeServiceLifecycle($service, (int) ($server['user'] ?? 0), $server, 'active', 'active', 'active');
+            $this->storeServiceLifecycle($service, $expectedClientUserId, $server, 'active', 'active', 'active');
             return true;
         });
     }
@@ -748,9 +774,13 @@ class FragCityCS2 extends PterodactylExtension
     {
         return $this->withServiceLifecycleLock($service, function () use ($service): array {
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
+            $expectedClientUserId = $server !== null
+                ? $this->assertPterodactylServerOwner($service, $server)
+                : 0;
+
             $this->storeServiceLifecycle(
                 $service,
-                (int) ($server['user'] ?? 0),
+                $expectedClientUserId,
                 $server,
                 'deleted',
                 $server === null ? 'missing' : (!empty($server['suspended']) ? 'suspended' : 'active'),
@@ -766,7 +796,7 @@ class FragCityCS2 extends PterodactylExtension
 
             $this->storeServiceLifecycle(
                 $service,
-                (int) ($server['user'] ?? 0),
+                $expectedClientUserId,
                 null,
                 'deleted',
                 'deleted',
