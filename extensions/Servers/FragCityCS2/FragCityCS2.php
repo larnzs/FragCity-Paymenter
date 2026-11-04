@@ -372,10 +372,20 @@ class FragCityCS2 extends PterodactylExtension
             throw new RuntimeException('The Pterodactyl server ownership link does not match this Paymenter service.');
         }
 
+        // Pterodactyl v1.11.10's UpdateUserRequest still requires the
+        // native identity fields on update; include them with the password.
+        // The password is hashed by Pterodactyl's UserUpdateService.
         $this->request(
             '/api/application/users/' . $clientUserId,
             'patch',
-            ['password' => $password]
+            [
+                'external_id' => (string) ($clientUser['external_id'] ?? ''),
+                'email' => (string) ($clientUser['email'] ?? ''),
+                'username' => (string) ($clientUser['username'] ?? ''),
+                'first_name' => (string) ($clientUser['first_name'] ?? ''),
+                'last_name' => (string) ($clientUser['last_name'] ?? ''),
+                'password' => $password,
+            ]
         );
 
         return [
