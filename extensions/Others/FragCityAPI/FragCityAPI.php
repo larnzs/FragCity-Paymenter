@@ -221,10 +221,14 @@ class FragCityAPI extends Extension
 
             if ($service->product?->server?->extension !== 'FragCityCS2') {
                 DB::transaction(function () use ($mapping): void {
+                    $alreadyFlagged = (string) $mapping->lifecycle_state === 'review_required'
+                        && (string) ($mapping->last_error ?? '') === 'Paymenter service no longer uses FragCityCS2.';
+
                     DB::table('fragcity_service_servers')
                         ->where('id', (int) $mapping->id)
                         ->update([
                             'desired_state' => 'review',
+                            'observed_state' => 'service_extension_changed',
                             'lifecycle_state' => 'review_required',
                             'next_reconcile_at' => now()->addDay(),
                             'last_reconciled_at' => now(),
@@ -232,18 +236,20 @@ class FragCityAPI extends Extension
                             'updated_at' => now(),
                         ]);
 
-                    DB::table('fragcity_service_lifecycle_events')->insert([
-                        'paymenter_service_id' => (int) $mapping->paymenter_service_id,
-                        'customer_uuid' => $mapping->customer_uuid,
-                        'event_key' => 'service_extension_changed',
-                        'from_state' => (string) $mapping->lifecycle_state,
-                        'to_state' => 'review_required',
-                        'details' => json_encode([
-                            'source' => 'scheduled_reconciliation',
-                            'action' => 'admin_review_required',
-                        ], JSON_THROW_ON_ERROR),
-                        'occurred_at' => now(),
-                    ]);
+                    if (!$alreadyFlagged) {
+                        DB::table('fragcity_service_lifecycle_events')->insert([
+                            'paymenter_service_id' => (int) $mapping->paymenter_service_id,
+                            'customer_uuid' => $mapping->customer_uuid,
+                            'event_key' => 'service_extension_changed',
+                            'from_state' => (string) $mapping->lifecycle_state,
+                            'to_state' => 'review_required',
+                            'details' => json_encode([
+                                'source' => 'scheduled_reconciliation',
+                                'action' => 'admin_review_required',
+                            ], JSON_THROW_ON_ERROR),
+                            'occurred_at' => now(),
+                        ]);
+                    }
                 });
                 continue;
             }
@@ -822,7 +828,13 @@ class FragCityAPI extends Extension
         $mappings = DB::table('fragcity_service_servers')
             ->where('customer_uuid', (string) $identity->customer_uuid)
             ->whereNull('deleted_at')
-            ->get(['id', 'paymenter_service_id', 'paymenter_user_id', 'lifecycle_state']);
+            ->get([
+                'id',
+                'paymenter_service_id',
+                'paymenter_user_id',
+                'lifecycle_state',
+                'paymenter_missing_reviewed_at',
+            ]);
 
         $missing = 0;
 
@@ -955,7 +967,11 @@ class FragCityAPI extends Extension
                 }
             }
 
-            $missing++;
+            // Acknowledged preserve_external orphans remain in the
+            // lifecycle inventory, but no longer count as unresolved alerts.
+            if (empty($mapping->paymenter_missing_reviewed_at)) {
+                $missing++;
+            }
         }
 
         if ($missing > 0) {

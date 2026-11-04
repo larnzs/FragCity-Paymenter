@@ -1335,6 +1335,9 @@ class FragCityCS2 extends PterodactylExtension
             $mappedPaymenterUserId = (int) ($mapping->paymenter_user_id ?? 0);
             if ($mappedPaymenterUserId > 0 && $mappedPaymenterUserId !== (int) $service->user_id) {
                 DB::transaction(function () use ($service, $mapping, $mappedPaymenterUserId): void {
+                    $alreadyFlagged = (string) $mapping->lifecycle_state === 'review_required'
+                        && (string) ($mapping->observed_state ?? '') === 'paymenter_owner_conflict';
+
                     DB::table('fragcity_service_servers')
                         ->where('paymenter_service_id', (int) $service->id)
                         ->update([
@@ -1347,20 +1350,22 @@ class FragCityCS2 extends PterodactylExtension
                             'updated_at' => now(),
                         ]);
 
-                    DB::table('fragcity_service_lifecycle_events')->insert([
-                        'paymenter_service_id' => (int) $service->id,
-                        'customer_uuid' => $mapping->customer_uuid,
-                        'event_key' => 'paymenter_service_owner_conflict',
-                        'from_state' => (string) $mapping->lifecycle_state,
-                        'to_state' => 'review_required',
-                        'details' => json_encode([
-                            'source' => 'lifecycle_reconciliation',
-                            'mapped_paymenter_user_id' => $mappedPaymenterUserId,
-                            'current_paymenter_user_id' => (int) $service->user_id,
-                            'action' => 'blocked_no_remote_mutation',
-                        ], JSON_THROW_ON_ERROR),
-                        'occurred_at' => now(),
-                    ]);
+                    if (!$alreadyFlagged) {
+                        DB::table('fragcity_service_lifecycle_events')->insert([
+                            'paymenter_service_id' => (int) $service->id,
+                            'customer_uuid' => $mapping->customer_uuid,
+                            'event_key' => 'paymenter_service_owner_conflict',
+                            'from_state' => (string) $mapping->lifecycle_state,
+                            'to_state' => 'review_required',
+                            'details' => json_encode([
+                                'source' => 'lifecycle_reconciliation',
+                                'mapped_paymenter_user_id' => $mappedPaymenterUserId,
+                                'current_paymenter_user_id' => (int) $service->user_id,
+                                'action' => 'blocked_no_remote_mutation',
+                            ], JSON_THROW_ON_ERROR),
+                            'occurred_at' => now(),
+                        ]);
+                    }
                 });
 
                 return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => 'none'];
