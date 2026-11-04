@@ -1172,7 +1172,6 @@ class FragCityCS2 extends PterodactylExtension
             $existingMapping = DB::table('fragcity_service_servers')
                 ->where('paymenter_service_id', (int) $service->id)
                 ->first();
-            $this->assertPaymenterServiceOwnerMapping($service, $existingMapping);
 
             if (
                 $existingMapping
@@ -1185,6 +1184,8 @@ class FragCityCS2 extends PterodactylExtension
                     'already_deleted' => true,
                 ];
             }
+
+            $this->assertPaymenterServiceOwnerMapping($service, $existingMapping);
 
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
             $expectedClientUserId = $server !== null
@@ -1320,6 +1321,17 @@ class FragCityCS2 extends PterodactylExtension
                 ->where('paymenter_service_id', (int) $service->id)
                 ->first();
 
+            if (
+                $mapping
+                && ((string) $mapping->lifecycle_state === 'deleted' || $mapping->deleted_at !== null)
+            ) {
+                DB::table('fragcity_service_servers')
+                    ->where('paymenter_service_id', (int) $service->id)
+                    ->update(['last_reconciled_at' => now(), 'next_reconcile_at' => null, 'updated_at' => now()]);
+
+                return ['service_id' => (int) $service->id, 'state' => 'deleted', 'action' => 'none'];
+            }
+
             $mappedPaymenterUserId = (int) ($mapping->paymenter_user_id ?? 0);
             if ($mappedPaymenterUserId > 0 && $mappedPaymenterUserId !== (int) $service->user_id) {
                 DB::transaction(function () use ($service, $mapping, $mappedPaymenterUserId): void {
@@ -1352,17 +1364,6 @@ class FragCityCS2 extends PterodactylExtension
                 });
 
                 return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => 'none'];
-            }
-
-            if (
-                $mapping
-                && ((string) $mapping->lifecycle_state === 'deleted' || $mapping->deleted_at !== null)
-            ) {
-                DB::table('fragcity_service_servers')
-                    ->where('paymenter_service_id', (int) $service->id)
-                    ->update(['last_reconciled_at' => now(), 'next_reconcile_at' => null, 'updated_at' => now()]);
-
-                return ['service_id' => (int) $service->id, 'state' => 'deleted', 'action' => 'none'];
             }
 
             $wasPreviouslyProvisioned = $this->mappingWasPreviouslyProvisioned($mapping);
