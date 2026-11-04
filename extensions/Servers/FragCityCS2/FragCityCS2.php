@@ -24,7 +24,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.5.0',
+    version: '1.6.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -719,7 +719,12 @@ class FragCityCS2 extends PterodactylExtension
         $apiKey = trim((string) $this->config('customer_api_key'));
 
         if ($apiKey === '') {
-            return $this->request($path, 'get');
+            $payload = $this->requestApplicationApi('GET', $path);
+            if ($payload === null) {
+                throw new RuntimeException('Pterodactyl server not found.');
+            }
+
+            return $payload;
         }
 
         if (

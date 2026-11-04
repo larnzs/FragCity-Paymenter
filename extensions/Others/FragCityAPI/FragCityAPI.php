@@ -24,7 +24,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account, Client API, Console and File Manager bridge for FragCity.',
-    version: '1.5.0',
+    version: '1.6.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -119,7 +119,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.5.0',
+            'version' => '1.6.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -310,13 +310,16 @@ class FragCityAPI extends Extension
                 'paymenter_user_already_linked_to_another_steam_account',
                 'email_already_in_use',
                 'paymenter_user_identity_conflict',
+                'customer_identity_storage_not_ready',
             ];
 
             if (in_array($e->getMessage(), $safeErrors, true)) {
+                $statusCode = $e->getMessage() === 'customer_identity_storage_not_ready' ? 503 : 409;
+
                 return response()->json([
                     'success' => false,
                     'error' => $e->getMessage(),
-                ], 409);
+                ], $statusCode);
             }
 
             Log::error('FragCity user synchronization failed.', [
@@ -579,14 +582,16 @@ class FragCityAPI extends Extension
                 continue;
             }
 
-            DB::table('fragcity_service_servers')
-                ->where('id', (int) $mapping->id)
-                ->update([
-                    'desired_state' => 'review',
-                    'lifecycle_state' => 'paymenter_missing',
-                    'last_error' => 'Paymenter service record is missing; external cleanup requires admin review.',
-                    'updated_at' => now(),
-                ]);
+            if ((string) $mapping->lifecycle_state !== 'paymenter_missing') {
+                DB::table('fragcity_service_servers')
+                    ->where('id', (int) $mapping->id)
+                    ->update([
+                        'desired_state' => 'review',
+                        'lifecycle_state' => 'paymenter_missing',
+                        'last_error' => 'Paymenter service record is missing; external cleanup requires admin review.',
+                        'updated_at' => now(),
+                    ]);
+            }
 
             $missing++;
         }
