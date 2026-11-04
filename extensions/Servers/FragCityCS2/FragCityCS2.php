@@ -1332,7 +1332,31 @@ class FragCityCS2 extends PterodactylExtension
             $identity = DB::table('fragcity_customer_identities')
                 ->where('paymenter_user_id', (int) $service->user_id)
                 ->first();
-            $customerUuid = trim((string) ($mapping->customer_uuid ?? $identity->customer_uuid ?? ''));
+
+            $identityUuid = trim((string) ($identity->customer_uuid ?? ''));
+            $mappingUuid = trim((string) ($mapping->customer_uuid ?? ''));
+            $identityClientId = (int) ($identity->pterodactyl_user_id ?? 0);
+            $mappingClientId = (int) ($mapping->pterodactyl_user_id ?? 0);
+
+            if (
+                ($identityUuid !== '' && $mappingUuid !== '' && !hash_equals($identityUuid, $mappingUuid))
+                || ($identityClientId > 0 && $mappingClientId > 0 && $identityClientId !== $mappingClientId)
+            ) {
+                $this->storeServiceLifecycle(
+                    $service,
+                    $mappingClientId > 0 ? $mappingClientId : $identityClientId,
+                    null,
+                    $desiredState,
+                    'identity_mapping_conflict',
+                    'review_required',
+                    'FragCity identity and service mapping disagree on the customer UUID or Pterodactyl Client ID.'
+                );
+                $this->markLifecycleReconciled((int) $service->id, 'review_required');
+
+                return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => 'none'];
+            }
+
+            $customerUuid = $identityUuid !== '' ? $identityUuid : $mappingUuid;
 
             if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $customerUuid)) {
                 $state = $wasPreviouslyProvisioned ? 'review_required' : 'provisioning';
@@ -1350,7 +1374,7 @@ class FragCityCS2 extends PterodactylExtension
                 return ['service_id' => (int) $service->id, 'state' => $state, 'action' => 'none'];
             }
 
-            $clientUserId = (int) ($mapping->pterodactyl_user_id ?? $identity->pterodactyl_user_id ?? 0);
+            $clientUserId = $identityClientId > 0 ? $identityClientId : $mappingClientId;
             if ($clientUserId < 1) {
                 $state = $wasPreviouslyProvisioned ? 'review_required' : 'provisioning';
                 $this->storeServiceLifecycle(
@@ -1684,7 +1708,7 @@ class FragCityCS2 extends PterodactylExtension
                 '/api/application/servers/external/' . (int) $service->id
                 . '?include=allocations,node,location,egg,nest'
             );
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             $message = strtolower($e->getMessage());
             if (str_contains($message, 'pterodactyl server not found')) {
                 // A 404 is only "missing external" when FragCity has prior
