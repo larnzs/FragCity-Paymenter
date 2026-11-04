@@ -1501,7 +1501,12 @@ class FragCityAPI extends Extension
             'search' => ['nullable', 'string', 'max:100'],
         ]);
         if ($validator->fails()) return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
-        if (!Schema::hasTable('fragcity_service_servers')) {
+        if (
+            !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasTable('fragcity_service_lifecycle_events')
+            || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
+        ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
 
@@ -1525,7 +1530,7 @@ class FragCityAPI extends Extension
                 ->leftJoin('services as s', 's.id', '=', 'm.paymenter_service_id');
             if ($state !== 'all') $query->where('m.lifecycle_state', $state);
             if ($search !== '') {
-                $needle = '%' . $search . '%';
+                $needle = '%' . addcslashes($search, '\\%_') . '%';
                 $query->where(function ($where) use ($needle): void {
                     $where->where('m.paymenter_service_id', 'like', $needle)
                         ->orWhere('m.pterodactyl_server_id', 'like', $needle)
@@ -1542,9 +1547,14 @@ class FragCityAPI extends Extension
                 'm.paymenter_service_id', 'm.paymenter_user_id', 'm.customer_uuid',
                 'm.pterodactyl_user_id', 'm.pterodactyl_server_id', 'm.server_identifier',
                 'm.desired_state', 'm.observed_state', 'm.lifecycle_state', 'm.last_seen_at',
-                'm.next_reconcile_at', 'm.deleted_at', 'm.last_error', 'm.updated_at',
+                'm.next_reconcile_at', 'm.last_reconciled_at', 'm.deleted_at', 'm.last_error',
+                'm.recreation_authorization_id', 'm.recreation_authorized_at',
+                'm.recreation_authorized_by', 'm.recreation_authorized_username',
+                'm.recreation_authorization_reason', 'm.recreation_authorization_consumed_at',
+                'm.recreation_authorization_revoked_at', 'm.updated_at',
                 'u.email as customer_email', 'u.first_name as customer_first_name',
-                'u.last_name as customer_last_name', 's.status as paymenter_service_status',
+                'u.last_name as customer_last_name', 's.id as paymenter_service_row_id',
+                's.status as paymenter_service_status',
             ])->orderByDesc('m.updated_at')->orderByDesc('m.paymenter_service_id')
                 ->offset(($page - 1) * $perPage)->limit($perPage)->get();
 
@@ -1566,9 +1576,15 @@ class FragCityAPI extends Extension
                 'observed_state' => (string) $row->observed_state,
                 'lifecycle_state' => (string) $row->lifecycle_state,
                 'paymenter_service_status' => $row->paymenter_service_status !== null ? (string) $row->paymenter_service_status : null,
-                'service_present' => $row->paymenter_service_status !== null,
+                'service_present' => $row->paymenter_service_row_id !== null,
                 'last_seen_at' => $row->last_seen_at,
+                'last_reconciled_at' => $row->last_reconciled_at,
                 'next_reconcile_at' => $row->next_reconcile_at,
+                'recreation_authorization_status' => $row->recreation_authorized_at === null
+                    ? 'none'
+                    : ($row->recreation_authorization_revoked_at !== null
+                        ? 'revoked'
+                        : ($row->recreation_authorization_consumed_at !== null ? 'consumed' : 'pending')),
                 'deleted_at' => $row->deleted_at,
                 'last_error' => $row->last_error !== null ? mb_substr((string) $row->last_error, 0, 500) : null,
                 'updated_at' => $row->updated_at,
@@ -1602,7 +1618,12 @@ class FragCityAPI extends Extension
             'service_id' => ['required', 'integer', 'min:1'],
         ]);
         if ($validator->fails()) return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
-        if (!Schema::hasTable('fragcity_service_servers')) {
+        if (
+            !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasTable('fragcity_service_lifecycle_events')
+            || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
+        ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
 
@@ -1623,7 +1644,11 @@ class FragCityAPI extends Extension
         }
     }
 
-    /** Read-only inspection: never creates or deletes a remote Pterodactyl resource. */
+    /**
+     * Reconcile actual Pterodactyl state with Paymenter service intent.
+     * This may suspend/unsuspend an already verified Server; it never creates
+     * or deletes a remote resource.
+     */
     public function adminLifecycleReconcile(Request $request): JsonResponse
     {
         $authError = $this->authenticateBridgeRequest($request);
@@ -1635,6 +1660,13 @@ class FragCityAPI extends Extension
             'service_id' => ['required', 'integer', 'min:1'],
         ]);
         if ($validator->fails()) return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        if (
+            !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasTable('fragcity_service_lifecycle_events')
+            || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
+        ) {
+            return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
+        }
 
         $data = $validator->validated();
         $serviceId = (int) $data['service_id'];
@@ -1645,13 +1677,17 @@ class FragCityAPI extends Extension
         }
 
         try {
-            $service = Service::query()->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue'])->find($serviceId);
+            $service = Service::query()
+                ->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue'])
+                ->find($serviceId);
+
             if (!$service) {
                 DB::transaction(function () use ($mapping, $data, $serviceId): void {
                     DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->update([
                         'desired_state' => 'review',
                         'lifecycle_state' => 'paymenter_missing',
                         'next_reconcile_at' => null,
+                        'last_reconciled_at' => now(),
                         'last_error' => 'Paymenter service record is missing; administrator inspection confirmed the orphan.',
                         'updated_at' => now(),
                     ]);
@@ -1670,6 +1706,7 @@ class FragCityAPI extends Extension
                         'occurred_at' => now(),
                     ]);
                 });
+
                 return response()->json(['success' => true, 'data' => [
                     'result' => 'paymenter_missing',
                     'detail' => $this->adminLifecycleDetailPayload($serviceId),
@@ -1677,41 +1714,94 @@ class FragCityAPI extends Extension
             }
 
             if ($service->product?->server?->extension !== 'FragCityCS2') {
-                DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->update([
-                    'desired_state' => 'review',
-                    'lifecycle_state' => 'review_required',
-                    'next_reconcile_at' => now()->addDay(),
-                    'last_error' => 'Paymenter service no longer uses FragCityCS2.',
-                    'updated_at' => now(),
-                ]);
+                DB::transaction(function () use ($mapping, $data, $serviceId): void {
+                    DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->update([
+                        'desired_state' => 'review',
+                        'lifecycle_state' => 'review_required',
+                        'next_reconcile_at' => now()->addDay(),
+                        'last_reconciled_at' => now(),
+                        'last_error' => 'Paymenter service no longer uses FragCityCS2.',
+                        'updated_at' => now(),
+                    ]);
+                    DB::table('fragcity_service_lifecycle_events')->insert([
+                        'paymenter_service_id' => $serviceId,
+                        'customer_uuid' => $mapping->customer_uuid,
+                        'event_key' => 'admin_reconciliation_review_required',
+                        'from_state' => (string) $mapping->lifecycle_state,
+                        'to_state' => 'review_required',
+                        'details' => json_encode([
+                            'source' => 'admin_dashboard',
+                            'actor_steamid64' => (string) $data['actor_steamid64'],
+                            'actor_username' => (string) ($data['actor_username'] ?? ''),
+                            'reason' => 'service_extension_changed',
+                        ], JSON_THROW_ON_ERROR),
+                        'occurred_at' => now(),
+                    ]);
+                });
+
                 return response()->json(['success' => true, 'data' => [
                     'result' => 'review_required',
                     'detail' => $this->adminLifecycleDetailPayload($serviceId),
                 ]]);
             }
 
-            $summary = ExtensionHelper::callService($service, 'getCustomerPanelSummary');
+            $result = ExtensionHelper::callService($service, 'reconcileCustomerLifecycle');
             DB::table('fragcity_service_lifecycle_events')->insert([
                 'paymenter_service_id' => $serviceId,
                 'customer_uuid' => $mapping->customer_uuid,
-                'event_key' => 'admin_reconciliation_requested',
+                'event_key' => 'admin_reconciliation_completed',
                 'from_state' => (string) $mapping->lifecycle_state,
-                'to_state' => (string) ($summary['state'] ?? $mapping->lifecycle_state),
+                'to_state' => (string) ($result['state'] ?? $mapping->lifecycle_state),
                 'details' => json_encode([
                     'source' => 'admin_dashboard',
                     'actor_steamid64' => (string) $data['actor_steamid64'],
                     'actor_username' => (string) ($data['actor_username'] ?? ''),
-                    'action' => 'inspect_only',
+                    'action' => (string) ($result['action'] ?? 'none'),
+                    'desired_state' => (string) ($result['desired_state'] ?? ''),
+                    'observed_state' => (string) ($result['observed_state'] ?? ''),
+                    'pterodactyl_server_id' => (int) ($result['pterodactyl_server_id'] ?? 0),
                 ], JSON_THROW_ON_ERROR),
                 'occurred_at' => now(),
             ]);
+
             return response()->json(['success' => true, 'data' => [
-                'result' => 'reconciled',
-                'summary' => is_array($summary) ? $summary : [],
+                'result' => (string) ($result['state'] ?? 'reconciled'),
+                'summary' => is_array($result) ? $result : [],
                 'detail' => $this->adminLifecycleDetailPayload($serviceId),
             ]]);
         } catch (Throwable $e) {
-            Log::warning('FragCity administrator lifecycle inspection failed.', [
+            try {
+                DB::transaction(function () use ($mapping, $data, $serviceId, $e): void {
+                    DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->update([
+                        'next_reconcile_at' => now()->addMinute(),
+                        'last_reconciled_at' => now(),
+                        'last_error' => 'Administrator reconciliation failed: ' . get_class($e),
+                        'updated_at' => now(),
+                    ]);
+                    DB::table('fragcity_service_lifecycle_events')->insert([
+                        'paymenter_service_id' => $serviceId,
+                        'customer_uuid' => $mapping->customer_uuid,
+                        'event_key' => 'admin_reconciliation_failed',
+                        'from_state' => (string) $mapping->lifecycle_state,
+                        'to_state' => (string) $mapping->lifecycle_state,
+                        'details' => json_encode([
+                            'source' => 'admin_dashboard',
+                            'actor_steamid64' => (string) $data['actor_steamid64'],
+                            'actor_username' => (string) ($data['actor_username'] ?? ''),
+                            'exception' => get_class($e),
+                            'retry_at' => now()->addMinute()->toIso8601String(),
+                        ], JSON_THROW_ON_ERROR),
+                        'occurred_at' => now(),
+                    ]);
+                });
+            } catch (Throwable $auditError) {
+                Log::error('FragCity admin lifecycle failure could not be persisted.', [
+                    'service_id' => $serviceId,
+                    'exception' => get_class($auditError),
+                ]);
+            }
+
+            Log::warning('FragCity administrator lifecycle reconciliation failed.', [
                 'service_id' => $serviceId,
                 'actor_steamid_hash' => substr(hash('sha256', (string) $data['actor_steamid64']), 0, 16),
                 'exception' => get_class($e),
@@ -1720,7 +1810,7 @@ class FragCityAPI extends Extension
         }
     }
 
-    /** Explicitly authorize one missing server for a later manual CreateJob retry. */
+    /** Explicitly grant one audited, one-shot retry for a missing Server. */
     public function adminLifecycleAuthorizeRecreation(Request $request): JsonResponse
     {
         $authError = $this->authenticateBridgeRequest($request);
@@ -1733,31 +1823,50 @@ class FragCityAPI extends Extension
             'reason' => ['required', 'string', 'min:8', 'max:500'],
         ]);
         if ($validator->fails()) return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        if (!Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')) {
+            return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
+        }
 
         $data = $validator->validated();
         $serviceId = (int) $data['service_id'];
         $reason = trim((string) $data['reason']);
+
         try {
             $result = DB::transaction(function () use ($data, $serviceId, $reason): array {
-                $mapping = DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->lockForUpdate()->first();
+                $mapping = DB::table('fragcity_service_servers')
+                    ->where('paymenter_service_id', $serviceId)
+                    ->lockForUpdate()
+                    ->first();
                 if (!$mapping) throw new RuntimeException('admin_lifecycle_record_not_found');
-                if ((string) $mapping->lifecycle_state === 'deleted' || $mapping->deleted_at !== null) {
-                    throw new RuntimeException('admin_lifecycle_action_not_allowed');
-                }
-                if ((string) $mapping->desired_state === 'recreate_authorized'
-                    && (string) $mapping->lifecycle_state === 'missing_external') {
-                    return ['already_authorized' => true];
-                }
-                if ((string) $mapping->lifecycle_state !== 'missing_external') {
-                    throw new RuntimeException('admin_lifecycle_action_not_allowed');
-                }
-                $service = Service::query()->with('product.server')->find($serviceId);
-                if (!$service || $service->product?->server?->extension !== 'FragCityCS2') {
+                if ((string) $mapping->lifecycle_state !== 'missing_external' || $mapping->deleted_at !== null) {
                     throw new RuntimeException('admin_lifecycle_action_not_allowed');
                 }
 
+                $service = Service::query()->with('product.server')->find($serviceId);
+                if (
+                    !$service
+                    || $service->product?->server?->extension !== 'FragCityCS2'
+                    || !in_array((string) $service->status, [Service::STATUS_ACTIVE, Service::STATUS_SUSPENDED], true)
+                ) {
+                    throw new RuntimeException('admin_lifecycle_action_not_allowed');
+                }
+
+                $pending = !empty($mapping->recreation_authorized_at)
+                    && empty($mapping->recreation_authorization_consumed_at)
+                    && empty($mapping->recreation_authorization_revoked_at);
+                if ($pending) return ['already_authorized' => true];
+
+                $authorizationId = (string) Str::uuid();
                 DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->update([
-                    'desired_state' => 'recreate_authorized',
+                    'recreation_authorization_id' => $authorizationId,
+                    'recreation_authorized_at' => now(),
+                    'recreation_authorized_by' => (string) $data['actor_steamid64'],
+                    'recreation_authorized_username' => (string) ($data['actor_username'] ?? ''),
+                    'recreation_authorization_reason' => $reason,
+                    'recreation_authorization_consumed_at' => null,
+                    'recreation_authorization_revoked_at' => null,
+                    'recreation_authorization_revoked_by' => null,
+                    'recreation_authorization_revoke_reason' => null,
                     'last_error' => null,
                     'updated_at' => now(),
                 ]);
@@ -1769,16 +1878,19 @@ class FragCityAPI extends Extension
                     'to_state' => 'missing_external',
                     'details' => json_encode([
                         'source' => 'admin_dashboard',
+                        'authorization_id' => $authorizationId,
                         'approved' => true,
                         'reason' => $reason,
                         'actor_steamid64' => (string) $data['actor_steamid64'],
                         'actor_username' => (string) ($data['actor_username'] ?? ''),
-                        'next_step' => 'administrator_must_retry_paymenter_create_job',
+                        'next_step' => 'administrator_must_retry_the_same_paymenter_service_create_job',
                     ], JSON_THROW_ON_ERROR),
                     'occurred_at' => now(),
                 ]);
+
                 return ['already_authorized' => false];
             }, 3);
+
             return response()->json(['success' => true, 'data' => [
                 'already_authorized' => (bool) $result['already_authorized'],
                 'detail' => $this->adminLifecycleDetailPayload($serviceId),
@@ -1787,7 +1899,7 @@ class FragCityAPI extends Extension
             $status = match ($e->getMessage()) {
                 'admin_lifecycle_record_not_found' => 404,
                 'admin_lifecycle_action_not_allowed' => 409,
-                default => 500,
+                default => 503,
             };
             return response()->json(['success' => false, 'error' => in_array($e->getMessage(), [
                 'admin_lifecycle_record_not_found', 'admin_lifecycle_action_not_allowed',
@@ -1802,7 +1914,90 @@ class FragCityAPI extends Extension
         }
     }
 
+    /** Revoke an unconsumed recreation grant and retain a separate audit reason. */
+    public function adminLifecycleRevokeRecreation(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) return $authError;
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'actor_steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'actor_username' => ['nullable', 'string', 'max:64'],
+            'service_id' => ['required', 'integer', 'min:1'],
+            'reason' => ['required', 'string', 'min:8', 'max:500'],
+        ]);
+        if ($validator->fails()) return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        if (!Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')) {
+            return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
+        }
+
+        $data = $validator->validated();
+        $serviceId = (int) $data['service_id'];
+        $reason = trim((string) $data['reason']);
+
+        try {
+            DB::transaction(function () use ($data, $serviceId, $reason): void {
+                $mapping = DB::table('fragcity_service_servers')
+                    ->where('paymenter_service_id', $serviceId)
+                    ->lockForUpdate()
+                    ->first();
+                if (!$mapping) throw new RuntimeException('admin_lifecycle_record_not_found');
+
+                $pending = !empty($mapping->recreation_authorized_at)
+                    && empty($mapping->recreation_authorization_consumed_at)
+                    && empty($mapping->recreation_authorization_revoked_at);
+                if (!$pending || (string) $mapping->lifecycle_state === 'deleted' || $mapping->deleted_at !== null) {
+                    throw new RuntimeException('admin_lifecycle_action_not_allowed');
+                }
+
+                DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->update([
+                    'recreation_authorization_revoked_at' => now(),
+                    'recreation_authorization_revoked_by' => (string) $data['actor_steamid64'],
+                    'recreation_authorization_revoke_reason' => $reason,
+                    'updated_at' => now(),
+                ]);
+                DB::table('fragcity_service_lifecycle_events')->insert([
+                    'paymenter_service_id' => $serviceId,
+                    'customer_uuid' => $mapping->customer_uuid,
+                    'event_key' => 'admin_recreation_authorization_revoked',
+                    'from_state' => (string) $mapping->lifecycle_state,
+                    'to_state' => (string) $mapping->lifecycle_state,
+                    'details' => json_encode([
+                        'source' => 'admin_dashboard',
+                        'authorization_id' => (string) $mapping->recreation_authorization_id,
+                        'reason' => $reason,
+                        'actor_steamid64' => (string) $data['actor_steamid64'],
+                        'actor_username' => (string) ($data['actor_username'] ?? ''),
+                    ], JSON_THROW_ON_ERROR),
+                    'occurred_at' => now(),
+                ]);
+            }, 3);
+
+            return response()->json(['success' => true, 'data' => [
+                'revoked' => true,
+                'detail' => $this->adminLifecycleDetailPayload($serviceId),
+            ]]);
+        } catch (RuntimeException $e) {
+            $status = match ($e->getMessage()) {
+                'admin_lifecycle_record_not_found' => 404,
+                'admin_lifecycle_action_not_allowed' => 409,
+                default => 503,
+            };
+            return response()->json(['success' => false, 'error' => in_array($e->getMessage(), [
+                'admin_lifecycle_record_not_found', 'admin_lifecycle_action_not_allowed',
+            ], true) ? $e->getMessage() : 'admin_lifecycle_unavailable'], $status);
+        } catch (Throwable $e) {
+            Log::error('FragCity administrator recreation revocation failed.', [
+                'service_id' => $serviceId,
+                'actor_steamid_hash' => substr(hash('sha256', (string) $data['actor_steamid64']), 0, 16),
+                'exception' => get_class($e),
+            ]);
+            return response()->json(['success' => false, 'error' => 'admin_lifecycle_unavailable'], 503);
+        }
+    }
+
     /** @return array<string,mixed> */
+    private function adminLifecycleDetailPayload    /** @return array<string,mixed> */
     private function adminLifecycleDetailPayload(int $serviceId): array
     {
         $mapping = DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->first();
@@ -1847,7 +2042,22 @@ class FragCityAPI extends Extension
                 'observed_state' => (string) $mapping->observed_state,
                 'lifecycle_state' => (string) $mapping->lifecycle_state,
                 'last_seen_at' => $mapping->last_seen_at,
+                'last_reconciled_at' => $mapping->last_reconciled_at ?? null,
                 'next_reconcile_at' => $mapping->next_reconcile_at ?? null,
+                'recreation_authorization_id' => (string) ($mapping->recreation_authorization_id ?? ''),
+                'recreation_authorized_at' => $mapping->recreation_authorized_at ?? null,
+                'recreation_authorized_by' => (string) ($mapping->recreation_authorized_by ?? ''),
+                'recreation_authorized_username' => (string) ($mapping->recreation_authorized_username ?? ''),
+                'recreation_authorization_reason' => (string) ($mapping->recreation_authorization_reason ?? ''),
+                'recreation_authorization_consumed_at' => $mapping->recreation_authorization_consumed_at ?? null,
+                'recreation_authorization_revoked_at' => $mapping->recreation_authorization_revoked_at ?? null,
+                'recreation_authorization_revoked_by' => (string) ($mapping->recreation_authorization_revoked_by ?? ''),
+                'recreation_authorization_revoke_reason' => (string) ($mapping->recreation_authorization_revoke_reason ?? ''),
+                'recreation_authorization_status' => empty($mapping->recreation_authorized_at)
+                    ? 'none'
+                    : (!empty($mapping->recreation_authorization_revoked_at)
+                        ? 'revoked'
+                        : (!empty($mapping->recreation_authorization_consumed_at) ? 'consumed' : 'pending')),
                 'deleted_at' => $mapping->deleted_at ?? null,
                 'last_error' => $mapping->last_error !== null ? mb_substr((string) $mapping->last_error, 0, 2000) : null,
                 'created_at' => $mapping->created_at,
