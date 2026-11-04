@@ -114,7 +114,13 @@ class FragCityAPI extends Extension
             'phone' => ['required', 'string', 'regex:/^09[0-9]{9}$/', 'max:15'],
             'first_name' => ['required', 'string', 'min:1', 'max:191'],
             'last_name' => ['required', 'string', 'min:1', 'max:191'],
-            'password' => ['required', 'string', 'min:8', 'max:255'],
+            'password' => [
+                'required',
+                'string',
+                'min:8',
+                'max:255',
+                'regex:/^(?=.*\\p{L})(?=.*[0-9])[\\s\\S]+$/u',
+            ],
         ]);
 
         if ($validator->fails()) {
