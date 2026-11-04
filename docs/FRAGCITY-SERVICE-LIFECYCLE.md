@@ -42,6 +42,7 @@ Append-only state-transition and reconciliation history. It deliberately has no 
 | Manually delete a Server in Pterodactyl | A confirmed 404 becomes `missing_external`. Website management controls are disabled and no automatic replacement is created. |
 | Manually delete a Paymenter service using raw SQL/out-of-band DB changes | Eloquent hooks are bypassed. Reconciliation marks the mapping `paymenter_missing` and records an audit event. It does not guess whether the external Server should be deleted; admin review is required. |
 | Temporary Pterodactyl API/network failure | Keep the mapping, store the error and retry later. A timeout, 401/403 or 5xx is never interpreted as deletion. |
+| Server external ID matches but Client owner is different | Refuse suspend, unsuspend and delete. The operation proceeds only when the server owner equals the Pterodactyl Client ID verified for the durable FragCity customer UUID. |
 
 ### Important deletion policy
 
@@ -146,6 +147,7 @@ Run these in staging or with disposable test services before production use:
 - Return a temporary 500/timeout from Pterodactyl: service is unavailable/retryable, not missing or deleted.
 - Delete a Paymenter service through its normal admin action: only its corresponding Pterodactyl Server is deleted; other customer servers and Client account remain.
 - Make Pterodactyl API deletion fail: Paymenter service deletion is blocked.
+- Change a test Server's owner while keeping the same service external ID: Suspend, Unsuspend and Terminate must fail closed and must not mutate the other customer's Server.
 - Delete a Paymenter user through Eloquent: every owned FragCityCS2 Server is cleaned up; UUID and Pterodactyl Client remain; re-sync the same SteamID64 and verify the same UUID is reused.
 - Remove a Paymenter service out-of-band in a disposable database: scheduled reconciliation marks `paymenter_missing` and does not delete the Pterodactyl Server.
 
