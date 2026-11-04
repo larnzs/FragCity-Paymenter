@@ -514,8 +514,9 @@ class FragCityCS2 extends PterodactylExtension
                 'allocation_alias' => trim((string) ($primaryAllocation['alias'] ?? $primaryAllocation['ip_alias'] ?? '')),
                 'allocations' => $serverAllocations,
                 'node_name' => trim((string) ($nodeAttributes['name'] ?? '')),
-                'node_description' => trim((string) ($nodeAttributes['description'] ?? '')),
-                'node_maintenance_mode' => (bool) ($nodeAttributes['maintenance_mode'] ?? false),
+                'node_maintenance_mode' => array_key_exists('maintenance_mode', $nodeAttributes)
+                    ? (bool) $nodeAttributes['maintenance_mode']
+                    : null,
                 'location_id' => (int) ($locationAttributes['id'] ?? $nodeAttributes['location_id'] ?? 0),
                 'location_short' => trim((string) ($locationAttributes['short'] ?? '')),
                 'location_long' => trim((string) ($locationAttributes['long'] ?? '')),
