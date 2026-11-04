@@ -116,6 +116,7 @@ class FragCityCS2 extends PterodactylExtension
             $mapping = DB::table('fragcity_service_servers')
                 ->where('paymenter_service_id', (int) $service->id)
                 ->first();
+            $this->assertPaymenterServiceOwnerMapping($service, $mapping);
 
             if (
                 $mapping
@@ -561,6 +562,20 @@ class FragCityCS2 extends PterodactylExtension
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
         ) {
             throw new RuntimeException('FragCity lifecycle migrations are not installed or are incomplete.');
+        }
+    }
+
+    /**
+     * A Paymenter service must remain attached to the Paymenter customer
+     * recorded when its external Pterodactyl resources were provisioned.
+     * Reassignment requires explicit administrator review; it must never
+     * silently transfer or delete another customer's Client/Server.
+     */
+    private function assertPaymenterServiceOwnerMapping(Service $service, ?object $mapping): void
+    {
+        $mappedPaymenterUserId = (int) ($mapping->paymenter_user_id ?? 0);
+        if ($mappedPaymenterUserId > 0 && $mappedPaymenterUserId !== (int) $service->user_id) {
+            throw new RuntimeException('Paymenter service owner differs from the durable FragCity service mapping; administrator review is required.');
         }
     }
 
@@ -1022,6 +1037,7 @@ class FragCityCS2 extends PterodactylExtension
             $mapping = DB::table('fragcity_service_servers')
                 ->where('paymenter_service_id', (int) $service->id)
                 ->first();
+            $this->assertPaymenterServiceOwnerMapping($service, $mapping);
 
             if (
                 $mapping
@@ -1088,6 +1104,7 @@ class FragCityCS2 extends PterodactylExtension
             $mapping = DB::table('fragcity_service_servers')
                 ->where('paymenter_service_id', (int) $service->id)
                 ->first();
+            $this->assertPaymenterServiceOwnerMapping($service, $mapping);
 
             if (
                 $mapping
@@ -1155,6 +1172,7 @@ class FragCityCS2 extends PterodactylExtension
             $existingMapping = DB::table('fragcity_service_servers')
                 ->where('paymenter_service_id', (int) $service->id)
                 ->first();
+            $this->assertPaymenterServiceOwnerMapping($service, $existingMapping);
 
             if (
                 $existingMapping
@@ -1301,6 +1319,40 @@ class FragCityCS2 extends PterodactylExtension
             $mapping = DB::table('fragcity_service_servers')
                 ->where('paymenter_service_id', (int) $service->id)
                 ->first();
+
+            $mappedPaymenterUserId = (int) ($mapping->paymenter_user_id ?? 0);
+            if ($mappedPaymenterUserId > 0 && $mappedPaymenterUserId !== (int) $service->user_id) {
+                DB::transaction(function () use ($service, $mapping, $mappedPaymenterUserId): void {
+                    DB::table('fragcity_service_servers')
+                        ->where('paymenter_service_id', (int) $service->id)
+                        ->update([
+                            'desired_state' => 'review',
+                            'observed_state' => 'paymenter_owner_conflict',
+                            'lifecycle_state' => 'review_required',
+                            'next_reconcile_at' => now()->addDay(),
+                            'last_reconciled_at' => now(),
+                            'last_error' => 'Paymenter service owner differs from the durable FragCity service mapping.',
+                            'updated_at' => now(),
+                        ]);
+
+                    DB::table('fragcity_service_lifecycle_events')->insert([
+                        'paymenter_service_id' => (int) $service->id,
+                        'customer_uuid' => $mapping->customer_uuid,
+                        'event_key' => 'paymenter_service_owner_conflict',
+                        'from_state' => (string) $mapping->lifecycle_state,
+                        'to_state' => 'review_required',
+                        'details' => json_encode([
+                            'source' => 'lifecycle_reconciliation',
+                            'mapped_paymenter_user_id' => $mappedPaymenterUserId,
+                            'current_paymenter_user_id' => (int) $service->user_id,
+                            'action' => 'blocked_no_remote_mutation',
+                        ], JSON_THROW_ON_ERROR),
+                        'occurred_at' => now(),
+                    ]);
+                });
+
+                return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => 'none'];
+            }
 
             if (
                 $mapping
@@ -1512,11 +1564,7 @@ class FragCityCS2 extends PterodactylExtension
                 $action = $expectedSuspended ? 'suspend' : 'unsuspend';
                 $server = $this->findPterodactylServerByExternalId((int) $service->id);
 
-                if (
-                    $server === null
-                    || (int) ($server['user'] ?? 0) !== $clientUserId
-                    || (string) ($server['external_id'] ?? '') !== (string) $service->id
-                ) {
+                if ($server === null) {
                     $this->storeServiceLifecycle(
                         $service,
                         $clientUserId,
@@ -1529,6 +1577,24 @@ class FragCityCS2 extends PterodactylExtension
                     $this->markLifecycleReconciled((int) $service->id, 'missing_external');
 
                     return ['service_id' => (int) $service->id, 'state' => 'missing_external', 'action' => $action];
+                }
+
+                if (
+                    (int) ($server['user'] ?? 0) !== $clientUserId
+                    || (string) ($server['external_id'] ?? '') !== (string) $service->id
+                ) {
+                    $this->storeServiceLifecycle(
+                        $service,
+                        $clientUserId,
+                        $server,
+                        $desiredState,
+                        'ownership_conflict',
+                        'review_required',
+                        'Pterodactyl server ownership changed during state alignment; further mutation was refused.'
+                    );
+                    $this->markLifecycleReconciled((int) $service->id, 'review_required');
+
+                    return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => $action];
                 }
             }
 
@@ -1617,6 +1683,7 @@ class FragCityCS2 extends PterodactylExtension
         $mapping = DB::table('fragcity_service_servers')
             ->where('paymenter_service_id', (int) $service->id)
             ->first();
+        $this->assertPaymenterServiceOwnerMapping($service, $mapping);
 
         $identityUuid = trim((string) ($identity->customer_uuid ?? ''));
         $mappingUuid = trim((string) ($mapping->customer_uuid ?? ''));
