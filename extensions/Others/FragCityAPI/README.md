@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.2.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.3.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -8,8 +8,10 @@ Provides a narrow private server-to-server bridge for FragCity account synchroni
 
 - `POST /api/v1/fragcity/bridge/ping`
 - `POST /api/v1/fragcity/bridge/users/sync`
+- `POST /api/v1/fragcity/bridge/servers/list`
+- `POST /api/v1/fragcity/bridge/servers/password`
 
-Both routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are not customer/browser endpoints.
+All bridge routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are server-to-server endpoints; the browser must never call them directly.
 
 ## Configuration
 
@@ -43,6 +45,20 @@ The mapping table `fragcity_user_links` enforces a unique Paymenter user per Fra
 An existing Paymenter account with the same email is linked only when its current password matches the supplied password and it is not already linked to another SteamID. Otherwise the endpoint returns HTTP 409; it never silently claims an unrelated account by email alone.
 
 FragCity is the identity source of truth. A successful authenticated sync refreshes Paymenter's email, name and password to match the current FragCity account. Do not let customers change credentials directly in Paymenter; credential changes should originate in FragCity and be synchronized.
+
+## Customer server inventory and panel password
+
+FragCity requests the customer's services by the authenticated SteamID64. The bridge resolves that SteamID64 through `fragcity_user_links`, lists only non-cancelled services owned by the linked Paymenter user, and exposes only products assigned to the `FragCityCS2` server extension.
+
+The server extension returns an allow-listed summary from the Pterodactyl Application API: service ID/status, server UUID/identifier/name, node ID, resource limits, dates, panel URL, panel username and email. Server ownership is verified by both the Pterodactyl `external_id` (Paymenter service ID) and Pterodactyl owner user ID before data is returned.
+
+The inventory read also repairs a legacy Pterodactyl client identity when its email matches the linked Paymenter account and its `external_id` is empty or already matches that Paymenter user ID. It synchronizes the native Pterodactyl username, email, first/last name and `external_id`; a conflicting external ID or a username collision fails closed.
+
+The `servers/password` endpoint accepts a customer-selected Pterodactyl password only after the signed request is validated and the service is confirmed to belong to the linked Paymenter user. The server extension verifies the Pterodactyl server owner and updates only that user's password through the Pterodactyl Application API. Pterodactyl hashes the password. The bridge stores only a `fragcity_panel_password_set_at` timestamp property; it never stores or returns plaintext or a password hash.
+
+FragCity's website endpoint additionally requires an authenticated website session, CSRF token and successful re-entry of the current FragCity password. The website sends the new panel password to Paymenter only over the signed HTTPS bridge. Never expose the HMAC secret or Pterodactyl Application API key to browser JavaScript.
+
+The panel password is intentionally independent from FragCity and Paymenter passwords. It cannot be read back after setting; customers can set a new one through FragCity at any time.
 
 ## Installation
 
