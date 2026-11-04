@@ -920,9 +920,14 @@ class FragCityCS2 extends PterodactylExtension
             $previousDesiredState = (string) ($existing->desired_state ?? '');
             $previousObservedState = (string) ($existing->observed_state ?? '');
 
+            $identityCustomerUuid = trim((string) ($identity->customer_uuid ?? ''));
+            $existingCustomerUuid = trim((string) ($existing->customer_uuid ?? ''));
+
             $values = [
                 'paymenter_user_id' => (int) $service->user_id,
-                'customer_uuid' => $identity->customer_uuid ?? ($existing->customer_uuid ?? null),
+                'customer_uuid' => $identityCustomerUuid !== ''
+                    ? $identityCustomerUuid
+                    : ($existingCustomerUuid !== '' ? $existingCustomerUuid : null),
                 'pterodactyl_user_id' => $pterodactylUserId > 0
                     ? $pterodactylUserId
                     : ($existing->pterodactyl_user_id ?? null),
@@ -1580,8 +1585,8 @@ class FragCityCS2 extends PterodactylExtension
 
     /**
      * Return an allow-listed server summary and panel login identity for the
-     * authenticated owner. This also repairs legacy client usernames and
-     * attaches a missing external_id, but never changes the user's password.
+     * authenticated owner. The inventory path performs GET-only identity
+     * verification and never repairs or mutates the Pterodactyl Client profile.
      *
      * @return array<string,mixed>
      */

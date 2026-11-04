@@ -1848,6 +1848,9 @@ class FragCityAPI extends Extension
         $data = $validator->validated();
         $serviceId = (int) $data['service_id'];
         $reason = trim((string) $data['reason']);
+        if (mb_strlen($reason) < 8 || mb_strlen($reason) > 500) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
 
         try {
             $result = DB::transaction(function () use ($data, $serviceId, $reason): array {
@@ -1962,6 +1965,9 @@ class FragCityAPI extends Extension
         $data = $validator->validated();
         $serviceId = (int) $data['service_id'];
         $reason = trim((string) $data['reason']);
+        if (mb_strlen($reason) < 8 || mb_strlen($reason) > 500) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
 
         try {
             DB::transaction(function () use ($data, $serviceId, $reason): void {
