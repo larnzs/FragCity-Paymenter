@@ -25,7 +25,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed FragCity bridge for durable customer identity, CS2 service lifecycle, Client API, Console and File Manager.',
-    version: '1.8.0',
+    version: '1.9.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -141,7 +141,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.8.0',
+            'version' => '1.9.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -1551,7 +1551,8 @@ class FragCityAPI extends Extension
                 'm.recreation_authorization_id', 'm.recreation_authorized_at',
                 'm.recreation_authorized_by', 'm.recreation_authorized_username',
                 'm.recreation_authorization_reason', 'm.recreation_authorization_consumed_at',
-                'm.recreation_authorization_revoked_at', 'm.updated_at',
+                'm.recreation_authorization_revoked_at', 'm.recreation_authorization_claim_expires_at',
+                'm.updated_at',
                 'u.email as customer_email', 'u.first_name as customer_first_name',
                 'u.last_name as customer_last_name', 's.id as paymenter_service_row_id',
                 's.status as paymenter_service_status',
@@ -1584,7 +1585,12 @@ class FragCityAPI extends Extension
                     ? 'none'
                     : ($row->recreation_authorization_revoked_at !== null
                         ? 'revoked'
-                        : ($row->recreation_authorization_consumed_at !== null ? 'consumed' : 'pending')),
+                        : ($row->recreation_authorization_consumed_at !== null
+                            ? 'consumed'
+                            : ($row->recreation_authorization_claim_expires_at !== null
+                                && now()->lt($row->recreation_authorization_claim_expires_at)
+                                ? 'in_progress'
+                                : 'pending'))),
                 'deleted_at' => $row->deleted_at,
                 'last_error' => $row->last_error !== null ? mb_substr((string) $row->last_error, 0, 500) : null,
                 'updated_at' => $row->updated_at,
@@ -1829,6 +1835,7 @@ class FragCityAPI extends Extension
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_consumed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_revoked_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
         ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
@@ -1872,6 +1879,8 @@ class FragCityAPI extends Extension
                     'recreation_authorization_consumed_at' => null,
                     'recreation_authorization_revoked_at' => null,
                     'recreation_authorization_revoked_by' => null,
+                    'recreation_authorization_claimed_at' => null,
+                    'recreation_authorization_claim_expires_at' => null,
                     'recreation_authorization_revoke_reason' => null,
                     'last_error' => null,
                     'updated_at' => now(),
@@ -1939,6 +1948,7 @@ class FragCityAPI extends Extension
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_consumed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_revoked_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
         ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
@@ -1958,7 +1968,15 @@ class FragCityAPI extends Extension
                 $pending = !empty($mapping->recreation_authorized_at)
                     && empty($mapping->recreation_authorization_consumed_at)
                     && empty($mapping->recreation_authorization_revoked_at);
-                if (!$pending || (string) $mapping->lifecycle_state === 'deleted' || $mapping->deleted_at !== null) {
+                $claimInProgress = $mapping->recreation_authorization_claim_expires_at !== null
+                    && now()->lt($mapping->recreation_authorization_claim_expires_at);
+
+                if (
+                    !$pending
+                    || $claimInProgress
+                    || (string) $mapping->lifecycle_state === 'deleted'
+                    || $mapping->deleted_at !== null
+                ) {
                     throw new RuntimeException('admin_lifecycle_action_not_allowed');
                 }
 
@@ -2061,6 +2079,10 @@ class FragCityAPI extends Extension
                 'recreation_authorized_username' => (string) ($mapping->recreation_authorized_username ?? ''),
                 'recreation_authorization_reason' => (string) ($mapping->recreation_authorization_reason ?? ''),
                 'recreation_authorization_consumed_at' => $mapping->recreation_authorization_consumed_at ?? null,
+                'recreation_authorization_claimed_at' => $mapping->recreation_authorization_claimed_at ?? null,
+                'recreation_authorization_claim_expires_at' => $mapping->recreation_authorization_claim_expires_at ?? null,
+                'recreation_authorization_in_progress' => !empty($mapping->recreation_authorization_claim_expires_at)
+                    && now()->lt($mapping->recreation_authorization_claim_expires_at),
                 'recreation_authorization_revoked_at' => $mapping->recreation_authorization_revoked_at ?? null,
                 'recreation_authorization_revoked_by' => (string) ($mapping->recreation_authorization_revoked_by ?? ''),
                 'recreation_authorization_revoke_reason' => (string) ($mapping->recreation_authorization_revoke_reason ?? ''),
@@ -2068,7 +2090,12 @@ class FragCityAPI extends Extension
                     ? 'none'
                     : (!empty($mapping->recreation_authorization_revoked_at)
                         ? 'revoked'
-                        : (!empty($mapping->recreation_authorization_consumed_at) ? 'consumed' : 'pending')),
+                        : (!empty($mapping->recreation_authorization_consumed_at)
+                            ? 'consumed'
+                            : (!empty($mapping->recreation_authorization_claim_expires_at)
+                                && now()->lt($mapping->recreation_authorization_claim_expires_at)
+                                ? 'in_progress'
+                                : 'pending'))),
                 'deleted_at' => $mapping->deleted_at ?? null,
                 'last_error' => $mapping->last_error !== null ? mb_substr((string) $mapping->last_error, 0, 2000) : null,
                 'created_at' => $mapping->created_at,

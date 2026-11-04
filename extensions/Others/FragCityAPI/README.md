@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.8.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.9.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -119,7 +119,7 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.8.0; its `upgraded()` hook runs the pending migrations, including the encrypted Client API credential table. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
+Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.9.0; its `upgraded()` hook runs the pending migrations, including the encrypted Client API credential table. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
 
 ## Security notes
 
@@ -139,4 +139,5 @@ Enable **FragCity API** in Paymenter Admin → Extensions → Others and configu
 - Recreation approval is stored independently from `desired_state`. It records a unique authorization ID, administrator SteamID64/username, reason, timestamp and consumed/revoked state. A grant is consumed only after the replacement Server is verified, so transient CreateJob failures do not silently consume it.
 - An unconsumed grant can be revoked with a reason; both grant and revoke actions are permanent audit events.
 - `last_reconciled_at` records the latest inspection attempt. Failed attempts are retried and produce audit events.
-- Migration `2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php` is additive; earlier migration files remain unchanged.
+- A recreation CreateJob must atomically claim its pending authorization. The claim has a two-hour lease; active claims cannot be revoked. Failed attempts release the claim, while a process crash lets the lease expire before another retry or revocation.
+- Migration `2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php and `2026_11_04_000004_add_recreation_authorization_claim_columns.php`` is additive; earlier migration files remain unchanged.
