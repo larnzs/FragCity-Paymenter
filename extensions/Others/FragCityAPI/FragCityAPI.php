@@ -822,17 +822,78 @@ class FragCityAPI extends Extension
         $mappings = DB::table('fragcity_service_servers')
             ->where('customer_uuid', (string) $identity->customer_uuid)
             ->whereNull('deleted_at')
-            ->get(['id', 'paymenter_service_id', 'lifecycle_state']);
+            ->get(['id', 'paymenter_service_id', 'paymenter_user_id', 'lifecycle_state']);
 
         $missing = 0;
 
         foreach ($mappings as $mapping) {
-            $exists = Service::query()
-                ->where('id', (int) $mapping->paymenter_service_id)
-                ->where('user_id', $paymenterUserId)
-                ->exists();
+            if (in_array((string) $mapping->lifecycle_state, ['deleted', 'deleting'], true)) {
+                continue;
+            }
 
-            if ($exists || in_array((string) $mapping->lifecycle_state, ['deleted', 'deleting'], true)) {
+            // A row that still exists under a different Paymenter owner is an
+            // ownership conflict, not a missing service. Never misclassify it
+            // as an orphan or mutate the external Client/Server.
+            $serviceRow = DB::table('services')
+                ->where('id', (int) $mapping->paymenter_service_id)
+                ->first(['id', 'user_id']);
+
+            if ($serviceRow !== null) {
+                $mappedOwnerId = (int) ($mapping->paymenter_user_id ?? 0);
+                $currentOwnerId = (int) ($serviceRow->user_id ?? 0);
+                if (
+                    ($mappedOwnerId > 0 && $mappedOwnerId !== $paymenterUserId)
+                    || $currentOwnerId !== $paymenterUserId
+                ) {
+                    DB::transaction(function () use ($mapping, $paymenterUserId, $mappedOwnerId, $currentOwnerId): void {
+                        $current = DB::table('fragcity_service_servers')
+                            ->where('id', (int) $mapping->id)
+                            ->lockForUpdate()
+                            ->first();
+
+                        if (
+                            !$current
+                            || $current->deleted_at !== null
+                            || in_array((string) $current->lifecycle_state, ['deleted', 'deleting'], true)
+                        ) {
+                            return;
+                        }
+
+                        $alreadyFlagged = (string) $current->lifecycle_state === 'review_required'
+                            && (string) $current->observed_state === 'paymenter_owner_conflict';
+
+                        DB::table('fragcity_service_servers')
+                            ->where('id', (int) $current->id)
+                            ->update([
+                                'desired_state' => 'review',
+                                'observed_state' => 'paymenter_owner_conflict',
+                                'lifecycle_state' => 'review_required',
+                                'next_reconcile_at' => now()->addDay(),
+                                'last_reconciled_at' => now(),
+                                'last_error' => 'Paymenter service owner differs from the durable FragCity customer mapping.',
+                                'updated_at' => now(),
+                            ]);
+
+                        if (!$alreadyFlagged && Schema::hasTable('fragcity_service_lifecycle_events')) {
+                            DB::table('fragcity_service_lifecycle_events')->insert([
+                                'paymenter_service_id' => (int) $current->paymenter_service_id,
+                                'customer_uuid' => (string) $current->customer_uuid,
+                                'event_key' => 'paymenter_service_owner_conflict',
+                                'from_state' => (string) $current->lifecycle_state,
+                                'to_state' => 'review_required',
+                                'details' => json_encode([
+                                    'source' => 'website_reconciliation',
+                                    'mapped_paymenter_user_id' => $mappedOwnerId,
+                                    'identity_paymenter_user_id' => $paymenterUserId,
+                                    'current_service_paymenter_user_id' => $currentOwnerId,
+                                    'action' => 'blocked_no_remote_mutation',
+                                ], JSON_THROW_ON_ERROR),
+                                'occurred_at' => now(),
+                            ]);
+                        }
+                    }, 3);
+                }
+
                 continue;
             }
 
