@@ -17,6 +17,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
 
@@ -65,6 +66,47 @@ class FragCityAPI extends Extension
     public function boot(): void
     {
         require __DIR__ . '/routes.php';
+
+        // Keep Paymenter Core untouched. The extension owns the cleanup
+        // policy and blocks the Eloquent delete if the corresponding remote
+        // CS2 server cannot be safely terminated.
+        Service::deleting(function (Service $service): void {
+            $service->loadMissing(['product.server']);
+
+            if ($service->product?->server?->extension !== 'FragCityCS2') {
+                return;
+            }
+
+            try {
+                ExtensionHelper::terminateServer($service);
+            } catch (Throwable $e) {
+                Log::error('FragCity service deletion blocked because remote cleanup failed.', [
+                    'service_id' => (int) $service->id,
+                    'paymenter_user_id' => (int) $service->user_id,
+                    'exception' => get_class($e),
+                ]);
+
+                throw $e;
+            }
+        });
+
+        // A Paymenter customer account can own several independent CS2
+        // services. Terminate each one before the user row is removed; the
+        // identity registry deliberately has no cascading foreign key.
+        User::deleting(function (User $user): void {
+            $services = Service::query()
+                ->where('user_id', (int) $user->id)
+                ->with('product.server')
+                ->get();
+
+            foreach ($services as $service) {
+                if ($service->product?->server?->extension !== 'FragCityCS2') {
+                    continue;
+                }
+
+                ExtensionHelper::terminateServer($service);
+            }
+        });
     }
 
     public function ping(Request $request): JsonResponse
@@ -246,8 +288,11 @@ class FragCityAPI extends Extension
                     ['name' => 'FragCity SteamID64', 'value' => $steamId]
                 );
 
+                $customerUuid = $this->syncCustomerIdentity($user, $steamId);
+
                 return [
                     'user_id' => (int) $user->id,
+                    'customer_uuid' => $customerUuid,
                     'created' => $created,
                     'email' => (string) $user->email,
                 ];
@@ -264,6 +309,7 @@ class FragCityAPI extends Extension
                 'email_already_linked_to_another_paymenter_user',
                 'paymenter_user_already_linked_to_another_steam_account',
                 'email_already_in_use',
+                'paymenter_user_identity_conflict',
             ];
 
             if (in_array($e->getMessage(), $safeErrors, true)) {
@@ -386,9 +432,19 @@ class FragCityAPI extends Extension
                 }
             }
 
+            $paymenterMissingMappings = $this->markPaymenterMissingMappings(
+                $steamId,
+                (int) $user->id
+            );
+
             return response()->json([
                 'success' => true,
-                'data' => ['servers' => $servers],
+                'data' => [
+                    'servers' => $servers,
+                    'lifecycle_alerts' => [
+                        'paymenter_missing' => $paymenterMissingMappings,
+                    ],
+                ],
             ]);
         } catch (Throwable $e) {
             Log::error('FragCity customer server list failed.', [
@@ -401,6 +457,149 @@ class FragCityAPI extends Extension
                 'error' => 'customer_servers_unavailable',
             ], 500);
         }
+    }
+
+    /**
+     * Create or recover a durable customer identity independent of either
+     * platform's auto-increment user IDs. The registry intentionally survives
+     * Paymenter user deletion and re-registration.
+     */
+    private function syncCustomerIdentity(User $user, string $steamId): string
+    {
+        if (!Schema::hasTable('fragcity_customer_identities')) {
+            throw new RuntimeException('customer_identity_storage_not_ready');
+        }
+
+        return DB::transaction(function () use ($user, $steamId): string {
+            $identity = DB::table('fragcity_customer_identities')
+                ->where('steamid64', $steamId)
+                ->lockForUpdate()
+                ->first();
+
+            $identityByPaymenterUser = DB::table('fragcity_customer_identities')
+                ->where('paymenter_user_id', (int) $user->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                $identityByPaymenterUser
+                && (string) $identityByPaymenterUser->steamid64 !== $steamId
+            ) {
+                throw new RuntimeException('paymenter_user_identity_conflict');
+            }
+
+            $customerUuid = $identity
+                ? (string) $identity->customer_uuid
+                : (string) Str::uuid();
+
+            if (!preg_match(
+                '/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD',
+                $customerUuid
+            )) {
+                throw new RuntimeException('customer_identity_registry_invalid');
+            }
+
+            if ($identity) {
+                $previousPaymenterUserId = (int) ($identity->paymenter_user_id ?? 0);
+
+                if ($previousPaymenterUserId > 0 && $previousPaymenterUserId !== (int) $user->id) {
+                    $previousUserStillExists = User::query()
+                        ->where('id', $previousPaymenterUserId)
+                        ->exists();
+
+                    if ($previousUserStillExists) {
+                        throw new RuntimeException('paymenter_user_identity_conflict');
+                    }
+                }
+
+                DB::table('fragcity_customer_identities')
+                    ->where('id', (int) $identity->id)
+                    ->update([
+                        'paymenter_user_id' => (int) $user->id,
+                        'status' => 'active',
+                        'updated_at' => now(),
+                    ]);
+            } else {
+                DB::table('fragcity_customer_identities')->insert([
+                    'customer_uuid' => $customerUuid,
+                    'steamid64' => $steamId,
+                    'paymenter_user_id' => (int) $user->id,
+                    'pterodactyl_user_id' => null,
+                    'status' => 'active',
+                    'last_verified_at' => now(),
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+            }
+
+            $user->properties()->updateOrCreate(
+                ['key' => 'fragcity_customer_uuid'],
+                ['name' => 'FragCity Customer UUID', 'value' => $customerUuid]
+            );
+
+            return $customerUuid;
+        }, 3);
+    }
+
+    /**
+     * Detect Paymenter service rows removed outside the supported Eloquent
+     * lifecycle. This records an orphan for admin review but never deletes a
+     * Pterodactyl server based on an incomplete or transient observation.
+     */
+    private function markPaymenterMissingMappings(string $steamId, int $paymenterUserId): int
+    {
+        if (!Schema::hasTable('fragcity_customer_identities')
+            || !Schema::hasTable('fragcity_service_servers')) {
+            return 0;
+        }
+
+        $identity = DB::table('fragcity_customer_identities')
+            ->where('steamid64', $steamId)
+            ->where('paymenter_user_id', $paymenterUserId)
+            ->first();
+
+        if (!$identity) {
+            return 0;
+        }
+
+        $mappings = DB::table('fragcity_service_servers')
+            ->where('customer_uuid', (string) $identity->customer_uuid)
+            ->whereNull('deleted_at')
+            ->get(['id', 'paymenter_service_id', 'lifecycle_state']);
+
+        $missing = 0;
+
+        foreach ($mappings as $mapping) {
+            $exists = Service::query()
+                ->where('id', (int) $mapping->paymenter_service_id)
+                ->where('user_id', $paymenterUserId)
+                ->exists();
+
+            if ($exists || in_array((string) $mapping->lifecycle_state, ['deleted', 'deleting'], true)) {
+                continue;
+            }
+
+            DB::table('fragcity_service_servers')
+                ->where('id', (int) $mapping->id)
+                ->update([
+                    'desired_state' => 'review',
+                    'lifecycle_state' => 'paymenter_missing',
+                    'last_error' => 'Paymenter service record is missing; external cleanup requires admin review.',
+                    'updated_at' => now(),
+                ]);
+
+            $missing++;
+        }
+
+        if ($missing > 0) {
+            Log::warning('FragCity found Paymenter services missing outside the lifecycle hook.', [
+                'paymenter_user_id' => $paymenterUserId,
+                'customer_uuid' => (string) $identity->customer_uuid,
+                'missing_services' => $missing,
+            ]);
+        }
+
+        return $missing;
     }
 
     /**
