@@ -40,6 +40,7 @@ jobs:
             "extensions/Others/FragCityAPI/FragCityAPI.php"
             "extensions/Others/FragCityAPI/routes.php"
             "extensions/Servers/FragCityCS2/FragCityCS2.php"
+            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000001_create_fragcity_client_api_credentials_table.php"
             "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000002_create_fragcity_identity_and_service_lifecycle_tables.php"
             "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php"
             "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000004_add_recreation_authorization_claim_columns.php"
@@ -54,9 +55,10 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "version: '1.11.0'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -q "version: '1.11.1'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "'version' => '1.11.1'" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -q "function reconcileCustomerLifecycle" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -q "version: '1.7.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "version: '1.7.1'" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "function claimRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "function releaseRecreationAuthorizationClaim" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -q "function consumeRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
@@ -90,3 +92,17 @@ jobs:
           grep -Fq "strtolower((string) (\$parts['scheme'] ?? '')) !== 'https'" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq 'mb_strlen($reason) < 8' extensions/Others/FragCityAPI/FragCityAPI.php
           ! grep -Fq 'repairs legacy client usernames' extensions/Servers/FragCityCS2/FragCityCS2.php
+
+          grep -Fq "function runFragCityMigrations" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq 'if (!$request->isSecure())' extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "bridge_ip_allowlist_invalid" extensions/Others/FragCityAPI/FragCityAPI.php
+          context="$(sed -n '/private function getCustomerClientApiContext/,/^    }/p' extensions/Servers/FragCityCS2/FragCityCS2.php)"
+          grep -Fq 'getVerifiedPterodactylClientUserReadOnly(' <<< "$context"
+          ! grep -Fq 'ensurePterodactylClientUser(' <<< "$context"
+          routes_count="$(grep -c "Route::post('/api/v1/fragcity/bridge/" extensions/Others/FragCityAPI/routes.php)"
+          readme_count="$(grep -c -- '- `POST /api/v1/fragcity/bridge/' extensions/Others/FragCityAPI/README.md)"
+          test "$routes_count" -eq 16
+          test "$readme_count" -eq "$routes_count"
+          grep -Fq 'POST /api/v1/fragcity/bridge/servers/username' extensions/Others/FragCityAPI/README.md
+          ! grep -Fq '"desired_state" => "recreate_authorized"' docs/FRAGCITY-SERVICE-LIFECYCLE.md
+          grep -Fq 'Admin → Lifecycle' docs/FRAGCITY-SERVICE-LIFECYCLE.md
