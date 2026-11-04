@@ -71,3 +71,5 @@ jobs:
           grep -Fq "requestApplicationApi('GET'" <<< "$read_only_client"
           ! grep -Eq "requestApplicationApi\('(POST|DELETE)'" <<< "$read_only_client"
           ! grep -Fq '$this->ensurePterodactylClientUser(' <<< "$read_only_client"
+          ! grep -Fq 'catch (Exception $e)' extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q 'identity_mapping_conflict' extensions/Servers/FragCityCS2/FragCityCS2.php
