@@ -820,28 +820,55 @@ class FragCityAPI extends Extension
             }
 
             if ((string) $mapping->lifecycle_state !== 'paymenter_missing') {
-                DB::table('fragcity_service_servers')
-                    ->where('id', (int) $mapping->id)
-                    ->update([
-                        'desired_state' => 'review',
-                        'lifecycle_state' => 'paymenter_missing',
-                        'last_error' => 'Paymenter service record is missing; external cleanup requires admin review.',
-                        'updated_at' => now(),
-                    ]);
+                $markedMissing = DB::transaction(function () use ($mapping, $identity): bool {
+                    $current = DB::table('fragcity_service_servers')
+                        ->where('id', (int) $mapping->id)
+                        ->lockForUpdate()
+                        ->first();
 
-                if (Schema::hasTable('fragcity_service_lifecycle_events')) {
-                    DB::table('fragcity_service_lifecycle_events')->insert([
-                        'paymenter_service_id' => (int) $mapping->paymenter_service_id,
-                        'customer_uuid' => (string) $identity->customer_uuid,
-                        'event_key' => 'paymenter_service_missing',
-                        'from_state' => (string) $mapping->lifecycle_state,
-                        'to_state' => 'paymenter_missing',
-                        'details' => json_encode([
-                            'source' => 'website_reconciliation',
-                            'action' => 'admin_review_required',
-                        ], JSON_THROW_ON_ERROR),
-                        'occurred_at' => now(),
-                    ]);
+                    if (
+                        !$current
+                        || $current->deleted_at !== null
+                        || in_array((string) $current->lifecycle_state, ['deleted', 'deleting'], true)
+                    ) {
+                        return false;
+                    }
+
+                    if ((string) $current->lifecycle_state === 'paymenter_missing') {
+                        return true;
+                    }
+
+                    DB::table('fragcity_service_servers')
+                        ->where('id', (int) $current->id)
+                        ->update([
+                            'desired_state' => 'review',
+                            'lifecycle_state' => 'paymenter_missing',
+                            'next_reconcile_at' => null,
+                            'last_reconciled_at' => now(),
+                            'last_error' => 'Paymenter service record is missing; external cleanup requires admin review.',
+                            'updated_at' => now(),
+                        ]);
+
+                    if (Schema::hasTable('fragcity_service_lifecycle_events')) {
+                        DB::table('fragcity_service_lifecycle_events')->insert([
+                            'paymenter_service_id' => (int) $current->paymenter_service_id,
+                            'customer_uuid' => (string) $identity->customer_uuid,
+                            'event_key' => 'paymenter_service_missing',
+                            'from_state' => (string) $current->lifecycle_state,
+                            'to_state' => 'paymenter_missing',
+                            'details' => json_encode([
+                                'source' => 'website_reconciliation',
+                                'action' => 'admin_review_required_no_remote_delete',
+                            ], JSON_THROW_ON_ERROR),
+                            'occurred_at' => now(),
+                        ]);
+                    }
+
+                    return true;
+                }, 3);
+
+                if (!$markedMissing) {
+                    continue;
                 }
             }
 
