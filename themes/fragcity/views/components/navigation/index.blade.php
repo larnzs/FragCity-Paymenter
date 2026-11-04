@@ -33,7 +33,7 @@
                                 @foreach ($nav['children'] as $child)
                                 <x-navigation.link
                                     :href="$child['url']"
-                                    :spa="isset($child['spa']) ? $nav['spa'] : true">
+                                    :spa="$child['spa'] ?? true">
                                     {{ $child['name'] }}
                                 </x-navigation.link>
                                 @endforeach
