@@ -157,6 +157,11 @@ class FragCityAPI extends Extension
             !Schema::hasTable('fragcity_service_servers')
             || !Schema::hasTable('fragcity_service_lifecycle_events')
             || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_by')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_username')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_reason')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_decision')
         ) {
             return;
         }
@@ -188,6 +193,11 @@ class FragCityAPI extends Extension
                                 'lifecycle_state' => 'paymenter_missing',
                                 'next_reconcile_at' => null,
                                 'last_reconciled_at' => now(),
+                                'paymenter_missing_reviewed_at' => null,
+                                'paymenter_missing_reviewed_by' => null,
+                                'paymenter_missing_reviewed_username' => null,
+                                'paymenter_missing_review_reason' => null,
+                                'paymenter_missing_review_decision' => null,
                                 'last_error' => 'Paymenter service record is missing; external cleanup requires administrator review.',
                                 'updated_at' => now(),
                             ]);
@@ -788,8 +798,15 @@ class FragCityAPI extends Extension
      */
     private function markPaymenterMissingMappings(string $steamId, int $paymenterUserId): int
     {
-        if (!Schema::hasTable('fragcity_customer_identities')
-            || !Schema::hasTable('fragcity_service_servers')) {
+        if (
+            !Schema::hasTable('fragcity_customer_identities')
+            || !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_by')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_username')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_reason')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_decision')
+        ) {
             return 0;
         }
 
@@ -845,6 +862,11 @@ class FragCityAPI extends Extension
                             'lifecycle_state' => 'paymenter_missing',
                             'next_reconcile_at' => null,
                             'last_reconciled_at' => now(),
+                            'paymenter_missing_reviewed_at' => null,
+                            'paymenter_missing_reviewed_by' => null,
+                            'paymenter_missing_reviewed_username' => null,
+                            'paymenter_missing_review_reason' => null,
+                            'paymenter_missing_review_decision' => null,
                             'last_error' => 'Paymenter service record is missing; external cleanup requires admin review.',
                             'updated_at' => now(),
                         ]);
@@ -1706,6 +1728,11 @@ class FragCityAPI extends Extension
             !Schema::hasTable('fragcity_service_servers')
             || !Schema::hasTable('fragcity_service_lifecycle_events')
             || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_by')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_username')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_reason')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_decision')
         ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
@@ -1725,14 +1752,26 @@ class FragCityAPI extends Extension
 
             if (!$service) {
                 DB::transaction(function () use ($mapping, $data, $serviceId): void {
-                    DB::table('fragcity_service_servers')->where('paymenter_service_id', $serviceId)->update([
+                    $orphanValues = [
                         'desired_state' => 'review',
                         'lifecycle_state' => 'paymenter_missing',
                         'next_reconcile_at' => null,
                         'last_reconciled_at' => now(),
                         'last_error' => 'Paymenter service record is missing; administrator inspection confirmed the orphan.',
                         'updated_at' => now(),
-                    ]);
+                    ];
+                    if ((string) $mapping->lifecycle_state !== 'paymenter_missing') {
+                        $orphanValues = array_merge($orphanValues, [
+                            'paymenter_missing_reviewed_at' => null,
+                            'paymenter_missing_reviewed_by' => null,
+                            'paymenter_missing_reviewed_username' => null,
+                            'paymenter_missing_review_reason' => null,
+                            'paymenter_missing_review_decision' => null,
+                        ]);
+                    }
+                    DB::table('fragcity_service_servers')
+                        ->where('paymenter_service_id', $serviceId)
+                        ->update($orphanValues);
                     DB::table('fragcity_service_lifecycle_events')->insert([
                         'paymenter_service_id' => $serviceId,
                         'customer_uuid' => $mapping->customer_uuid,
