@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Validator;
 use RuntimeException;
 use Throwable;
@@ -346,9 +347,10 @@ class FragCityAPI extends Extension
                 ->orderByDesc('id')
                 ->get();
 
-            $clientApiConnected = DB::table('fragcity_client_api_credentials')
-                ->where('user_id', (int) $user->id)
-                ->exists();
+            $clientApiConnected = Schema::hasTable('fragcity_client_api_credentials')
+                && DB::table('fragcity_client_api_credentials')
+                    ->where('user_id', (int) $user->id)
+                    ->exists();
 
             $servers = [];
 
