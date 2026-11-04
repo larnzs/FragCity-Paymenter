@@ -137,7 +137,7 @@ Enable **FragCity API** in Paymenter Admin → Extensions → Others and configu
 - Only an authoritative Pterodactyl 404 is treated as a missing resource. Authentication failures, timeouts and 5xx responses remain retryable failures.
 - A manually deleted Server remains `missing_external`; scheduled reconciliation checks for its return but never recreates it.
 - Recreation approval is stored independently from `desired_state`. It records a unique authorization ID, administrator SteamID64/username, reason, timestamp and consumed/revoked state. A grant is consumed only after the replacement Server is verified, so transient CreateJob failures do not silently consume it.
-- An unconsumed grant can be revoked with a reason; both grant and revoke actions are permanent audit events.
+- An unconsumed grant can be revoked with a reason; both grant and revoke actions are permanent audit events. A CreateJob must claim the grant using a two-hour lease before provisioning starts. Revocation is rejected while the lease is active; transient failures release the claim and process crashes allow the lease to expire.
 - `last_reconciled_at` records the latest inspection attempt. Failed attempts are retried and produce audit events.
 - A recreation CreateJob must atomically claim its pending authorization. The claim has a two-hour lease; active claims cannot be revoked. Failed attempts release the claim, while a process crash lets the lease expire before another retry or revocation.
 - Migration `2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php and `2026_11_04_000004_add_recreation_authorization_claim_columns.php`` is additive; earlier migration files remain unchanged.

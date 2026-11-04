@@ -1506,6 +1506,8 @@ class FragCityAPI extends Extension
             || !Schema::hasTable('fragcity_service_lifecycle_events')
             || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claimed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
         ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
@@ -1629,6 +1631,8 @@ class FragCityAPI extends Extension
             || !Schema::hasTable('fragcity_service_lifecycle_events')
             || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claimed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
         ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
@@ -1835,6 +1839,7 @@ class FragCityAPI extends Extension
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_consumed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_revoked_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claimed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
         ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
@@ -1948,6 +1953,7 @@ class FragCityAPI extends Extension
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_consumed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_revoked_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claimed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
         ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
