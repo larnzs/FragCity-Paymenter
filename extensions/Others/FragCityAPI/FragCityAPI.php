@@ -904,6 +904,7 @@ class FragCityAPI extends Extension
                 'client_api_permission_denied',
                 'client_api_key_must_belong_to_server_owner',
                 'client_api_file_too_large_to_edit',
+                'client_api_file_not_editable',
                 'client_api_invalid_file_content',
                 'client_api_invalid_file_name',
                 'client_api_invalid_file_list',
