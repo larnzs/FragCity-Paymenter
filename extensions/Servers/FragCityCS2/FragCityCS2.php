@@ -112,19 +112,28 @@ class FragCityCS2 extends PterodactylExtension
         $this->assertLifecycleStorageReady();
 
         return $this->withServiceLifecycleLock($service, function () use ($service, $settings, $properties): array {
-            $clientUser = $this->ensurePterodactylClientUser($service, true);
-            $clientUserId = (int) ($clientUser['id'] ?? 0);
+            $mapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->first();
 
-            if ($clientUserId < 1) {
-                throw new RuntimeException('Pterodactyl client identity could not be verified.');
+            if (
+                $mapping
+                && (
+                    (string) $mapping->lifecycle_state === 'deleted'
+                    || $mapping->deleted_at !== null
+                )
+            ) {
+                throw new RuntimeException('This Paymenter service is already deleted in the FragCity lifecycle registry; create a new service instead.');
             }
 
-            // Retry-safe: if Pterodactyl created the server but Paymenter lost
-            // the job response, recover the existing server instead of creating
-            // a duplicate or failing with "Server already exists".
+            // Retry-safe recovery for a Server that exists but whose previous
+            // Paymenter job lost its response. Never create a second Client.
             $existing = $this->findPterodactylServerByExternalId((int) $service->id);
             if ($existing !== null) {
-                if ((int) ($existing['user'] ?? 0) !== $clientUserId) {
+                $clientUser = $this->ensurePterodactylClientUser($service, false);
+                $clientUserId = (int) ($clientUser['id'] ?? 0);
+
+                if ($clientUserId < 1 || (int) ($existing['user'] ?? 0) !== $clientUserId) {
                     throw new RuntimeException('The existing Pterodactyl server is linked to a different client account.');
                 }
 
@@ -142,6 +151,35 @@ class FragCityCS2 extends PterodactylExtension
                     'server' => (int) ($existing['id'] ?? 0),
                     'link' => rtrim((string) $this->config('host'), '/') . '/server/' . rawurlencode($identifier),
                 ];
+            }
+
+            $wasPreviouslyProvisioned = $mapping && (
+                (string) $mapping->lifecycle_state === 'missing_external'
+                || (int) ($mapping->pterodactyl_server_id ?? 0) > 0
+                || $mapping->last_seen_at !== null
+            );
+            $recreationAuthorized = $mapping
+                && (string) $mapping->desired_state === 'recreate_authorized';
+
+            if ($wasPreviouslyProvisioned && !$recreationAuthorized) {
+                $this->storeServiceLifecycle(
+                    $service,
+                    (int) ($mapping->pterodactyl_user_id ?? 0),
+                    null,
+                    'active',
+                    'missing',
+                    'missing_external',
+                    'Pterodactyl server is missing. Automatic recreation is blocked; admin approval is required.'
+                );
+
+                throw new RuntimeException('The Pterodactyl server for this service was previously provisioned but is now missing. Automatic recreation is blocked pending admin approval.');
+            }
+
+            $clientUser = $this->ensurePterodactylClientUser($service, true);
+            $clientUserId = (int) ($clientUser['id'] ?? 0);
+
+            if ($clientUserId < 1) {
+                throw new RuntimeException('Pterodactyl client identity could not be verified.');
             }
 
             $this->storeServiceLifecycle(
@@ -342,13 +380,11 @@ class FragCityCS2 extends PterodactylExtension
 
         $explicitlyMapped = $knownPterodactylUserId === $pterodactylUserId;
         $legacyPaymenterLink = $existingExternalId === (string) $paymenterUserId;
-        $unclaimedAccount = $existingExternalId === '';
 
         if (
             $existingExternalId !== $externalId
             && !$explicitlyMapped
             && !$legacyPaymenterLink
-            && !$unclaimedAccount
         ) {
             throw new RuntimeException(
                 'The Pterodactyl email is already linked to a different external account. Admin verification is required.'
