@@ -1823,7 +1823,13 @@ class FragCityAPI extends Extension
             'reason' => ['required', 'string', 'min:8', 'max:500'],
         ]);
         if ($validator->fails()) return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
-        if (!Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')) {
+        if (
+            !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasTable('fragcity_service_lifecycle_events')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_consumed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_revoked_at')
+        ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
 
@@ -1927,7 +1933,13 @@ class FragCityAPI extends Extension
             'reason' => ['required', 'string', 'min:8', 'max:500'],
         ]);
         if ($validator->fails()) return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
-        if (!Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')) {
+        if (
+            !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasTable('fragcity_service_lifecycle_events')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_consumed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_revoked_at')
+        ) {
             return response()->json(['success' => false, 'error' => 'lifecycle_storage_not_ready'], 503);
         }
 
@@ -1996,7 +2008,6 @@ class FragCityAPI extends Extension
         }
     }
 
-    /** @return array<string,mixed> */
     /** @return array<string,mixed> */
     private function adminLifecycleDetailPayload(int $serviceId): array
     {

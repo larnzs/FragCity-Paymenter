@@ -189,7 +189,11 @@ class FragCityCS2 extends PterodactylExtension
                 ]);
             }
 
-            $clientUser = $this->ensurePterodactylClientUser($service, true);
+            // A Server recreation grant does not authorize replacement of a
+            // previously mapped Pterodactyl Client account.
+            $allowClientCreate = !$wasPreviouslyProvisioned
+                && (int) ($mapping->pterodactyl_user_id ?? 0) < 1;
+            $clientUser = $this->ensurePterodactylClientUser($service, $allowClientCreate);
             $clientUserId = (int) ($clientUser['id'] ?? 0);
 
             if ($clientUserId < 1) {
@@ -401,6 +405,7 @@ class FragCityCS2 extends PterodactylExtension
         // Paymenter service ID as the Pterodactyl Server external_id.
         $externalId = $customerUuid;
         $attributes = null;
+        $knownPterodactylUserMissing = false;
 
         if ($knownPterodactylUserId > 0) {
             $known = $this->requestApplicationApi(
@@ -411,7 +416,15 @@ class FragCityCS2 extends PterodactylExtension
 
             if (is_array($knownAttributes)) {
                 $attributes = $knownAttributes;
+            } else {
+                $knownPterodactylUserMissing = true;
             }
+        }
+
+        if ($knownPterodactylUserMissing) {
+            throw new RuntimeException(
+                'The previously mapped Pterodactyl Client account is missing. Automatic Client recreation is blocked; administrator identity review is required.'
+            );
         }
 
         if (!is_array($attributes)) {
@@ -527,8 +540,13 @@ class FragCityCS2 extends PterodactylExtension
             !Schema::hasTable('fragcity_customer_identities')
             || !Schema::hasTable('fragcity_service_servers')
             || !Schema::hasTable('fragcity_service_lifecycle_events')
-            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
             || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorized_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorized_by')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_reason')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_consumed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_revoked_at')
         ) {
             throw new RuntimeException('FragCity lifecycle migrations are not installed or are incomplete.');
         }
