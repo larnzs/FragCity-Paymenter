@@ -22,7 +22,7 @@ use Throwable;
 
 #[ExtensionMeta(
     name: 'FragCity API',
-    description: 'Private signed server-to-server account synchronization bridge for FragCity.',
+    description: 'Private signed server-to-server account, Client API, Console and File Manager bridge for FragCity.',
     version: '1.5.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
@@ -77,7 +77,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.4.0',
+            'version' => '1.5.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
