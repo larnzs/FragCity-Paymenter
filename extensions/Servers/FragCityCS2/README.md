@@ -14,7 +14,18 @@ Before delegating server creation to Paymenter's official Pterodactyl implementa
 - If a Pterodactyl user already exists for that email, the extension updates the username and client identity only when its `external_id` is empty or matches the Paymenter user ID. A conflicting external identity stops provisioning rather than silently claiming another account.
 - The extension then delegates server creation to the unchanged Paymenter Pterodactyl implementation, which finds the client by email and assigns the server.
 
-The Pterodactyl Application API permits the password field to be omitted during client creation. When it is omitted, Pterodactyl generates a random password and sends its account-created notification with a password-reset link. This extension does not persist or send a plaintext password, so the Pterodactyl panel password remains independent from the FragCity/Paymenter password. No Paymenter Core file is modified.
+If an existing client is found by email with an empty `external_id`, the extension safely attaches it to the current Paymenter user before provisioning. A non-empty conflicting `external_id` is never overwritten. The same verified identity resolver is used by the customer server-management methods.
+
+## Customer server management
+
+Extension version: **1.2.0**.
+
+The extension exposes two narrow methods for the signed FragCity API bridge:
+
+- `getCustomerPanelSummary`: finds the Pterodactyl server by the Paymenter service ID, verifies both server `external_id` and owner user ID, and returns only the server metadata needed by the customer's FragCity "My Servers" page. It also aligns legacy client username/email/name fields and attaches the stable Paymenter user `external_id`.
+- `setCustomerPanelPassword`: validates the customer-selected password, verifies that the Pterodactyl server belongs to the Paymenter service owner, and updates that user's password through the Application API.
+
+The panel password is independent from FragCity and Paymenter credentials. Pterodactyl hashes it; the extension never saves it in Paymenter properties, logs, or API responses. No Paymenter Core or Pterodactyl Core file is modified.
 
 ## Egg coverage
 
