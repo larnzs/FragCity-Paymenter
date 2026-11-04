@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.7.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.8.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -114,7 +114,7 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.7.0; its `upgraded()` hook runs the pending migrations, including the encrypted Client API credential table. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
+Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.8.0; its `upgraded()` hook runs the pending migrations, including the encrypted Client API credential table. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
 
 ## Security notes
 
@@ -124,3 +124,14 @@ Enable **FragCity API** in Paymenter Admin → Extensions → Others and configu
 - Request bodies and passwords are never written to logs.
 - The Pterodactyl Application API key is never exposed to the website or browser. The customer's Client API key is encrypted at rest in the Paymenter database and decrypted only inside the CS2 extension for a specific owner-verified server operation.
 - The bridge creates no Pterodactyl users or servers; the FragCity CS2 server extension handles Pterodactyl client identity immediately before the official Paymenter server provisioner runs.
+
+
+## Lifecycle reconciliation and recovery authorization (1.8.0)
+
+- Scheduled and administrator-triggered reconciliation use the dedicated `reconcileCustomerLifecycle` operation. It verifies the stored Pterodactyl Client identity and the exact Server external ID, then aligns only the Server suspend state with Paymenter (`active` / `suspended`). It never creates a missing Client or Server and never repairs Client profile fields.
+- Only an authoritative Pterodactyl 404 is treated as a missing resource. Authentication failures, timeouts and 5xx responses remain retryable failures.
+- A manually deleted Server remains `missing_external`; scheduled reconciliation checks for its return but never recreates it.
+- Recreation approval is stored independently from `desired_state`. It records a unique authorization ID, administrator SteamID64/username, reason, timestamp and consumed/revoked state. A grant is consumed only after the replacement Server is verified, so transient CreateJob failures do not silently consume it.
+- An unconsumed grant can be revoked with a reason; both grant and revoke actions are permanent audit events.
+- `last_reconciled_at` records the latest inspection attempt. Failed attempts are retried and produce audit events.
+- Migration `2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php` is additive; earlier migration files remain unchanged.

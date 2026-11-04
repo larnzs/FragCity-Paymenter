@@ -25,7 +25,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed FragCity bridge for durable customer identity, CS2 service lifecycle, Client API, Console and File Manager.',
-    version: '1.7.0',
+    version: '1.8.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -141,33 +141,34 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.7.0',
+            'version' => '1.8.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
 
     /**
-     * Reconcile a bounded batch of service mappings. Paymenter service
-     * deletion through Eloquent is handled synchronously by model hooks;
-     * this job catches raw/out-of-band deletes and manual Pterodactyl deletes.
-     * Transient API failures are retried and never treated as missing.
+     * Reconcile bounded batches against Paymenter intent and Pterodactyl state.
+     * Eloquent deletion is synchronous; this catches out-of-band changes.
+     * It never recreates a missing Client or Server.
      */
     private function reconcileLifecycleBatch(): void
     {
         if (
             !Schema::hasTable('fragcity_service_servers')
             || !Schema::hasTable('fragcity_service_lifecycle_events')
+            || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
         ) {
             return;
         }
 
         $mappings = DB::table('fragcity_service_servers')
             ->whereNull('deleted_at')
-            ->whereNotIn('lifecycle_state', ['deleted', 'paymenter_missing', 'missing_external'])
+            ->whereNotIn('lifecycle_state', ['deleted', 'paymenter_missing'])
             ->where(function ($query): void {
                 $query->whereNull('next_reconcile_at')
                     ->orWhere('next_reconcile_at', '<=', now());
             })
+            ->orderByRaw('COALESCE(next_reconcile_at, created_at) asc')
             ->orderBy('id')
             ->limit(10)
             ->get();
@@ -179,77 +180,110 @@ class FragCityAPI extends Extension
 
             if (!$service) {
                 if ((string) $mapping->lifecycle_state !== 'paymenter_missing') {
+                    DB::transaction(function () use ($mapping): void {
+                        DB::table('fragcity_service_servers')
+                            ->where('id', (int) $mapping->id)
+                            ->update([
+                                'desired_state' => 'review',
+                                'lifecycle_state' => 'paymenter_missing',
+                                'next_reconcile_at' => null,
+                                'last_reconciled_at' => now(),
+                                'last_error' => 'Paymenter service record is missing; external cleanup requires administrator review.',
+                                'updated_at' => now(),
+                            ]);
+
+                        DB::table('fragcity_service_lifecycle_events')->insert([
+                            'paymenter_service_id' => (int) $mapping->paymenter_service_id,
+                            'customer_uuid' => $mapping->customer_uuid,
+                            'event_key' => 'paymenter_service_missing',
+                            'from_state' => (string) $mapping->lifecycle_state,
+                            'to_state' => 'paymenter_missing',
+                            'details' => json_encode([
+                                'source' => 'scheduled_reconciliation',
+                                'action' => 'admin_review_required_no_remote_delete',
+                            ], JSON_THROW_ON_ERROR),
+                            'occurred_at' => now(),
+                        ]);
+                    });
+                }
+                continue;
+            }
+
+            if ($service->product?->server?->extension !== 'FragCityCS2') {
+                DB::transaction(function () use ($mapping): void {
                     DB::table('fragcity_service_servers')
                         ->where('id', (int) $mapping->id)
                         ->update([
                             'desired_state' => 'review',
-                            'lifecycle_state' => 'paymenter_missing',
-                            'next_reconcile_at' => null,
-                            'last_error' => 'Paymenter service record is missing; external cleanup requires admin review.',
+                            'lifecycle_state' => 'review_required',
+                            'next_reconcile_at' => now()->addDay(),
+                            'last_reconciled_at' => now(),
+                            'last_error' => 'Paymenter service no longer uses FragCityCS2.',
                             'updated_at' => now(),
                         ]);
 
                     DB::table('fragcity_service_lifecycle_events')->insert([
                         'paymenter_service_id' => (int) $mapping->paymenter_service_id,
                         'customer_uuid' => $mapping->customer_uuid,
-                        'event_key' => 'paymenter_service_missing',
+                        'event_key' => 'service_extension_changed',
                         'from_state' => (string) $mapping->lifecycle_state,
-                        'to_state' => 'paymenter_missing',
+                        'to_state' => 'review_required',
                         'details' => json_encode([
                             'source' => 'scheduled_reconciliation',
                             'action' => 'admin_review_required',
                         ], JSON_THROW_ON_ERROR),
                         'occurred_at' => now(),
                     ]);
-                }
-
-                continue;
-            }
-
-            if ($service->product?->server?->extension !== 'FragCityCS2') {
-                DB::table('fragcity_service_servers')
-                    ->where('id', (int) $mapping->id)
-                    ->update([
-                        'desired_state' => 'review',
-                        'lifecycle_state' => 'review_required',
-                        'next_reconcile_at' => now()->addDay(),
-                        'last_error' => 'Paymenter service no longer uses FragCityCS2.',
-                        'updated_at' => now(),
-                    ]);
-
+                });
                 continue;
             }
 
             try {
-                ExtensionHelper::callService($service, 'getCustomerPanelSummary');
-
-                // A pending service may return before it has a Pterodactyl
-                // client/server. Keep it in the queue for a later check.
+                $result = ExtensionHelper::callService($service, 'reconcileCustomerLifecycle');
                 DB::table('fragcity_service_servers')
-                    ->where('id', (int) $mapping->id)
-                    ->whereNotIn('lifecycle_state', ['missing_external', 'deleted'])
+                    ->where('paymenter_service_id', (int) $service->id)
                     ->update([
-                        'next_reconcile_at' => now()->addMinutes(5),
+                        'last_reconciled_at' => now(),
+                        'next_reconcile_at' => (($result['state'] ?? '') === 'review_required')
+                            ? now()->addHour()
+                            : now()->addMinutes(5),
                         'updated_at' => now(),
                     ]);
             } catch (Throwable $e) {
                 Log::warning('FragCity scheduled lifecycle reconciliation failed.', [
-                    'service_id' => (int) $mapping->paymenter_service_id,
+                    'service_id' => (int) $service->id,
                     'exception' => get_class($e),
                 ]);
 
-                DB::table('fragcity_service_servers')
-                    ->where('id', (int) $mapping->id)
-                    ->update([
-                        'next_reconcile_at' => now()->addMinute(),
-                        'last_error' => 'Reconciliation request failed: ' . get_class($e),
-                        'updated_at' => now(),
+                DB::transaction(function () use ($service, $mapping, $e): void {
+                    DB::table('fragcity_service_servers')
+                        ->where('paymenter_service_id', (int) $service->id)
+                        ->update([
+                            'next_reconcile_at' => now()->addMinute(),
+                            'last_reconciled_at' => now(),
+                            'last_error' => 'Reconciliation request failed: ' . get_class($e),
+                            'updated_at' => now(),
+                        ]);
+
+                    DB::table('fragcity_service_lifecycle_events')->insert([
+                        'paymenter_service_id' => (int) $service->id,
+                        'customer_uuid' => $mapping->customer_uuid,
+                        'event_key' => 'reconciliation_failed',
+                        'from_state' => (string) $mapping->lifecycle_state,
+                        'to_state' => (string) $mapping->lifecycle_state,
+                        'details' => json_encode([
+                            'source' => 'scheduled_reconciliation',
+                            'exception' => get_class($e),
+                            'retry_at' => now()->addMinute()->toIso8601String(),
+                        ], JSON_THROW_ON_ERROR),
+                        'occurred_at' => now(),
                     ]);
+                });
             }
         }
     }
 
-    public function syncUser(Request $request): JsonResponse
+    public function syncUser(    public function syncUser(Request $request): JsonResponse
     {
         $authError = $this->authenticateBridgeRequest($request);
         if ($authError) {

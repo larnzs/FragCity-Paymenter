@@ -138,14 +138,24 @@ class FragCityCS2 extends PterodactylExtension
                     throw new RuntimeException('The existing Pterodactyl server is linked to a different client account.');
                 }
 
+                $desiredState = (string) $service->status === Service::STATUS_SUSPENDED
+                    ? 'suspended'
+                    : 'active';
+                $existingObservedState = !empty($existing['suspended']) ? 'suspended' : 'active';
                 $this->storeServiceLifecycle(
                     $service,
                     $clientUserId,
                     $existing,
-                    'active',
-                    !empty($existing['suspended']) ? 'suspended' : 'active',
-                    'ready'
+                    $desiredState,
+                    $existingObservedState,
+                    $desiredState === $existingObservedState
+                        ? ($desiredState === 'suspended' ? 'suspended' : 'ready')
+                        : 'review_required',
+                    $desiredState !== $existingObservedState
+                        ? 'Existing Pterodactyl server state differs from the Paymenter service state; scheduled reconciliation will align it.'
+                        : null
                 );
+                $this->consumeRecreationAuthorization($service, (int) ($existing['id'] ?? 0));
 
                 $identifier = trim((string) ($existing['identifier'] ?? ''));
                 return [
@@ -154,12 +164,8 @@ class FragCityCS2 extends PterodactylExtension
                 ];
             }
 
-            $wasPreviouslyProvisioned = $mapping && (
-                (int) ($mapping->pterodactyl_server_id ?? 0) > 0
-                || $mapping->last_seen_at !== null
-            );
-            $recreationAuthorized = $mapping
-                && (string) $mapping->desired_state === 'recreate_authorized';
+            $wasPreviouslyProvisioned = $this->mappingWasPreviouslyProvisioned($mapping);
+            $recreationAuthorized = $this->hasPendingRecreationAuthorization($mapping);
 
             if ($wasPreviouslyProvisioned && !$recreationAuthorized) {
                 $this->storeServiceLifecycle(
@@ -176,17 +182,10 @@ class FragCityCS2 extends PterodactylExtension
             }
 
             if ($wasPreviouslyProvisioned && $recreationAuthorized) {
-                DB::table('fragcity_service_lifecycle_events')->insert([
-                    'paymenter_service_id' => (int) $service->id,
-                    'customer_uuid' => $mapping->customer_uuid,
-                    'event_key' => 'admin_recreation_authorized',
-                    'from_state' => 'missing_external',
-                    'to_state' => 'provisioning',
-                    'details' => json_encode([
-                        'source' => 'admin_approved_mapping_flag',
-                        'approved' => true,
-                    ], JSON_THROW_ON_ERROR),
-                    'occurred_at' => now(),
+                $this->recordLifecycleEvent($service, 'recreation_provisioning_started', 'missing_external', 'provisioning', [
+                    'authorization_id' => (string) $mapping->recreation_authorization_id,
+                    'authorized_by' => (string) $mapping->recreation_authorized_by,
+                    'reason' => (string) $mapping->recreation_authorization_reason,
                 ]);
             }
 
@@ -243,14 +242,34 @@ class FragCityCS2 extends PterodactylExtension
                 throw new RuntimeException('Pterodactyl server creation could not be verified against the Paymenter service.');
             }
 
+            $desiredState = (string) $service->status === Service::STATUS_SUSPENDED
+                ? 'suspended'
+                : 'active';
+            $actualSuspended = (bool) ($attributes['suspended'] ?? false);
+
+            if ($desiredState === 'suspended' && !$actualSuspended) {
+                $suspendResult = $this->requestApplicationApi(
+                    'POST',
+                    '/api/application/servers/' . $serverId . '/suspend'
+                );
+                if ($suspendResult === null) {
+                    throw new RuntimeException('Pterodactyl server disappeared while applying the suspended Paymenter state.');
+                }
+                $attributes['suspended'] = true;
+                $actualSuspended = true;
+            }
+
             $this->storeServiceLifecycle(
                 $service,
                 $clientUserId,
                 $attributes,
-                'active',
-                !empty($attributes['suspended']) ? 'suspended' : 'active',
-                'ready'
+                $desiredState,
+                $actualSuspended ? 'suspended' : 'active',
+                $desiredState === ($actualSuspended ? 'suspended' : 'active')
+                    ? ($actualSuspended ? 'suspended' : 'ready')
+                    : 'review_required'
             );
+            $this->consumeRecreationAuthorization($service, $serverId);
 
             return $created;
         });
@@ -507,9 +526,106 @@ class FragCityCS2 extends PterodactylExtension
         if (
             !Schema::hasTable('fragcity_customer_identities')
             || !Schema::hasTable('fragcity_service_servers')
+            || !Schema::hasTable('fragcity_service_lifecycle_events')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_id')
+            || !Schema::hasColumn('fragcity_service_servers', 'last_reconciled_at')
         ) {
-            throw new RuntimeException('FragCity lifecycle migrations are not installed.');
+            throw new RuntimeException('FragCity lifecycle migrations are not installed or are incomplete.');
         }
+    }
+
+    private function mappingWasPreviouslyProvisioned(?object $mapping): bool
+    {
+        return $mapping !== null && (
+            (int) ($mapping->pterodactyl_server_id ?? 0) > 0
+            || $mapping->last_seen_at !== null
+        );
+    }
+
+    private function hasPendingRecreationAuthorization(?object $mapping): bool
+    {
+        return $mapping !== null
+            && !empty($mapping->recreation_authorized_at)
+            && empty($mapping->recreation_authorization_consumed_at)
+            && empty($mapping->recreation_authorization_revoked_at)
+            && !empty($mapping->recreation_authorization_id);
+    }
+
+    private function recordLifecycleEvent(
+        Service $service,
+        string $eventKey,
+        ?string $fromState,
+        ?string $toState,
+        array $details = []
+    ): void {
+        if (!Schema::hasTable('fragcity_service_lifecycle_events')) {
+            throw new RuntimeException('FragCity lifecycle event storage is not installed.');
+        }
+
+        $mapping = DB::table('fragcity_service_servers')
+            ->where('paymenter_service_id', (int) $service->id)
+            ->first();
+
+        DB::table('fragcity_service_lifecycle_events')->insert([
+            'paymenter_service_id' => (int) $service->id,
+            'customer_uuid' => $mapping->customer_uuid ?? null,
+            'event_key' => $eventKey,
+            'from_state' => $fromState,
+            'to_state' => $toState,
+            'details' => json_encode($details, JSON_THROW_ON_ERROR),
+            'occurred_at' => now(),
+        ]);
+    }
+
+    /**
+     * Keep an approval alive across transient CreateJob failures. Consume it
+     * only after Pterodactyl confirms the replacement Server.
+     */
+    private function consumeRecreationAuthorization(Service $service, int $serverId): void
+    {
+        if ($serverId < 1) {
+            throw new RuntimeException('A valid Pterodactyl server ID is required to consume recreation authorization.');
+        }
+
+        DB::transaction(function () use ($service, $serverId): void {
+            $mapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$this->hasPendingRecreationAuthorization($mapping)) {
+                return;
+            }
+
+            $updated = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->whereNull('recreation_authorization_consumed_at')
+                ->whereNull('recreation_authorization_revoked_at')
+                ->update([
+                    'recreation_authorization_consumed_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+            if ($updated !== 1) {
+                throw new RuntimeException('Recreation authorization could not be consumed safely.');
+            }
+
+            DB::table('fragcity_service_lifecycle_events')->insert([
+                'paymenter_service_id' => (int) $service->id,
+                'customer_uuid' => $mapping->customer_uuid,
+                'event_key' => 'admin_recreation_authorization_consumed',
+                'from_state' => 'missing_external',
+                'to_state' => 'ready',
+                'details' => json_encode([
+                    'authorization_id' => (string) $mapping->recreation_authorization_id,
+                    'authorized_by' => (string) $mapping->recreation_authorized_by,
+                    'reason' => (string) $mapping->recreation_authorization_reason,
+                    'pterodactyl_server_id' => $serverId,
+                    'consumed_at' => now()->toIso8601String(),
+                ], JSON_THROW_ON_ERROR),
+                'occurred_at' => now(),
+            ]);
+        }, 3);
     }
 
     /**
@@ -751,14 +867,15 @@ class FragCityCS2 extends PterodactylExtension
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
 
             if ($server === null) {
+                $wasPreviouslyProvisioned = $this->mappingWasPreviouslyProvisioned($mapping);
                 $this->storeServiceLifecycle(
                     $service,
                     0,
                     null,
                     'suspended',
-                    'missing',
-                    'missing_external',
-                    'Pterodactyl server returned 404 during suspend.'
+                    $wasPreviouslyProvisioned ? 'missing' : 'unknown',
+                    $wasPreviouslyProvisioned ? 'missing_external' : 'provisioning',
+                    $wasPreviouslyProvisioned ? 'Pterodactyl server returned 404 during suspend.' : null
                 );
                 return true;
             }
@@ -816,14 +933,15 @@ class FragCityCS2 extends PterodactylExtension
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
 
             if ($server === null) {
+                $wasPreviouslyProvisioned = $this->mappingWasPreviouslyProvisioned($mapping);
                 $this->storeServiceLifecycle(
                     $service,
                     0,
                     null,
                     'active',
-                    'missing',
-                    'missing_external',
-                    'Pterodactyl server returned 404 during unsuspend.'
+                    $wasPreviouslyProvisioned ? 'missing' : 'unknown',
+                    $wasPreviouslyProvisioned ? 'missing_external' : 'provisioning',
+                    $wasPreviouslyProvisioned ? 'Pterodactyl server returned 404 during unsuspend.' : null
                 );
                 return true;
             }
@@ -997,6 +1115,279 @@ class FragCityCS2 extends PterodactylExtension
         }
 
         return $payload;
+    }
+
+    /**
+     * Verify and reconcile one service against Paymenter intent and the exact
+     * Pterodactyl Application API records. This method never creates a Client
+     * or Server and never repairs Client profile fields.
+     *
+     * @return array<string,mixed>
+     */
+    public function reconcileCustomerLifecycle(Service $service, $settings = null, $properties = null): array
+    {
+        $this->assertLifecycleStorageReady();
+
+        return $this->withServiceLifecycleLock($service, function () use ($service): array {
+            $mapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->first();
+
+            if (
+                $mapping
+                && ((string) $mapping->lifecycle_state === 'deleted' || $mapping->deleted_at !== null)
+            ) {
+                DB::table('fragcity_service_servers')
+                    ->where('paymenter_service_id', (int) $service->id)
+                    ->update(['last_reconciled_at' => now(), 'next_reconcile_at' => null, 'updated_at' => now()]);
+
+                return ['service_id' => (int) $service->id, 'state' => 'deleted', 'action' => 'none'];
+            }
+
+            $wasPreviouslyProvisioned = $this->mappingWasPreviouslyProvisioned($mapping);
+            $desiredState = match ((string) $service->status) {
+                Service::STATUS_ACTIVE => 'active',
+                Service::STATUS_SUSPENDED => 'suspended',
+                default => null,
+            };
+
+            if ($desiredState === null) {
+                $state = $wasPreviouslyProvisioned ? 'review_required' : 'provisioning';
+                $preservedDesired = in_array((string) ($mapping->desired_state ?? ''), ['active', 'suspended'], true)
+                    ? (string) $mapping->desired_state
+                    : 'active';
+                $this->storeServiceLifecycle(
+                    $service,
+                    (int) ($mapping->pterodactyl_user_id ?? 0),
+                    null,
+                    $preservedDesired,
+                    (string) ($mapping->observed_state ?? 'unknown'),
+                    $state,
+                    $wasPreviouslyProvisioned
+                        ? 'Paymenter service is not active or suspended; automated state alignment was withheld.'
+                        : null
+                );
+                $this->markLifecycleReconciled((int) $service->id, $state);
+
+                return ['service_id' => (int) $service->id, 'state' => $state, 'action' => 'none'];
+            }
+
+            $identity = DB::table('fragcity_customer_identities')
+                ->where('paymenter_user_id', (int) $service->user_id)
+                ->first();
+            $customerUuid = trim((string) ($mapping->customer_uuid ?? $identity->customer_uuid ?? ''));
+
+            if (!preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iD', $customerUuid)) {
+                $state = $wasPreviouslyProvisioned ? 'review_required' : 'provisioning';
+                $this->storeServiceLifecycle(
+                    $service,
+                    (int) ($mapping->pterodactyl_user_id ?? 0),
+                    null,
+                    $desiredState,
+                    'unknown',
+                    $state,
+                    $wasPreviouslyProvisioned ? 'Durable FragCity customer UUID is missing or invalid.' : null
+                );
+                $this->markLifecycleReconciled((int) $service->id, $state);
+
+                return ['service_id' => (int) $service->id, 'state' => $state, 'action' => 'none'];
+            }
+
+            $clientUserId = (int) ($mapping->pterodactyl_user_id ?? $identity->pterodactyl_user_id ?? 0);
+            if ($clientUserId < 1) {
+                $state = $wasPreviouslyProvisioned ? 'review_required' : 'provisioning';
+                $this->storeServiceLifecycle(
+                    $service,
+                    0,
+                    null,
+                    $desiredState,
+                    $wasPreviouslyProvisioned ? 'missing_client' : 'unknown',
+                    $state,
+                    $wasPreviouslyProvisioned
+                        ? 'Previously provisioned service has no verified Pterodactyl Client ID in the identity registry.'
+                        : null
+                );
+                $this->markLifecycleReconciled((int) $service->id, $state);
+
+                return ['service_id' => (int) $service->id, 'state' => $state, 'action' => 'none'];
+            }
+
+            $clientResponse = $this->requestApplicationApi('GET', '/api/application/users/' . $clientUserId);
+            if ($clientResponse === null) {
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    null,
+                    $desiredState,
+                    'missing_client',
+                    'review_required',
+                    'Pterodactyl Client account is missing; automatic account recreation is blocked.'
+                );
+                $this->markLifecycleReconciled((int) $service->id, 'review_required');
+
+                return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => 'none'];
+            }
+
+            $clientAttributes = $clientResponse['attributes'] ?? null;
+            if (
+                !is_array($clientAttributes)
+                || (int) ($clientAttributes['id'] ?? 0) !== $clientUserId
+                || (string) ($clientAttributes['external_id'] ?? '') !== $customerUuid
+            ) {
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    null,
+                    $desiredState,
+                    'client_identity_conflict',
+                    'review_required',
+                    'Pterodactyl Client identity does not match the durable FragCity customer UUID.'
+                );
+                $this->markLifecycleReconciled((int) $service->id, 'review_required');
+
+                return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => 'none'];
+            }
+
+            $server = $this->findPterodactylServerByExternalId((int) $service->id);
+            if ($server === null) {
+                $state = $wasPreviouslyProvisioned ? 'missing_external' : 'provisioning';
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    null,
+                    $desiredState,
+                    $wasPreviouslyProvisioned ? 'missing' : 'unknown',
+                    $state,
+                    $wasPreviouslyProvisioned
+                        ? 'Pterodactyl confirmed that a previously verified service server no longer exists.'
+                        : null
+                );
+                $this->markLifecycleReconciled((int) $service->id, $state);
+
+                return ['service_id' => (int) $service->id, 'state' => $state, 'action' => 'none'];
+            }
+
+            if ((int) ($server['user'] ?? 0) !== $clientUserId) {
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    $server,
+                    $desiredState,
+                    'ownership_conflict',
+                    'review_required',
+                    'Pterodactyl Server belongs to a different Client; automated lifecycle mutation was refused.'
+                );
+                $this->markLifecycleReconciled((int) $service->id, 'review_required');
+
+                return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => 'none'];
+            }
+
+            $actualSuspended = (bool) ($server['suspended'] ?? false);
+            $expectedSuspended = $desiredState === 'suspended';
+            $action = 'none';
+
+            if ($actualSuspended !== $expectedSuspended) {
+                $transitionState = $expectedSuspended ? 'suspending' : 'unsuspending';
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    $server,
+                    $desiredState,
+                    $actualSuspended ? 'suspended' : 'active',
+                    $transitionState
+                );
+
+                $endpoint = '/api/application/servers/' . (int) $server['id']
+                    . ($expectedSuspended ? '/suspend' : '/unsuspend');
+                $mutation = $this->requestApplicationApi('POST', $endpoint);
+
+                if ($mutation === null) {
+                    $this->storeServiceLifecycle(
+                        $service,
+                        $clientUserId,
+                        null,
+                        $desiredState,
+                        'missing',
+                        'missing_external',
+                        'Pterodactyl server disappeared while applying the Paymenter service state.'
+                    );
+                    $this->markLifecycleReconciled((int) $service->id, 'missing_external');
+
+                    return ['service_id' => (int) $service->id, 'state' => 'missing_external', 'action' => $expectedSuspended ? 'suspend' : 'unsuspend'];
+                }
+
+                $action = $expectedSuspended ? 'suspend' : 'unsuspend';
+                $server = $this->findPterodactylServerByExternalId((int) $service->id);
+
+                if (
+                    $server === null
+                    || (int) ($server['user'] ?? 0) !== $clientUserId
+                    || (string) ($server['external_id'] ?? '') !== (string) $service->id
+                ) {
+                    $this->storeServiceLifecycle(
+                        $service,
+                        $clientUserId,
+                        null,
+                        $desiredState,
+                        'missing',
+                        'missing_external',
+                        'Pterodactyl server could not be re-verified after state alignment.'
+                    );
+                    $this->markLifecycleReconciled((int) $service->id, 'missing_external');
+
+                    return ['service_id' => (int) $service->id, 'state' => 'missing_external', 'action' => $action];
+                }
+            }
+
+            $actualSuspended = (bool) ($server['suspended'] ?? false);
+            if ($actualSuspended !== $expectedSuspended) {
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    $server,
+                    $desiredState,
+                    $actualSuspended ? 'suspended' : 'active',
+                    'review_required',
+                    'Pterodactyl state still differs from Paymenter after reconciliation.'
+                );
+                $this->markLifecycleReconciled((int) $service->id, 'review_required');
+
+                return ['service_id' => (int) $service->id, 'state' => 'review_required', 'action' => $action];
+            }
+
+            $finalState = $expectedSuspended ? 'suspended' : 'ready';
+            $this->storeServiceLifecycle(
+                $service,
+                $clientUserId,
+                $server,
+                $desiredState,
+                $expectedSuspended ? 'suspended' : 'active',
+                $finalState
+            );
+            $this->markLifecycleReconciled((int) $service->id, $finalState);
+
+            return [
+                'service_id' => (int) $service->id,
+                'state' => $finalState,
+                'desired_state' => $desiredState,
+                'observed_state' => $expectedSuspended ? 'suspended' : 'active',
+                'action' => $action,
+                'pterodactyl_server_id' => (int) ($server['id'] ?? 0),
+            ];
+        });
+    }
+
+    private function markLifecycleReconciled(int $serviceId, string $state): void
+    {
+        DB::table('fragcity_service_servers')
+            ->where('paymenter_service_id', $serviceId)
+            ->update([
+                'last_reconciled_at' => now(),
+                'next_reconcile_at' => $state === 'deleted'
+                    ? null
+                    : now()->addMinutes($state === 'review_required' ? 60 : 5),
+                'updated_at' => now(),
+            ]);
     }
 
     /**
