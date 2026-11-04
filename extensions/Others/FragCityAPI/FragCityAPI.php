@@ -688,7 +688,7 @@ class FragCityAPI extends Extension
         RateLimiter::hit($rateLimitKey, 900);
 
         try {
-            $resolved = $this->resolveCustomerService($steamId, $serviceId);
+            $resolved = $this->resolveCustomerService($steamId, $serviceId, true);
             if (!$resolved) {
                 return response()->json(['success' => false, 'error' => 'service_not_found'], 404);
             }
@@ -741,12 +741,19 @@ class FragCityAPI extends Extension
                 'client_api_key_must_belong_to_server_owner',
                 'client_api_server_verification_failed',
                 'client_api_invalid_response',
+                'service_not_active',
             ], true) ? $message : 'client_api_connection_failed';
+
+            $status = match ($safeError) {
+                'service_not_active' => 409,
+                'client_api_key_must_belong_to_server_owner' => 403,
+                default => 422,
+            };
 
             return response()->json([
                 'success' => false,
                 'error' => $safeError,
-            ], $safeError === 'client_api_key_must_belong_to_server_owner' ? 403 : 422);
+            ], $status);
         }
     }
 
@@ -812,7 +819,7 @@ class FragCityAPI extends Extension
         $data = $validator->validated();
 
         try {
-            $resolved = $this->resolveCustomerService((string) $data['steamid64'], (int) $data['service_id']);
+            $resolved = $this->resolveCustomerService((string) $data['steamid64'], (int) $data['service_id'], true);
             if (!$resolved) {
                 return response()->json(['success' => false, 'error' => 'service_not_found'], 404);
             }
@@ -839,10 +846,11 @@ class FragCityAPI extends Extension
                 'client_api_not_connected',
                 'client_api_permission_denied',
                 'client_api_key_must_belong_to_server_owner',
+                'service_not_active',
             ], true) ? $message : 'customer_console_unavailable';
 
             $status = match ($safeError) {
-                'client_api_not_connected' => 409,
+                'client_api_not_connected', 'service_not_active' => 409,
                 'client_api_permission_denied', 'client_api_key_must_belong_to_server_owner' => 403,
                 default => 502,
             };
@@ -890,7 +898,7 @@ class FragCityAPI extends Extension
 
         $data = $validator->validated();
         try {
-            $resolved = $this->resolveCustomerService((string) $data['steamid64'], (int) $data['service_id']);
+            $resolved = $this->resolveCustomerService((string) $data['steamid64'], (int) $data['service_id'], true);
             if (!$resolved) {
                 return response()->json(['success' => false, 'error' => 'service_not_found'], 404);
             }
@@ -918,6 +926,7 @@ class FragCityAPI extends Extension
                 'client_api_not_connected',
                 'client_api_permission_denied',
                 'client_api_key_must_belong_to_server_owner',
+                'service_not_active',
                 'client_api_file_too_large_to_edit',
                 'client_api_file_not_editable',
                 'client_api_invalid_file_content',
@@ -928,7 +937,7 @@ class FragCityAPI extends Extension
             ], true) ? $message : 'customer_file_action_failed';
 
             $status = match ($safeError) {
-                'client_api_not_connected' => 409,
+                'client_api_not_connected', 'service_not_active' => 409,
                 'client_api_permission_denied', 'client_api_key_must_belong_to_server_owner' => 403,
                 'client_api_file_too_large_to_edit' => 413,
                 'client_api_file_not_editable',
@@ -953,7 +962,7 @@ class FragCityAPI extends Extension
      *
      * @return array{user:User,service:Service}|null
      */
-    private function resolveCustomerService(string $steamId, int $serviceId): ?array
+    private function resolveCustomerService(string $steamId, int $serviceId, bool $requireActive = false): ?array
     {
         $link = DB::table('fragcity_user_links')
             ->where('steamid64', $steamId)
@@ -977,6 +986,10 @@ class FragCityAPI extends Extension
 
         if (!$service || $service->product?->server?->extension !== 'FragCityCS2') {
             return null;
+        }
+
+        if ($requireActive && $service->status !== Service::STATUS_ACTIVE) {
+            throw new RuntimeException('service_not_active');
         }
 
         return ['user' => $user, 'service' => $service];
