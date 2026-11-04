@@ -676,8 +676,8 @@ class FragCityCS2 extends PterodactylExtension
                     'paymenter_service_id' => (int) $service->id,
                     'customer_uuid' => $mapping->customer_uuid,
                     'event_key' => 'admin_recreation_provisioning_attempt_failed',
-                    'from_state' => 'provisioning',
-                    'to_state' => 'missing_external',
+                    'from_state' => (string) $mapping->lifecycle_state,
+                    'to_state' => (string) $mapping->lifecycle_state,
                     'details' => json_encode([
                         'authorization_id' => $authorizationId,
                         'exception' => $failureType,
