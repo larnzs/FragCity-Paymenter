@@ -1,0 +1,62 @@
+name: FragCity Lifecycle PHP Checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extensions/Others/FragCityAPI/**"
+      - "extensions/Servers/FragCityCS2/**"
+      - ".github/workflows/fragcity-lifecycle-php.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "extensions/Others/FragCityAPI/**"
+      - "extensions/Servers/FragCityCS2/**"
+      - ".github/workflows/fragcity-lifecycle-php.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php-syntax:
+    name: PHP 8.3 syntax and lifecycle contract
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Lint lifecycle PHP files
+        shell: bash
+        run: |
+          set -euo pipefail
+          files=(
+            "extensions/Others/FragCityAPI/FragCityAPI.php"
+            "extensions/Others/FragCityAPI/routes.php"
+            "extensions/Servers/FragCityCS2/FragCityCS2.php"
+            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000002_create_fragcity_identity_and_service_lifecycle_tables.php"
+            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000003_add_lifecycle_reconciliation_and_recreation_authorization_columns.php"
+            "extensions/Others/FragCityAPI/database/migrations/2026_11_04_000004_add_recreation_authorization_claim_columns.php"
+          )
+          for file in "${files[@]}"; do
+            test -f "$file"
+            php -l "$file"
+          done
+
+      - name: Verify lifecycle safety contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q "version: '1.9.0'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -q "function reconcileCustomerLifecycle" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "function claimRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "function releaseRecreationAuthorizationClaim" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "function consumeRecreationAuthorization" extensions/Servers/FragCityCS2/FragCityCS2.php
+          ! grep -q "\$legacyPaymenterLink" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "adminLifecycleRevokeRecreation" extensions/Others/FragCityAPI/routes.php
