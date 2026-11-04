@@ -23,3 +23,8 @@ Route::post('/api/v1/fragcity/bridge/servers/password', [FragCityAPI::class, 'se
     ->middleware('throttle:60,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.servers.password');
+
+Route::post('/api/v1/fragcity/bridge/servers/username', [FragCityAPI::class, 'setPanelUsername'])
+    ->middleware('throttle:60,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.servers.username');
