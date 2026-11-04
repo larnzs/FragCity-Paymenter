@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.3.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.5.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -10,6 +10,10 @@ Provides a narrow private server-to-server bridge for FragCity account synchroni
 - `POST /api/v1/fragcity/bridge/users/sync`
 - `POST /api/v1/fragcity/bridge/servers/list`
 - `POST /api/v1/fragcity/bridge/servers/password`
+- `POST /api/v1/fragcity/bridge/servers/client-api/connect`
+- `POST /api/v1/fragcity/bridge/servers/client-api/disconnect`
+- `POST /api/v1/fragcity/bridge/servers/console`
+- `POST /api/v1/fragcity/bridge/servers/files`
 
 All bridge routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are server-to-server endpoints; the browser must never call them directly.
 
@@ -60,6 +64,26 @@ FragCity's website endpoint additionally requires an authenticated website sessi
 
 The panel password is intentionally independent from FragCity and Paymenter passwords. It cannot be read back after setting; customers can set a new one through FragCity at any time.
 
+## Customer Client API, Console and File Manager
+
+The FragCity My Servers integration uses a separate Pterodactyl **Client API key created by the customer inside their own Pterodactyl account**. It is not the admin Application API key configured on the FragCity CS2 server extension.
+
+Customers connect the key from FragCity → My Servers → Access → Secure management tools. The website requires an authenticated FragCity session, CSRF validation and re-entry of the current FragCity password. Paymenter validates all of the following before accepting the key:
+
+1. The FragCity SteamID resolves to the linked Paymenter user.
+2. The selected Paymenter service belongs to that user and uses the FragCityCS2 server extension.
+3. The Pterodactyl Application API server has the expected Paymenter \`external_id\` and owner user ID.
+4. The Client API key can read that exact server and Pterodactyl reports \`meta.is_server_owner=true\`.
+5. The Client API server UUID and short identifier match the Application API record.
+
+Only after validation is the Client API key encrypted with Laravel \`Crypt::encryptString()\` in \`fragcity_client_api_credentials\`. A SHA-256 fingerprint is stored for identification; plaintext is never logged or returned to the website. The key is stored once per Paymenter user and revalidated against the specific owned server on every Console/File request. Disconnect removes the stored encrypted credential from Paymenter; it does not revoke the key from Pterodactyl. Customers must separately revoke the key under Pterodactyl Account → API Credentials to invalidate it.
+
+The Console endpoint returns only the short-lived WebSocket URL and token issued by Pterodactyl. The long-lived Client API key stays server-side. The website browser connects directly to the Pterodactyl/Wings WSS endpoint with the short-lived token. File Manager operations are allow-listed and proxied through the signed bridge. File paths are validated, file edits are size-limited, and Pterodactyl continues to enforce the account's server/file permissions.
+
+The direct file upload and WebSocket connections originate from the FragCity website browser. Configure the exact FragCity website origin in the Wings \`api.allowed_origins\` setting (for example, \`https://fragcity.ir\` only if that is the actual origin serving My Servers). Do not guess the origin or expose Wings credentials. Back up the Wings config before editing it, and restart Wings only during an approved maintenance window. If this origin is not allowed, Console WebSocket and/or browser uploads may fail due to browser CORS/origin checks, while server-side file list/read/write/download operations can still work.
+
+The Application API dashboard key remains separate and should retain only the read-only Application API permissions needed for the existing server summary: Servers, Allocations, Nodes, Locations, Nests and Eggs. Do not grant Client API or write privileges to that key.
+
 ## Installation
 
 Copy this directory to:
@@ -76,7 +100,7 @@ composer dump-autoload
 php artisan optimize:clear
 ```
 
-Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. The extension migration runs when it is installed. Do not uninstall the extension after creating user links unless the mapping table has been backed up.
+Enable **FragCity API** in Paymenter Admin → Extensions → Others and configure the secret. On an existing installation, update the extension to version 1.5.0; its `upgraded()` hook runs the pending migrations, including the encrypted Client API credential table. Confirm the migration has run before enabling customer Client API connections. Do not uninstall the extension after creating user links or credentials unless the mapping and credential tables have been backed up.
 
 ## Security notes
 
