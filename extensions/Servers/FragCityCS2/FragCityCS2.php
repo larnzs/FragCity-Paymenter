@@ -20,7 +20,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.2.0',
+    version: '1.3.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
