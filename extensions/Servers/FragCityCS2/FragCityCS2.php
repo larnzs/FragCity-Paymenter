@@ -181,101 +181,129 @@ class FragCityCS2 extends PterodactylExtension
                 throw new RuntimeException('The Pterodactyl server for this service was previously provisioned but is now missing. Automatic recreation is blocked pending admin approval.');
             }
 
+            $recreationAuthorizationId = null;
             if ($wasPreviouslyProvisioned && $recreationAuthorized) {
-                $this->recordLifecycleEvent($service, 'recreation_provisioning_started', 'missing_external', 'provisioning', [
-                    'authorization_id' => (string) $mapping->recreation_authorization_id,
-                    'authorized_by' => (string) $mapping->recreation_authorized_by,
-                    'reason' => (string) $mapping->recreation_authorization_reason,
-                ]);
+                $recreationAuthorizationId = $this->claimRecreationAuthorization($service);
             }
 
-            // A Server recreation grant does not authorize replacement of a
-            // previously mapped Pterodactyl Client account.
-            $allowClientCreate = !$wasPreviouslyProvisioned
-                && (int) ($mapping->pterodactyl_user_id ?? 0) < 1;
-            $clientUser = $this->ensurePterodactylClientUser($service, $allowClientCreate);
-            $clientUserId = (int) ($clientUser['id'] ?? 0);
-
-            if ($clientUserId < 1) {
-                throw new RuntimeException('Pterodactyl client identity could not be verified.');
-            }
-
-            $this->storeServiceLifecycle(
-                $service,
-                $clientUserId,
-                null,
-                'active',
-                'unknown',
-                'provisioning'
-            );
-
-            $created = parent::createServer($service, $settings, $properties);
-            $serverId = (int) ($created['server'] ?? 0);
-
-            if ($serverId < 1) {
-                throw new RuntimeException('Paymenter returned an invalid Pterodactyl server ID.');
-            }
-
-            // Persist the server ID returned by the official provisioner
-            // before a second verification request. If that request times out
-            // or the process exits, a retry can recover this Server or block
-            // unsafe automatic recreation if it is later manually deleted.
-            $this->storeServiceLifecycle(
-                $service,
-                $clientUserId,
-                [
-                    'id' => $serverId,
-                    'user' => $clientUserId,
-                ],
-                'active',
-                'unknown',
-                'provisioning'
-            );
-
-            $serverResponse = $this->requestApplicationApi(
-                'GET',
-                '/api/application/servers/' . $serverId
-            );
-            $attributes = $serverResponse['attributes'] ?? null;
-
-            if (
-                !is_array($attributes)
-                || (string) ($attributes['external_id'] ?? '') !== (string) $service->id
-                || (int) ($attributes['user'] ?? 0) !== $clientUserId
-            ) {
-                throw new RuntimeException('Pterodactyl server creation could not be verified against the Paymenter service.');
-            }
-
-            $desiredState = (string) $service->status === Service::STATUS_SUSPENDED
-                ? 'suspended'
-                : 'active';
-            $actualSuspended = (bool) ($attributes['suspended'] ?? false);
-
-            if ($desiredState === 'suspended' && !$actualSuspended) {
-                $suspendResult = $this->requestApplicationApi(
-                    'POST',
-                    '/api/application/servers/' . $serverId . '/suspend'
-                );
-                if ($suspendResult === null) {
-                    throw new RuntimeException('Pterodactyl server disappeared while applying the suspended Paymenter state.');
+            try {
+                if ($recreationAuthorizationId !== null) {
+                    $this->recordLifecycleEvent($service, 'recreation_provisioning_started', 'missing_external', 'provisioning', [
+                        'authorization_id' => $recreationAuthorizationId,
+                        'authorized_by' => (string) $mapping->recreation_authorized_by,
+                        'reason' => (string) $mapping->recreation_authorization_reason,
+                        'claim_expires_at' => now()->addHours(2)->toIso8601String(),
+                    ]);
                 }
-                $attributes['suspended'] = true;
-                $actualSuspended = true;
-            }
 
-            $this->storeServiceLifecycle(
-                $service,
-                $clientUserId,
-                $attributes,
-                $desiredState,
-                $actualSuspended ? 'suspended' : 'active',
-                $desiredState === ($actualSuspended ? 'suspended' : 'active')
-                    ? ($actualSuspended ? 'suspended' : 'ready')
-                    : 'review_required'
-            );
-            $this->consumeRecreationAuthorization($service, $serverId);
+                // A Server recreation grant does not authorize replacement of
+                // a previously mapped Pterodactyl Client account.
+                $allowClientCreate = !$wasPreviouslyProvisioned
+                    && (int) ($mapping->pterodactyl_user_id ?? 0) < 1;
+                $clientUser = $this->ensurePterodactylClientUser($service, $allowClientCreate);
+                $clientUserId = (int) ($clientUser['id'] ?? 0);
 
-            return $created;
+                if ($clientUserId < 1) {
+                    throw new RuntimeException('Pterodactyl client identity could not be verified.');
+                }
+
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    null,
+                    'active',
+                    'unknown',
+                    'provisioning'
+                );
+
+                $created = parent::createServer($service, $settings, $properties);
+                $serverId = (int) ($created['server'] ?? 0);
+
+                if ($serverId < 1) {
+                    throw new RuntimeException('Paymenter returned an invalid Pterodactyl server ID.');
+                }
+
+                // Persist the server ID returned by the official provisioner
+                // before a second verification request. A later retry can
+                // recover this exact Server without creating a duplicate.
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    [
+                        'id' => $serverId,
+                        'user' => $clientUserId,
+                    ],
+                    'active',
+                    'unknown',
+                    'provisioning'
+                );
+
+                $serverResponse = $this->requestApplicationApi(
+                    'GET',
+                    '/api/application/servers/' . $serverId
+                );
+                $attributes = $serverResponse['attributes'] ?? null;
+
+                if (
+                    !is_array($attributes)
+                    || (string) ($attributes['external_id'] ?? '') !== (string) $service->id
+                    || (int) ($attributes['user'] ?? 0) !== $clientUserId
+                ) {
+                    throw new RuntimeException('Pterodactyl server creation could not be verified against the Paymenter service.');
+                }
+
+                $desiredState = (string) $service->status === Service::STATUS_SUSPENDED
+                    ? 'suspended'
+                    : 'active';
+                $actualSuspended = (bool) ($attributes['suspended'] ?? false);
+
+                if ($desiredState === 'suspended' && !$actualSuspended) {
+                    $suspendResult = $this->requestApplicationApi(
+                        'POST',
+                        '/api/application/servers/' . $serverId . '/suspend'
+                    );
+                    if ($suspendResult === null) {
+                        throw new RuntimeException('Pterodactyl server disappeared while applying the suspended Paymenter state.');
+                    }
+                    $attributes['suspended'] = true;
+                    $actualSuspended = true;
+                }
+
+                $this->storeServiceLifecycle(
+                    $service,
+                    $clientUserId,
+                    $attributes,
+                    $desiredState,
+                    $actualSuspended ? 'suspended' : 'active',
+                    $desiredState === ($actualSuspended ? 'suspended' : 'active')
+                        ? ($actualSuspended ? 'suspended' : 'ready')
+                        : 'review_required'
+                );
+                $this->consumeRecreationAuthorization(
+                    $service,
+                    $serverId,
+                    $recreationAuthorizationId
+                );
+
+                return $created;
+            } catch (Throwable $e) {
+                if ($recreationAuthorizationId !== null) {
+                    try {
+                        $this->releaseRecreationAuthorizationClaim(
+                            $service,
+                            $recreationAuthorizationId,
+                            get_class($e)
+                        );
+                    } catch (Throwable $releaseError) {
+                        Log::error('FragCity recreation authorization claim could not be released.', [
+                            'service_id' => (int) $service->id,
+                            'exception' => get_class($releaseError),
+                        ]);
+                    }
+                }
+
+                throw $e;
+            }            return $created;
         });
     }
 
@@ -547,6 +575,8 @@ class FragCityCS2 extends PterodactylExtension
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_reason')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_consumed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_revoked_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claimed_at')
+            || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
         ) {
             throw new RuntimeException('FragCity lifecycle migrations are not installed or are incomplete.');
         }
@@ -567,6 +597,96 @@ class FragCityCS2 extends PterodactylExtension
             && empty($mapping->recreation_authorization_consumed_at)
             && empty($mapping->recreation_authorization_revoked_at)
             && !empty($mapping->recreation_authorization_id);
+    }
+
+    private function claimRecreationAuthorization(Service $service): string
+    {
+        return DB::transaction(function () use ($service): string {
+            $mapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$this->hasPendingRecreationAuthorization($mapping)) {
+                throw new RuntimeException('A pending administrator recreation authorization is required.');
+            }
+
+            $activeClaim = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->where('recreation_authorization_claim_expires_at', '>', now())
+                ->exists();
+
+            if ($activeClaim) {
+                throw new RuntimeException('The administrator recreation authorization is already claimed by an active provisioning attempt.');
+            }
+
+            $authorizationId = (string) $mapping->recreation_authorization_id;
+            $updated = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->where('recreation_authorization_id', $authorizationId)
+                ->whereNull('recreation_authorization_consumed_at')
+                ->whereNull('recreation_authorization_revoked_at')
+                ->update([
+                    'recreation_authorization_claimed_at' => now(),
+                    'recreation_authorization_claim_expires_at' => now()->addHours(2),
+                    'updated_at' => now(),
+                ]);
+
+            if ($updated !== 1) {
+                throw new RuntimeException('The administrator recreation authorization could not be claimed safely.');
+            }
+
+            return $authorizationId;
+        }, 3);
+    }
+
+    private function releaseRecreationAuthorizationClaim(
+        Service $service,
+        string $authorizationId,
+        string $failureType
+    ): void {
+        DB::transaction(function () use ($service, $authorizationId, $failureType): void {
+            $mapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                !$mapping
+                || (string) ($mapping->recreation_authorization_id ?? '') !== $authorizationId
+                || !empty($mapping->recreation_authorization_consumed_at)
+                || !empty($mapping->recreation_authorization_revoked_at)
+            ) {
+                return;
+            }
+
+            $updated = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->where('recreation_authorization_id', $authorizationId)
+                ->whereNull('recreation_authorization_consumed_at')
+                ->whereNull('recreation_authorization_revoked_at')
+                ->update([
+                    'recreation_authorization_claimed_at' => null,
+                    'recreation_authorization_claim_expires_at' => null,
+                    'updated_at' => now(),
+                ]);
+
+            if ($updated === 1) {
+                DB::table('fragcity_service_lifecycle_events')->insert([
+                    'paymenter_service_id' => (int) $service->id,
+                    'customer_uuid' => $mapping->customer_uuid,
+                    'event_key' => 'admin_recreation_provisioning_attempt_failed',
+                    'from_state' => 'provisioning',
+                    'to_state' => 'missing_external',
+                    'details' => json_encode([
+                        'authorization_id' => $authorizationId,
+                        'exception' => $failureType,
+                        'claim_released_at' => now()->toIso8601String(),
+                    ], JSON_THROW_ON_ERROR),
+                    'occurred_at' => now(),
+                ]);
+            }
+        }, 3);
     }
 
     private function recordLifecycleEvent(
@@ -599,30 +719,53 @@ class FragCityCS2 extends PterodactylExtension
      * Keep an approval alive across transient CreateJob failures. Consume it
      * only after Pterodactyl confirms the replacement Server.
      */
-    private function consumeRecreationAuthorization(Service $service, int $serverId): void
-    {
+    private function consumeRecreationAuthorization(
+        Service $service,
+        int $serverId,
+        ?string $expectedAuthorizationId = null
+    ): void {
         if ($serverId < 1) {
             throw new RuntimeException('A valid Pterodactyl server ID is required to consume recreation authorization.');
         }
 
-        DB::transaction(function () use ($service, $serverId): void {
+        DB::transaction(function () use ($service, $serverId, $expectedAuthorizationId): void {
             $mapping = DB::table('fragcity_service_servers')
                 ->where('paymenter_service_id', (int) $service->id)
                 ->lockForUpdate()
                 ->first();
 
             if (!$this->hasPendingRecreationAuthorization($mapping)) {
+                if ($expectedAuthorizationId !== null) {
+                    throw new RuntimeException('The recreation authorization changed while the replacement Server was being provisioned.');
+                }
                 return;
             }
 
-            $updated = DB::table('fragcity_service_servers')
+            $authorizationId = (string) $mapping->recreation_authorization_id;
+            if (
+                $expectedAuthorizationId !== null
+                && !hash_equals($authorizationId, $expectedAuthorizationId)
+            ) {
+                throw new RuntimeException('The recreation authorization ID changed during provisioning.');
+            }
+
+            $query = DB::table('fragcity_service_servers')
                 ->where('paymenter_service_id', (int) $service->id)
+                ->where('recreation_authorization_id', $authorizationId)
                 ->whereNull('recreation_authorization_consumed_at')
-                ->whereNull('recreation_authorization_revoked_at')
-                ->update([
-                    'recreation_authorization_consumed_at' => now(),
-                    'updated_at' => now(),
-                ]);
+                ->whereNull('recreation_authorization_revoked_at');
+
+            if ($expectedAuthorizationId !== null) {
+                $query->whereNotNull('recreation_authorization_claimed_at')
+                    ->where('recreation_authorization_claim_expires_at', '>', now());
+            }
+
+            $updated = $query->update([
+                'recreation_authorization_consumed_at' => now(),
+                'recreation_authorization_claimed_at' => null,
+                'recreation_authorization_claim_expires_at' => null,
+                'updated_at' => now(),
+            ]);
 
             if ($updated !== 1) {
                 throw new RuntimeException('Recreation authorization could not be consumed safely.');
@@ -635,7 +778,7 @@ class FragCityCS2 extends PterodactylExtension
                 'from_state' => 'missing_external',
                 'to_state' => 'ready',
                 'details' => json_encode([
-                    'authorization_id' => (string) $mapping->recreation_authorization_id,
+                    'authorization_id' => $authorizationId,
                     'authorized_by' => (string) $mapping->recreation_authorized_by,
                     'reason' => (string) $mapping->recreation_authorization_reason,
                     'pterodactyl_server_id' => $serverId,
@@ -647,6 +790,7 @@ class FragCityCS2 extends PterodactylExtension
     }
 
     /**
+     * Serialize all lifecycle mutations for one Paymenter service.    /**
      * Serialize all lifecycle mutations for one Paymenter service.
      *
      * @template T
