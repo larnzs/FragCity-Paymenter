@@ -8,6 +8,7 @@ use App\Models\Service;
 use Illuminate\Support\Facades\Log;
 use Paymenter\Extensions\Servers\Pterodactyl\Pterodactyl as PterodactylExtension;
 use RuntimeException;
+use Throwable;
 
 /**
  * FragCity's CS2 checkout and Egg contract layer.
