@@ -1662,6 +1662,7 @@ class FragCityAPI extends Extension
             || !Schema::hasColumn('fragcity_service_servers', 'recreation_authorization_claim_expires_at')
             || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_at')
             || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_by')
+            || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_reviewed_username')
             || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_reason')
             || !Schema::hasColumn('fragcity_service_servers', 'paymenter_missing_review_decision')
         ) {
