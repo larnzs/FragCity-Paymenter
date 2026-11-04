@@ -25,7 +25,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed FragCity bridge for durable customer identity, CS2 service lifecycle, Client API, Console and File Manager.',
-    version: '1.11.0',
+    version: '1.11.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -56,12 +56,53 @@ class FragCityAPI extends Extension
 
     public function installed(): void
     {
-        ExtensionHelper::runMigrations('extensions/Others/FragCityAPI/database/migrations');
+        $this->runFragCityMigrations();
     }
 
     public function upgraded($oldVersion = null): void
     {
-        ExtensionHelper::runMigrations('extensions/Others/FragCityAPI/database/migrations');
+        $this->runFragCityMigrations();
+    }
+
+    /**
+     * Paymenter's ExtensionHelper::runMigrations() catches migration
+     * exceptions and logs them without rethrowing. Verify the migration
+     * repository afterward so an incomplete upgrade cannot report success.
+     */
+    private function runFragCityMigrations(): void
+    {
+        $relativePath = 'extensions/Others/FragCityAPI/database/migrations';
+        $files = glob(base_path($relativePath) . '/*.php') ?: [];
+        $expected = array_map(
+            static fn (string $file): string => pathinfo($file, PATHINFO_FILENAME),
+            $files
+        );
+
+        if ($expected === []) {
+            throw new RuntimeException('FragCity API migration files were not found.');
+        }
+
+        ExtensionHelper::runMigrations($relativePath);
+
+        try {
+            $recorded = DB::table('migrations')
+                ->whereIn('migration', $expected)
+                ->pluck('migration')
+                ->all();
+        } catch (Throwable $e) {
+            throw new RuntimeException(
+                'FragCity API migrations ran but their completion could not be verified.',
+                0,
+                $e
+            );
+        }
+
+        $pending = array_values(array_diff($expected, $recorded));
+        if ($pending !== []) {
+            throw new RuntimeException(
+                'FragCity API migration upgrade is incomplete: ' . implode(', ', $pending)
+            );
+        }
     }
 
     public function boot(): void
@@ -141,7 +182,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.10.0',
+            'version' => '1.11.1',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -2529,6 +2570,13 @@ class FragCityAPI extends Extension
 
     private function authenticateBridgeRequest(Request $request, int $maxBodyBytes = 16384): ?JsonResponse
     {
+        if (!$request->isSecure()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'https_required',
+            ], 400);
+        }
+
         $secret = (string) $this->config('shared_secret');
         if (!preg_match('/^[a-f0-9]{64,256}$/iD', $secret)) {
             return response()->json([
@@ -2537,14 +2585,29 @@ class FragCityAPI extends Extension
             ], 503);
         }
 
-        $allowedIps = preg_split('/[,\s]+/', trim((string) ($this->config('allowed_ips') ?? ''))) ?: [];
-        $allowedIps = array_values(array_filter($allowedIps, fn ($ip) => filter_var($ip, FILTER_VALIDATE_IP)));
+        $allowedIpsConfig = trim((string) ($this->config('allowed_ips') ?? ''));
+        if ($allowedIpsConfig !== '') {
+            $allowedIps = preg_split('/[,\\s]+/', $allowedIpsConfig, -1, PREG_SPLIT_NO_EMPTY) ?: [];
+            $invalidIps = array_filter(
+                $allowedIps,
+                static fn ($ip): bool => filter_var($ip, FILTER_VALIDATE_IP) === false
+            );
 
-        if ($allowedIps && !in_array((string) $request->ip(), $allowedIps, true)) {
-            return response()->json([
-                'success' => false,
-                'error' => 'source_ip_not_allowed',
-            ], 403);
+            // A configured but malformed allowlist must fail closed. Silently
+            // filtering every invalid entry would otherwise disable the list.
+            if ($allowedIps === [] || $invalidIps !== []) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'bridge_ip_allowlist_invalid',
+                ], 503);
+            }
+
+            if (!in_array((string) $request->ip(), $allowedIps, true)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'source_ip_not_allowed',
+                ], 403);
+            }
         }
 
         $timestamp = (string) $request->header('X-FragCity-Timestamp', '');
