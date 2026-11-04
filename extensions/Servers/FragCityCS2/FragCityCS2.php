@@ -710,6 +710,20 @@ class FragCityCS2 extends PterodactylExtension
     public function suspendServer(Service $service, $settings, $properties): bool
     {
         return $this->withServiceLifecycleLock($service, function () use ($service): bool {
+            $mapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->first();
+
+            if (
+                $mapping
+                && (
+                    (string) $mapping->lifecycle_state === 'deleted'
+                    || $mapping->deleted_at !== null
+                )
+            ) {
+                throw new RuntimeException('This service is permanently deleted in the FragCity lifecycle registry.');
+            }
+
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
 
             if ($server === null) {
@@ -761,6 +775,20 @@ class FragCityCS2 extends PterodactylExtension
     public function unsuspendServer(Service $service, $settings, $properties): bool
     {
         return $this->withServiceLifecycleLock($service, function () use ($service): bool {
+            $mapping = DB::table('fragcity_service_servers')
+                ->where('paymenter_service_id', (int) $service->id)
+                ->first();
+
+            if (
+                $mapping
+                && (
+                    (string) $mapping->lifecycle_state === 'deleted'
+                    || $mapping->deleted_at !== null
+                )
+            ) {
+                throw new RuntimeException('This service is permanently deleted in the FragCity lifecycle registry.');
+            }
+
             $server = $this->findPterodactylServerByExternalId((int) $service->id);
 
             if ($server === null) {
@@ -984,6 +1012,23 @@ class FragCityCS2 extends PterodactylExtension
         $previousMapping = DB::table('fragcity_service_servers')
             ->where('paymenter_service_id', (int) $service->id)
             ->first();
+
+        if (
+            $previousMapping
+            && (
+                (string) $previousMapping->lifecycle_state === 'deleted'
+                || $previousMapping->deleted_at !== null
+            )
+        ) {
+            return [
+                'service_id' => (int) $service->id,
+                'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
+                'service_status' => (string) $service->status,
+                'state' => 'deleted',
+                'panel' => null,
+                'server' => null,
+            ];
+        }
 
         try {
             $serverResponse = $this->requestCustomerDashboardDetails(
