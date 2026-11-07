@@ -3,7 +3,7 @@
 A minimal private identity bridge between the FragCity website backend and Paymenter.
 
 - **Compatibility target:** Paymenter v1.5.9
-- **Extension version:** 1.2.0
+- **Extension version:** 1.3.0
 - **Path:** `extensions/Others/FragCitySupportAPI`
 
 This extension is intentionally small. Paymenter remains the system of record for tickets, messages, invoices and invoice items. The website uses Paymenter's official Admin API for those operations.
@@ -15,7 +15,7 @@ This extension is intentionally small. Paymenter remains the system of record fo
 The extension exposes only:
 
 - `POST /api/v1/fragcity/support/ping` — authenticated connectivity check
-- `POST /api/v1/fragcity/support/identity/resolve` — resolve a SteamID64 to its linked Paymenter user ID
+- `POST /api/v1/fragcity/support/identity/resolve` — resolve a SteamID64 to its linked Paymenter user ID and synchronized email/phone identity
 
 It does not create or list tickets, post messages, update ticket status, manage attachments, read invoices, read transactions, or modify accounting records.
 
@@ -173,6 +173,8 @@ The key must remain in server-side FragCity settings. The customer browser calls
 
 ## Identity bridge
 
+The mapping is maintained by the existing `FragCityAPI` extension in the `fragcity_user_links` table. The identity response also returns the Paymenter user's normalized email and the `fragcity_phone` User property; it does not rely on a phone column in the Paymenter `users` table. The response is server-to-server only and must never be forwarded to the customer browser. FragCity compares both values with the authenticated user's local profile and checks that the local `paymenter_user_id` matches the resolved Paymenter ID before any customer ticket action.
+
 The mapping is maintained by the existing `FragCityAPI` extension in the `fragcity_user_links` table:
 
 - `steamid64`
@@ -201,6 +203,8 @@ Successful response:
   "data": {
     "steamid64": "7656119XXXXXXXXXX",
     "paymenter_user_id": 123,
+    "email": "customer@example.com",
+    "phone": "09123456789",
     "linked": true
   }
 }
