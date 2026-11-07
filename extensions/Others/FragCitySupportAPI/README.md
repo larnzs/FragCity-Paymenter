@@ -253,8 +253,8 @@ rsync -a --delete \
   extensions/Others/FragCitySupportAPI/
 
 chown -R root:www-data extensions/Others/FragCitySupportAPI
-find extensions/Others/FragCitySupportAPI -type d -exec chmod 755 {} \\;
-find extensions/Others/FragCitySupportAPI -type f -exec chmod 644 {} \\;
+find extensions/Others/FragCitySupportAPI -type d -exec chmod 755 {} \;
+find extensions/Others/FragCitySupportAPI -type f -exec chmod 644 {} \;
 
 composer dump-autoload --optimize --no-interaction
 php artisan optimize:clear
