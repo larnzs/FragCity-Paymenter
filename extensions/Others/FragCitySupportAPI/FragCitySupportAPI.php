@@ -77,6 +77,13 @@ class FragCitySupportAPI extends Extension
         );
     }
 
+    public function ticketOptions(Request $request)
+    {
+        return $this->handle($request, fn (array $payload, User $user) =>
+            app(Services\SupportTicketService::class)->options($payload, $user)
+        );
+    }
+
     public function ticketShow(Request $request)
     {
         return $this->handle($request, fn (array $payload, User $user) =>
