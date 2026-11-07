@@ -2,6 +2,7 @@
 
 namespace Paymenter\Extensions\Others\FragCitySupportAPI;
 
+use App\Attributes\ExtensionMeta;
 use App\Classes\Extension\Extension;
 use App\Models\User;
 use Closure;
@@ -13,6 +14,13 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Validator;
 use Throwable;
 
+#[ExtensionMeta(
+    name: 'FragCity Support API',
+    description: 'Private signed bridge for Paymenter customer tickets and read-only accounting.',
+    version: '1.0.0',
+    author: 'FragCity',
+    url: 'https://fragcity.ir'
+)]
 class FragCitySupportAPI extends Extension
 {
     private const VERSION = '1.0.0';
@@ -47,16 +55,19 @@ class FragCitySupportAPI extends Extension
 
     public function ping(Request $request): JsonResponse
     {
-        return $this->handle($request, function (): JsonResponse {
-            return response()->json([
-                'success' => true,
-                'service' => 'FragCitySupportAPI',
-                'version' => self::VERSION,
-                'paymenter_ticketing' => true,
-                'accounting_mode' => 'read_only',
-                'timestamp' => now()->toIso8601String(),
-            ]);
-        });
+        $authError = $this->authenticateRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        return response()->json([
+            'success' => true,
+            'service' => 'FragCitySupportAPI',
+            'version' => self::VERSION,
+            'paymenter_ticketing' => true,
+            'accounting_mode' => 'read_only',
+            'timestamp' => now()->toIso8601String(),
+        ]);
     }
 
     public function ticketsList(Request $request)
@@ -151,16 +162,18 @@ class FragCitySupportAPI extends Extension
             ], 400);
         }
 
-        $identity = $this->resolveLinkedUser($payload);
-        if ($identity instanceof JsonResponse) {
-            return $identity;
-        }
+        $identity = null;
 
         try {
+            $identity = $this->resolveLinkedUser($payload);
+            if ($identity instanceof JsonResponse) {
+                return $identity;
+            }
+
             return $callback($payload, $identity);
         } catch (Throwable $exception) {
             Log::error('FragCity Support API request failed.', [
-                'paymenter_user_id' => $identity->id,
+                'paymenter_user_id' => $identity instanceof User ? $identity->id : null,
                 'exception' => get_class($exception),
             ]);
 
