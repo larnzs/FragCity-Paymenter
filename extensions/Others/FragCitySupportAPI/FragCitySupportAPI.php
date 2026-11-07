@@ -16,14 +16,14 @@ use Throwable;
 
 #[ExtensionMeta(
     name: 'FragCity Support API',
-    description: 'Private signed bridge for Paymenter customer tickets and read-only accounting.',
-    version: '1.0.0',
+    description: 'Private SteamID identity bridge and small compatibility endpoints for Paymenter support.',
+    version: '1.1.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
 class FragCitySupportAPI extends Extension
 {
-    private const VERSION = '1.0.0';
+    private const VERSION = '1.1.0';
 
     public function getConfig($values = []): array
     {
@@ -53,6 +53,9 @@ class FragCitySupportAPI extends Extension
         require __DIR__ . '/routes.php';
     }
 
+    /**
+     * Health check. It authenticates the bridge but does not require a customer.
+     */
     public function ping(Request $request): JsonResponse
     {
         $authError = $this->authenticateRequest($request);
@@ -64,90 +67,68 @@ class FragCitySupportAPI extends Extension
             'success' => true,
             'service' => 'FragCitySupportAPI',
             'version' => self::VERSION,
-            'paymenter_ticketing' => true,
-            'accounting_mode' => 'read_only',
+            'identity_bridge' => true,
+            'paymenter_native_api' => true,
             'timestamp' => now()->toIso8601String(),
         ]);
     }
 
-    public function ticketsList(Request $request)
+    /**
+     * Resolve a FragCity SteamID64 to its linked Paymenter user ID.
+     *
+     * FragCity's backend uses the returned ID with Paymenter's official
+     * /api/v1/admin endpoints. The API key must never be sent to the browser.
+     */
+    public function resolveIdentity(Request $request): mixed
+    {
+        return $this->handle($request, function (array $payload, User $user): JsonResponse {
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'steamid64' => (string) $payload['steamid64'],
+                    'paymenter_user_id' => (int) $user->id,
+                    'linked' => true,
+                ],
+            ]);
+        });
+    }
+
+    /**
+     * Paymenter does not expose its ticket department configuration through
+     * the Admin API, so this small endpoint returns the current server options.
+     */
+    public function ticketOptions(Request $request): mixed
     {
         return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportTicketService::class)->index($payload, $user)
+            app(Services\SupportBridgeService::class)->options($user)
         );
     }
 
-    public function ticketOptions(Request $request)
+    /**
+     * Paymenter's Admin API has no ticket-message attachment upload route.
+     * This endpoint only attaches a file to an existing message owned by
+     * the signed-in FragCity customer.
+     */
+    public function attachmentUpload(Request $request): mixed
     {
         return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportTicketService::class)->options($payload, $user)
+            app(Services\SupportBridgeService::class)->upload($payload, $user)
         );
     }
 
-    public function ticketShow(Request $request)
+    public function attachmentDownload(Request $request): mixed
     {
         return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportTicketService::class)->show($payload, $user)
+            app(Services\SupportBridgeService::class)->download($payload, $user)
         );
     }
 
-    public function ticketCreate(Request $request)
-    {
-        return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportTicketService::class)->create($payload, $user)
-        );
-    }
-
-    public function ticketReply(Request $request)
-    {
-        return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportTicketService::class)->reply($payload, $user)
-        );
-    }
-
-    public function ticketClose(Request $request)
-    {
-        return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportTicketService::class)->close($payload, $user)
-        );
-    }
-
-    public function ticketReopen(Request $request)
-    {
-        return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportTicketService::class)->reopen($payload, $user)
-        );
-    }
-
-    public function attachmentDownload(Request $request)
-    {
-        return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportTicketService::class)->download($payload, $user)
-        );
-    }
-
-    public function accountingSummary(Request $request)
-    {
-        return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportAccountingService::class)->summary($payload, $user)
-        );
-    }
-
-    public function invoicesList(Request $request)
-    {
-        return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportAccountingService::class)->invoices($payload, $user)
-        );
-    }
-
-    public function invoiceShow(Request $request)
-    {
-        return $this->handle($request, fn (array $payload, User $user) =>
-            app(Services\SupportAccountingService::class)->invoice($payload, $user)
-        );
-    }
-
-    public function transactionsList(Request $request)
+    /**
+     * Paymenter v1.5.9 exposes invoice and invoice-item endpoints but no
+     * invoice-transaction endpoint in its Admin API, so keep this read-only
+     * compatibility endpoint here.
+     */
+    public function transactionsList(Request $request): mixed
     {
         return $this->handle($request, fn (array $payload, User $user) =>
             app(Services\SupportAccountingService::class)->transactions($payload, $user)
@@ -169,18 +150,18 @@ class FragCitySupportAPI extends Extension
             ], 400);
         }
 
-        $identity = null;
+        $user = null;
 
         try {
-            $identity = $this->resolveLinkedUser($payload);
-            if ($identity instanceof JsonResponse) {
-                return $identity;
+            $user = $this->resolveLinkedUser($payload);
+            if ($user instanceof JsonResponse) {
+                return $user;
             }
 
-            return $callback($payload, $identity);
+            return $callback($payload, $user);
         } catch (Throwable $exception) {
             Log::error('FragCity Support API request failed.', [
-                'paymenter_user_id' => $identity instanceof User ? $identity->id : null,
+                'paymenter_user_id' => $user instanceof User ? $user->id : null,
                 'exception' => get_class($exception),
             ]);
 
@@ -265,9 +246,9 @@ class FragCitySupportAPI extends Extension
         $signature = strtolower((string) $request->header('X-FragCity-Signature', ''));
         $rawBody = $request->getContent();
 
-        // Attachments are transported as base64 inside JSON. Keep a hard
-        // request limit so a signed request cannot exhaust PHP memory.
-        if (strlen($rawBody) > 30 * 1024 * 1024) {
+        // Files are transferred as base64 JSON. This hard request limit
+        // leaves room for base64 overhead over the 10 MiB decoded file cap.
+        if (strlen($rawBody) > 15 * 1024 * 1024) {
             return response()->json([
                 'success' => false,
                 'error' => 'request_too_large',
