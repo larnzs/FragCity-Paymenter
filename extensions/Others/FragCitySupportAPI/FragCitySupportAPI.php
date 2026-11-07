@@ -239,11 +239,19 @@ class FragCitySupportAPI extends Extension
             ], 503);
         }
 
-        $allowedIps = preg_split('/[,\s]+/', trim((string) ($this->config('allowed_ips') ?? ''))) ?: [];
-        $allowedIps = array_values(array_filter(
-            $allowedIps,
-            fn ($ip) => filter_var($ip, FILTER_VALIDATE_IP)
-        ));
+        $rawAllowedIps = trim((string) ($this->config('allowed_ips') ?? ''));
+        $allowedIps = $rawAllowedIps === ''
+            ? []
+            : (preg_split('/[,\s]+/', $rawAllowedIps) ?: []);
+
+        foreach ($allowedIps as $allowedIp) {
+            if (!filter_var($allowedIp, FILTER_VALIDATE_IP)) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'invalid_ip_allowlist_configuration',
+                ], 503);
+            }
+        }
 
         if ($allowedIps && !in_array((string) $request->ip(), $allowedIps, true)) {
             return response()->json([
