@@ -54,7 +54,7 @@ All routes use **POST + JSON + HMAC-SHA256**.
   "steamid64": "7656119XXXXXXXXXX",
   "subject": "My server is not starting",
   "department": "Support",
-  "priority": "normal",
+  "priority": "high",
   "service_id": 123,
   "message": "Please check my server. It remains offline after restart."
 }
