@@ -164,8 +164,58 @@ class SupportBridgeService
         ], 201);
     }
 
+    public function listAttachments(array $payload, User $user): JsonResponse
+    {
+        if ($disabled = $this->ticketsDisabled()) {
+            return $disabled;
+        }
+
+        $validator = Validator::make($payload, [
+            'ticket_id' => ['required', 'integer', 'min:1'],
+        ]);
+
+        if ($validator->fails()) {
+            return $this->validationError($validator);
+        }
+
+        $ticket = Ticket::query()
+            ->whereKey((int) $validator->validated()['ticket_id'])
+            ->where('user_id', (int) $user->id)
+            ->with(['messages.attachments'])
+            ->first();
+
+        if (!$ticket) {
+            return $this->error('ticket_not_found', 404);
+        }
+
+        $messages = $ticket->messages->map(function (TicketMessage $message): array {
+            return [
+                'message_id' => (int) $message->id,
+                'attachments' => $message->attachments->map(fn (TicketMessageAttachment $attachment) => [
+                    'uuid' => (string) $attachment->uuid,
+                    'filename' => (string) $attachment->filename,
+                    'filesize' => (int) $attachment->filesize,
+                    'mime_type' => (string) $attachment->mime_type,
+                    'created_at' => $attachment->created_at?->toIso8601String(),
+                ])->values(),
+            ];
+        })->values();
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'ticket_id' => (int) $ticket->id,
+                'messages' => $messages,
+            ],
+        ]);
+    }
+
     public function download(array $payload, User $user): BinaryFileResponse|JsonResponse
     {
+        if ($disabled = $this->ticketsDisabled()) {
+            return $disabled;
+        }
+
         $validator = Validator::make($payload, [
             'attachment_uuid' => ['required', 'uuid'],
         ]);
