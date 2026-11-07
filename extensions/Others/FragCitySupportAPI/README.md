@@ -236,7 +236,16 @@ Paymenter's native Admin API has no ticket-message attachment upload endpoint. A
 
 The extension verifies that the ticket belongs to the resolved user and that the target message was authored by that same customer. Up to five files are allowed per message. Each file is limited to 10 MiB. Supported detected MIME types are JPEG, PNG, WebP, GIF, PDF, plain text, CSV, JSON and ZIP.
 
-The response returns an attachment UUID. Use that UUID with the download endpoint. Download is also ownership-checked.
+The response returns an attachment UUID. Use the signed \`attachments/list\` endpoint to obtain the attachment UUIDs and metadata for all messages in an owned ticket:
+
+\`\`\`json
+{
+  "steamid64": "7656119XXXXXXXXXX",
+  "ticket_id": 456
+}
+\`\`\`
+
+The list response is grouped by message ID and does not expose storage paths. Use the returned UUID with the download endpoint. Download is also ownership-checked.
 
 The PHP request-body limit must allow base64 overhead. Configure \`post_max_size\` to at least \`15M\` if uploads are enabled.
 
