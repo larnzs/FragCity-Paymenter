@@ -1,0 +1,40 @@
+name: FragCity Support API PHP Checks
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extensions/Others/FragCitySupportAPI/**"
+      - ".github/workflows/fragcity-support-api-php.yml"
+  pull_request:
+    branches: [main]
+    paths:
+      - "extensions/Others/FragCitySupportAPI/**"
+      - ".github/workflows/fragcity-support-api-php.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  php-syntax:
+    name: PHP 8.3 syntax check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Lint every PHP file in FragCitySupportAPI
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d extensions/Others/FragCitySupportAPI
+          while IFS= read -r -d '' file; do
+            php -l "$file"
+          done < <(find extensions/Others/FragCitySupportAPI -type f -name '*.php' -print0 | sort -z)
