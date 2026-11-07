@@ -15,13 +15,13 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity Support API',
     description: 'Private SteamID64 identity bridge for the FragCity website and Paymenter native Admin API.',
-    version: '1.2.0',
+    version: '1.3.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
 class FragCitySupportAPI extends Extension
 {
-    private const VERSION = '1.2.0';
+    private const VERSION = '1.3.0';
 
     public function getConfig($values = []): array
     {
@@ -113,11 +113,20 @@ class FragCitySupportAPI extends Extension
                 ], 404);
             }
 
+            // FragCityAPI stores the synchronized phone number as a User
+            // property, not as a column on the Paymenter users table.
+            $paymenterEmail = mb_strtolower(trim((string) $user->email));
+            $paymenterPhone = trim((string) $user->properties()
+                ->where('key', 'fragcity_phone')
+                ->value('value'));
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'steamid64' => $steamId,
                     'paymenter_user_id' => (int) $user->id,
+                    'email' => $paymenterEmail,
+                    'phone' => $paymenterPhone,
                     'linked' => true,
                 ],
             ]);
