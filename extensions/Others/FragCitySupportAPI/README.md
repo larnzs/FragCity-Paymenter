@@ -34,6 +34,7 @@ All routes use **POST + JSON + HMAC-SHA256**.
 
 | Endpoint | Purpose |
 |---|---|
+| `/api/v1/fragcity/support/tickets/options` | Read Paymenter-configured departments, priorities and ticket limits |
 | `/api/v1/fragcity/support/ping` | Verify bridge connectivity |
 | `/api/v1/fragcity/support/tickets/list` | List the customer's tickets |
 | `/api/v1/fragcity/support/tickets/show` | Read one ticket and its message thread |
