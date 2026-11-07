@@ -63,10 +63,12 @@ Paymenter's Admin API Key is administrative, not a per-customer token. The \`fil
 Therefore:
 
 1. FragCity must authenticate the customer using its own session.
-2. FragCity must resolve the customer's Paymenter ID through the signed \`identity/resolve\` endpoint.
+2. FragCity must resolve the customer's Paymenter ID through the signed \`identity/resolve\` endpoint. Never accept \`paymenter_user_id\` from browser input.
 3. FragCity must add \`filter[user_id]=<resolved Paymenter ID>\` to ticket and invoice list queries.
-4. Before using a direct \`/tickets/{id}\`, \`PATCH /tickets/{id}\`, or \`/invoices/{id}\` route, FragCity must first verify that the object appears in a list query filtered by both its ID and the resolved \`user_id\`.
-5. The Admin API Key must remain on the PHP server. The browser must never call Paymenter's Admin API directly.
+4. Before using a direct \`GET /tickets/{id}\`, \`PATCH /tickets/{id}\`, \`GET /invoices/{id}\`, or \`POST /ticket-messages\` route, FragCity must first verify ticket or invoice ownership with a list query filtered by both object ID and the resolved \`user_id\`.
+5. For \`POST /ticket-messages\`, FragCity must set \`user_id\` to the resolved Paymenter ID and must verify that \`ticket_id\` belongs to that same user. Never accept either ID from browser input.
+6. When updating a ticket, send only the intended fields such as \`status\`; never pass a client-supplied \`user_id\`.
+7. The Admin API Key must remain on the PHP server. The browser must never call Paymenter's Admin API directly.
 
 ## Native Paymenter Admin API usage
 
