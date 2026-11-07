@@ -1,15 +1,15 @@
 <?php
 
-namespace Paymenter\\Extensions\\Others\\FragCitySupportAPI;
+namespace Paymenter\Extensions\Others\FragCitySupportAPI;
 
-use App\\Attributes\\ExtensionMeta;
-use App\\Classes\\Extension\\Extension;
-use App\\Models\\User;
-use Illuminate\\Http\\JsonResponse;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Cache;
-use Illuminate\\Support\\Facades\\DB;
-use Illuminate\\Support\\Facades\\Log;
+use App\Attributes\ExtensionMeta;
+use App\Classes\Extension\Extension;
+use App\Models\User;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Throwable;
 
 #[ExtensionMeta(
@@ -152,7 +152,7 @@ class FragCitySupportAPI extends Extension
         $rawAllowedIps = trim((string) ($this->config('allowed_ips') ?? ''));
         $allowedIps = $rawAllowedIps === ''
             ? []
-            : (preg_split('/[,\\s]+/', $rawAllowedIps) ?: []);
+            : (preg_split('/[,\s]+/', $rawAllowedIps) ?: []);
 
         foreach ($allowedIps as $allowedIp) {
             if (!filter_var($allowedIp, FILTER_VALIDATE_IP)) {
@@ -194,7 +194,7 @@ class FragCitySupportAPI extends Extension
             ], 401);
         }
 
-        $signedMessage = $timestamp . "\\n" . $nonce . "\\n" . $rawBody;
+        $signedMessage = $timestamp . "\n" . $nonce . "\n" . $rawBody;
         $expectedSignature = hash_hmac('sha256', $signedMessage, $secret);
 
         if (!hash_equals($expectedSignature, $signature)) {
