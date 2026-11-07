@@ -277,6 +277,10 @@ class SupportTicketService
 
     public function download(array $payload, User $user): BinaryFileResponse|JsonResponse
     {
+        if ($disabled = $this->ticketsDisabled()) {
+            return $disabled;
+        }
+
         $validator = Validator::make($payload, [
             'attachment_uuid' => ['required', 'uuid'],
         ]);
