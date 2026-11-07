@@ -1,204 +1,201 @@
 # FragCitySupportAPI
 
-A small private compatibility bridge between FragCity and Paymenter.
+A minimal private identity bridge between the FragCity website backend and Paymenter.
 
-**Compatibility target:** Paymenter v1.5.9  
-**Extension version:** 1.1.0  
-**Extension path:** \`extensions/Others/FragCitySupportAPI\`
+- **Compatibility target:** Paymenter v1.5.9
+- **Extension version:** 1.2.0
+- **Path:** `extensions/Others/FragCitySupportAPI`
 
-This extension deliberately does **not** duplicate Paymenter's native ticket or invoice APIs.
+This extension is intentionally small. Paymenter remains the system of record for tickets, messages, invoices and invoice items. The website uses Paymenter's official Admin API for those operations.
 
 ## Responsibility split
 
-### Paymenter Admin API — primary API
+### FragCitySupportAPI
 
-Use Paymenter's built-in API at \`/api/v1/admin\` for:
+The extension exposes only:
+
+- `POST /api/v1/fragcity/support/ping` — authenticated connectivity check
+- `POST /api/v1/fragcity/support/identity/resolve` — resolve a SteamID64 to its linked Paymenter user ID
+
+It does not create or list tickets, post messages, update ticket status, manage attachments, read invoices, read transactions, or modify accounting records.
+
+### Paymenter native Admin API
+
+Use Paymenter's official API at `/api/v1/admin` for:
 
 - Ticket list, create, show and update
-- Ticket message list-through-ticket-include and create
+- Ticket message list/read and create
 - Invoice list and show
-- Invoice item details through invoice includes
+- Invoice item details through the invoice `items` relationship
 
-### FragCitySupportAPI — compatibility bridge only
-
-Use this extension only for the small capabilities the native API does not provide:
-
-- Resolve the authenticated FragCity \`SteamID64\` to its linked Paymenter \`user_id\`
-- Read Paymenter's configured ticket departments and customer ticket options
-- Upload and download ticket message attachments
-- Read invoice transactions (Paymenter v1.5.9 has no invoice-transactions Admin API resource)
-
-The extension does not create, list, update, close or delete tickets. It does not create or update invoices. It does not change Paymenter Core.
+Do not create a second ticket or invoice database in FragCity.
 
 ## Paymenter API Key setup
 
-Create a separate API Key in **Admin → API Keys** named:
+Create a dedicated key in **Admin → API Keys**, for example:
 
-\`\`\`text
+```text
 FragCity Support Website
-\`\`\`
+```
 
-Enable only these seven permissions:
+Enable only these permissions:
 
 | Permission | Why it is needed |
 |---|---|
-| View Tickets | List and verify ticket ownership |
-| Create Tickets | Create a support ticket |
-| Update Tickets | Close and reopen a ticket |
-| View Ticket Messages | Include messages in a ticket response |
-| Create Ticket Messages | Send the first message and later replies |
-| View Invoices | List and verify invoice ownership |
-| View Invoice Items | Include invoice line items |
+| View Tickets | List tickets and verify ownership |
+| Create Tickets | Create customer tickets |
+| Update Tickets | Close or reopen customer tickets |
+| View Ticket Messages | Read ticket conversations |
+| Create Ticket Messages | Send customer messages |
+| View Invoices | List and inspect invoices |
+| View Invoice Items | Read invoice line items |
 
-Do not enable any Delete, Impersonate, User Create/Update, Invoice Create/Update, Invoice Item Create/Update, Order, Service, Coupon or Credit permissions.
+Do not enable Delete, Impersonate, User Create/Update, Invoice Create/Update, Invoice Item Create/Update, Orders, Services, Coupons or Credits. `View Users` is not needed for Steam identity resolution.
 
-\`View Users\` is optional only if FragCity needs staff/customer names from Paymenter user relationships. It is not required for the SteamID64-to-user-ID lookup performed by this extension.
+Keep the API key only in FragCity's private server-side settings. Never send it to the browser or JavaScript. If the Paymenter API Key screen offers an IP allowlist, restrict it to the FragCity backend's public outbound IP.
 
-Set the API Key's **Allowed IP Addresses** to the public outbound IP of the FragCity PHP backend. Keep the raw token only in private server-side settings. Never send it to browser JavaScript.
-
-### Important API Key security boundary
-
-Paymenter's Admin API Key is administrative, not a per-customer token. The \`filter[user_id]\` query narrows returned records but is not an authorization boundary.
-
-Therefore:
-
-1. FragCity must authenticate the customer using its own session.
-2. FragCity must resolve the customer's Paymenter ID through the signed \`identity/resolve\` endpoint. Never accept \`paymenter_user_id\` from browser input.
-3. FragCity must add \`filter[user_id]=<resolved Paymenter ID>\` to ticket and invoice list queries.
-4. Before using a direct \`GET /tickets/{id}\`, \`PATCH /tickets/{id}\`, \`GET /invoices/{id}\`, or \`POST /ticket-messages\` route, FragCity must first verify ticket or invoice ownership with a list query filtered by both object ID and the resolved \`user_id\`.
-5. For \`POST /ticket-messages\`, FragCity must set \`user_id\` to the resolved Paymenter ID and must verify that \`ticket_id\` belongs to that same user. Never accept either ID from browser input.
-6. When updating a ticket, send only the intended fields such as \`status\`; never pass a client-supplied \`user_id\`.
-7. The Admin API Key must remain on the PHP server. The browser must never call Paymenter's Admin API directly.
-
-## Native Paymenter Admin API usage
+## Native Paymenter Admin API contract
 
 Base URL:
 
-\`\`\`text
+```text
 https://billing.fragcity.ir/api/v1/admin
-\`\`\`
+```
 
-Authentication header:
+Headers:
 
-\`\`\`http
+```http
 Authorization: Bearer YOUR_PAYMENTER_ADMIN_API_KEY
 Accept: application/json
 Content-Type: application/json
-\`\`\`
-
-The API key token is stored in Paymenter as a SHA-256 hash and is shown only once when created.
+```
 
 ### Tickets
 
-List a customer's tickets:
+List the authenticated customer's tickets:
 
-\`\`\`http
+```http
 GET /tickets?filter[user_id]=123&sort=-updated_at&per_page=20
-\`\`\`
+```
 
-Read a customer's ticket and its messages:
+Load a customer's ticket and its messages while applying both ownership filters:
 
-\`\`\`http
-GET /tickets/456?include=messages
-\`\`\`
+```http
+GET /tickets?filter[id]=456&filter[user_id]=123&include=messages
+```
 
-Before calling the direct show route, verify ownership with:
+The Ticket API supports the `id` and `user_id` filters and the `messages` include in Paymenter v1.5.9. Prefer the filtered query above for customer detail views. If using `GET /tickets/{id}` or `PATCH /tickets/{id}`, first verify that the ticket belongs to the resolved Paymenter user.
 
-\`\`\`http
-GET /tickets?filter[id]=456&filter[user_id]=123
-\`\`\`
+Create a ticket:
 
-Create the ticket:
-
-\`\`\`http
+```http
 POST /tickets
 Content-Type: application/json
 
 {
-  "subject": "My CS2 server is not starting",
+  "subject": "CS2 server support",
   "user_id": 123,
   "department": "Support",
-  "priority": "medium"
+  "priority": "medium",
+  "status": "open"
 }
-\`\`\`
+```
 
-Paymenter defaults ticket priority to \`medium\` and status to \`open\` when omitted. Allowed priorities are \`low\`, \`medium\`, and \`high\`. The department must match one of the server's configured \`ticket_departments\` values.
+Paymenter v1.5.9 accepts `subject`, `user_id`, optional configured `department`, `priority` (`low`, `medium`, `high`) and `status` (`open`, `closed`, `replied`). The request defaults priority to `medium` and status to `open` when omitted. The department must match the values configured in Paymenter. Since this extension no longer has a ticket-options endpoint, keep the website's department choices aligned with the Paymenter configuration.
 
-Create the first message or a reply:
+Create the first message or a customer reply:
 
-\`\`\`http
+```http
 POST /ticket-messages
 Content-Type: application/json
 
 {
-  "message": "Please check my server. It remains offline after restart.",
+  "message": "Please check my server.",
   "user_id": 123,
   "ticket_id": 456
 }
-\`\`\`
+```
+
+Paymenter validates `message` (maximum 5,000 characters), `user_id` and `ticket_id`. Ticket creation and first-message creation are two separate API calls. The website backend should handle partial failure carefully and must not create duplicate tickets when retrying.
 
 Close or reopen a ticket:
 
-\`\`\`http
+```http
 PATCH /tickets/456
 Content-Type: application/json
 
 {
   "status": "closed"
 }
-\`\`\`
+```
 
-Use \`open\` to reopen. Allowed statuses in Paymenter v1.5.9 are \`open\`, \`closed\`, and \`replied\`.
+Use `open` to reopen. The customer website should only expose the status actions intended for customers; staff replies and staff-side management remain in Paymenter.
 
-**Important:** Ticket creation and first-message creation are two separate Paymenter API calls. FragCity should persist its local action state and handle a retry if the second request fails. Do not create duplicate tickets on a retry.
-
-The Ticket Messages collection endpoint does not expose a \`ticket_id\` filter in v1.5.9. For a ticket conversation, use the ticket show route with \`include=messages\`.
+The Ticket Messages list endpoint does not provide a `ticket_id` filter in v1.5.9. Read a conversation through the Ticket resource using `include=messages`.
 
 ### Invoices and invoice items
 
-List a customer's invoices:
+List the customer's invoices with line items:
 
-\`\`\`http
-GET /invoices?filter[user_id]=123&per_page=20
-\`\`\`
+```http
+GET /invoices?filter[user_id]=123&include=items&per_page=20
+```
 
-Read a specific invoice with its line items. Verify ownership first using a filtered invoice list query, just as with tickets:
+Inspect one invoice using both ownership filters:
 
-\`\`\`http
-GET /invoices?filter[id]=789&filter[user_id]=123
-GET /invoices/789?include=items
-\`\`\`
+```http
+GET /invoices?filter[id]=789&filter[user_id]=123&include=items
+```
 
-The native Invoice resource exposes status, currency code and due date. Invoice items expose description, quantity and unit price. Calculate the displayed invoice total in FragCity by summing \`quantity * price\` for the included items.
+The Invoice resource exposes invoice ID, status, currency code, due date and timestamps. Included Invoice Items expose description, quantity and unit price.
 
-Paymenter v1.5.9 does not include the invoice total, remaining balance or invoice transactions in the standard Invoice resource. The transaction fallback below exists for the latter.
+**Native API accounting limitation:** Paymenter v1.5.9 does not expose invoice transactions, a remaining balance, or the computed invoice total in its Invoice API resource. Do not present a calculated line-item sum as the authoritative payable amount where tax or payment allocations may apply. This implementation deliberately does not add a custom accounting endpoint; if the website later needs the exact transaction ledger or remaining balance, that requirement must be addressed separately.
 
-## FragCitySupportAPI endpoints
+### Attachments
 
-All endpoints use POST with JSON and the dedicated HMAC secret configured on this extension.
+Paymenter v1.5.9's Admin API can include existing message attachments when reading messages, but its `CreateTicketMessageRequest` accepts only `message`, `user_id` and `ticket_id`; it does not provide a native Admin API upload field/endpoint. This minimal bridge does not add a custom upload route. The first integration pass should use text-only messages unless a separate attachment requirement is approved.
 
-| Endpoint | Purpose |
-|---|---|
-| \`/api/v1/fragcity/support/ping\` | Verify signed bridge connectivity |
-| \`/api/v1/fragcity/support/identity/resolve\` | Resolve SteamID64 to Paymenter user ID |
-| \`/api/v1/fragcity/support/tickets/options\` | Read configured ticket departments, priorities and limits |
-| \`/api/v1/fragcity/support/attachments/upload\` | Upload a file to an owned customer message |
-| \`/api/v1/fragcity/support/attachments/download\` | Download a file belonging to an owned ticket |
-| \`/api/v1/fragcity/support/accounting/transactions/list\` | Read the customer's Paymenter invoice transactions |
+## Customer ownership and security
 
-### Identity resolution
+Paymenter's Admin API key is administrative, not a customer-scoped token. A query filter is not itself an authorization boundary.
+
+FragCity's PHP backend must:
+
+1. Authenticate the customer using the FragCity session.
+2. Read the customer's SteamID64 from its server-side authenticated user record, not from an arbitrary browser field.
+3. Resolve the SteamID64 through the signed `identity/resolve` endpoint and use the returned Paymenter user ID. Never accept `paymenter_user_id` from browser input.
+4. Always include `filter[user_id]=<resolved Paymenter user ID>` in ticket and invoice collection queries.
+5. Before viewing or updating an individual ticket, verify ownership using both `filter[id]` and `filter[user_id]`.
+6. Before `POST /ticket-messages`, verify that `ticket_id` belongs to the resolved user, then set `user_id` server-side to that same resolved ID.
+7. Never allow the browser to choose `user_id`, `ticket_id` ownership, or an arbitrary Paymenter invoice ID without a backend ownership check.
+
+The key must remain in server-side FragCity settings. The customer browser calls only FragCity's own backend.
+
+## Identity bridge
+
+The mapping is maintained by the existing `FragCityAPI` extension in the `fragcity_user_links` table:
+
+- `steamid64`
+- `user_id` (Paymenter user ID)
+
+Keep `FragCityAPI` enabled. This extension only reads the existing mapping; it does not create, update or delete links.
 
 Request:
 
-\`\`\`json
+```http
+POST /api/v1/fragcity/support/identity/resolve
+Content-Type: application/json
+```
+
+```json
 {
   "steamid64": "7656119XXXXXXXXXX"
 }
-\`\`\`
+```
 
-Response:
+Successful response:
 
-\`\`\`json
+```json
 {
   "success": true,
   "data": {
@@ -207,118 +204,70 @@ Response:
     "linked": true
   }
 }
-\`\`\`
+```
 
-The SteamID64 is resolved using the existing \`fragcity_user_links\` table. The website must not accept a Paymenter \`user_id\` from browser input; the PHP backend resolves it from its authenticated customer's SteamID64.
+Possible errors:
 
-### Ticket options
-
-The response contains:
-
-- Paymenter's configured department values
-- Supported priorities: \`low\`, \`medium\`, \`high\`
-- Whether customer-side closing is disabled
-- Attachment limits and supported file MIME types
-
-The website should fetch these options rather than hard-code the department list.
-
-### Attachment upload
-
-Paymenter's native Admin API has no ticket-message attachment upload endpoint. After creating the message through Paymenter's native \`POST /ticket-messages\`, send:
-
-\`\`\`json
-{
-  "steamid64": "7656119XXXXXXXXXX",
-  "ticket_id": 456,
-  "message_id": 987,
-  "filename": "server-console.png",
-  "content_base64": "iVBORw0KGgoAAAANSUhEUg..."
-}
-\`\`\`
-
-The extension verifies that the ticket belongs to the resolved user and that the target message was authored by that same customer. Up to five files are allowed per message. Each file is limited to 10 MiB. Supported detected MIME types are JPEG, PNG, WebP, GIF, PDF, plain text, CSV, JSON and ZIP.
-
-The response returns an attachment UUID. Use the signed \`attachments/list\` endpoint to obtain the attachment UUIDs and metadata for all messages in an owned ticket:
-
-\`\`\`json
-{
-  "steamid64": "7656119XXXXXXXXXX",
-  "ticket_id": 456
-}
-\`\`\`
-
-The list response is grouped by message ID and does not expose storage paths. Use the returned UUID with the download endpoint. Download is also ownership-checked.
-
-The PHP request-body limit must allow base64 overhead. Configure \`post_max_size\` to at least \`15M\` if uploads are enabled.
-
-### Read-only transaction list
-
-Request:
-
-\`\`\`json
-{
-  "steamid64": "7656119XXXXXXXXXX",
-  "status": "succeeded",
-  "page": 1,
-  "per_page": 20
-}
-\`\`\`
-
-Available statuses: \`processing\`, \`succeeded\`, \`failed\`.
-
-This endpoint only reads Paymenter transactions belonging to the resolved user. It cannot create, update, delete or settle a transaction.
+- `fragcity_account_not_linked` — no mapping exists for that SteamID64
+- `linked_paymenter_user_missing` — mapping exists but the Paymenter user no longer exists
+- `validation_failed` — SteamID64 is not a 17-digit string
+- `identity_lookup_failed` — unexpected server-side lookup failure
 
 ## HMAC authentication
 
-Use a dedicated secret for this extension. Do not reuse the existing FragCityAPI server-bridge secret.
+Use a dedicated secret for this extension. Do not reuse the existing FragCity server-bridge secret.
 
-Headers:
+Generate a 32-byte secret:
 
-- \`X-FragCity-Timestamp\`: Unix timestamp in seconds
-- \`X-FragCity-Nonce\`: 32–64 hexadecimal characters, unique per request
-- \`X-FragCity-Signature\`: HMAC-SHA256 hex digest
-
-Signed message:
-
-\`\`\`text
-timestamp + "\n" + nonce + "\n" + raw_json_body
-\`\`\`
-
-Timestamp must be within five minutes. Nonces are atomically stored in Laravel Cache for ten minutes. Replayed requests are rejected. The optional IP allowlist accepts exact source IP addresses.
-
-Generate a dedicated secret:
-
-\`\`\`bash
+```bash
 openssl rand -hex 32
-\`\`\`
+```
 
-Store it only in Paymenter's encrypted extension settings and FragCity's private server-side runtime settings. Never expose it to the browser or logs.
+Store it only in the encrypted extension setting and FragCity's private server-side runtime settings.
+
+Required headers:
+
+- `X-FragCity-Timestamp` — Unix timestamp in seconds
+- `X-FragCity-Nonce` — 32–64 hexadecimal characters, unique per request
+- `X-FragCity-Signature` — HMAC-SHA256 hexadecimal digest
+
+Signed message (the body must be the exact raw JSON bytes sent):
+
+```text
+timestamp + "\n" + nonce + "\n" + raw_json_body
+```
+
+The timestamp must be within five minutes. Nonces are atomically stored in Laravel Cache for ten minutes and cannot be reused. The optional source IP allowlist accepts exact IP addresses; HMAC authentication remains mandatory.
 
 ## Installation and update
 
-Copy this extension to:
+On the Paymenter server:
 
-\`\`\`text
-extensions/Others/FragCitySupportAPI/
-\`\`\`
+```bash
+cd /opt/fragcity-paymenter
+git pull --ff-only origin main
 
-Then on the Paymenter host:
-
-\`\`\`bash
 cd /var/www/paymenter
+rsync -a --delete \
+  /opt/fragcity-paymenter/extensions/Others/FragCitySupportAPI/ \
+  extensions/Others/FragCitySupportAPI/
+
+chown -R root:www-data extensions/Others/FragCitySupportAPI
+find extensions/Others/FragCitySupportAPI -type d -exec chmod 755 {} \\;
+find extensions/Others/FragCitySupportAPI -type f -exec chmod 644 {} \\;
+
 composer dump-autoload --optimize --no-interaction
 php artisan optimize:clear
-\`\`\`
+```
 
-Keep the existing \`FragCityAPI\` extension installed. It owns the \`fragcity_user_links\` mapping. Do not uninstall it or modify \`FragCityCS2\`.
-
-No new database migrations are required for this extension.
+No migration or queue-worker restart is required. Keep both the existing `FragCityAPI` and `FragCityCS2 v1.4.0` extensions unchanged.
 
 ## Out of scope
 
-- No Paymenter Core modifications
-- No duplicate ticket, message, invoice or invoice-item tables
-- No customer-facing Paymenter API Key in browser code
-- No Paymenter credit / FragCity wallet synchronization
-- No payment settlement or marking invoices paid
-- No ticket deletion from the FragCity customer site
+- Duplicate ticket, message, invoice or invoice-item storage
+- Customer-facing Paymenter panel or staff ticket UI in FragCity
+- Ticket-to-Service linking
+- Custom attachment upload/download API
+- Custom invoice transaction/accounting API
+- Payment settlement, invoice status mutation, or Paymenter credit changes
+- Paymenter Core modifications
