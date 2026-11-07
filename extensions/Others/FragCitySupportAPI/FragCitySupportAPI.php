@@ -123,6 +123,13 @@ class FragCitySupportAPI extends Extension
         );
     }
 
+    public function attachmentList(Request $request): mixed
+    {
+        return $this->handle($request, fn (array $payload, User $user) =>
+            app(Services\SupportBridgeService::class)->listAttachments($payload, $user)
+        );
+    }
+
     /**
      * Paymenter v1.5.9 exposes invoice and invoice-item endpoints but no
      * invoice-transaction endpoint in its Admin API, so keep this read-only
