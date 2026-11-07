@@ -9,65 +9,33 @@ Route::post('/api/v1/fragcity/support/ping', [FragCitySupportAPI::class, 'ping']
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-support-api.ping');
 
-// Customer ticket operations. The signed SteamID64 is resolved server-side
-// to a Paymenter user; callers never submit a Paymenter user_id.
+// FragCity-only identity lookup. The site sends the authenticated customer's
+// SteamID64; the extension resolves it through the existing fragcity_user_links.
+Route::post('/api/v1/fragcity/support/identity/resolve', [FragCitySupportAPI::class, 'resolveIdentity'])
+    ->middleware('throttle:60,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-support-api.identity.resolve');
+
+// Paymenter API v1 owns ticket CRUD. This route only returns configured
+// departments and compatibility data not exposed by Paymenter's Admin API.
 Route::post('/api/v1/fragcity/support/tickets/options', [FragCitySupportAPI::class, 'ticketOptions'])
     ->middleware('throttle:60,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-support-api.tickets.options');
 
-Route::post('/api/v1/fragcity/support/tickets/list', [FragCitySupportAPI::class, 'ticketsList'])
-    ->middleware('throttle:60,1')
+// Paymenter's Admin API has no ticket-message attachment upload endpoint.
+Route::post('/api/v1/fragcity/support/attachments/upload', [FragCitySupportAPI::class, 'attachmentUpload'])
+    ->middleware('throttle:20,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.tickets.list');
-
-Route::post('/api/v1/fragcity/support/tickets/show', [FragCitySupportAPI::class, 'ticketShow'])
-    ->middleware('throttle:60,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.tickets.show');
-
-Route::post('/api/v1/fragcity/support/tickets/create', [FragCitySupportAPI::class, 'ticketCreate'])
-    ->middleware('throttle:12,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.tickets.create');
-
-Route::post('/api/v1/fragcity/support/tickets/reply', [FragCitySupportAPI::class, 'ticketReply'])
-    ->middleware('throttle:30,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.tickets.reply');
-
-Route::post('/api/v1/fragcity/support/tickets/close', [FragCitySupportAPI::class, 'ticketClose'])
-    ->middleware('throttle:30,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.tickets.close');
-
-Route::post('/api/v1/fragcity/support/tickets/reopen', [FragCitySupportAPI::class, 'ticketReopen'])
-    ->middleware('throttle:30,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.tickets.reopen');
+    ->name('extensions.fragcity-support-api.attachments.upload');
 
 Route::post('/api/v1/fragcity/support/attachments/download', [FragCitySupportAPI::class, 'attachmentDownload'])
     ->middleware('throttle:30,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-support-api.attachments.download');
 
-// Read-only Paymenter invoice and transaction views. FragCity remains the
-// owner of its own wallet and customer payment settlement.
-Route::post('/api/v1/fragcity/support/accounting/summary', [FragCitySupportAPI::class, 'accountingSummary'])
-    ->middleware('throttle:60,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.accounting.summary');
-
-Route::post('/api/v1/fragcity/support/accounting/invoices/list', [FragCitySupportAPI::class, 'invoicesList'])
-    ->middleware('throttle:60,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.accounting.invoices.list');
-
-Route::post('/api/v1/fragcity/support/accounting/invoices/show', [FragCitySupportAPI::class, 'invoiceShow'])
-    ->middleware('throttle:60,1')
-    ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-support-api.accounting.invoices.show');
-
+// Paymenter v1.5.9 has no invoice-transactions resource in its Admin API.
+// Keep only this read-only compatibility endpoint here.
 Route::post('/api/v1/fragcity/support/accounting/transactions/list', [FragCitySupportAPI::class, 'transactionsList'])
     ->middleware('throttle:60,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
