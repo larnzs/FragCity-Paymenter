@@ -21,6 +21,25 @@ use Throwable;
 
 class SupportTicketService
 {
+    public function options(array $payload, User $user): JsonResponse
+    {
+        if ($disabled = $this->ticketsDisabled()) {
+            return $disabled;
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'departments' => array_values((array) config('settings.ticket_departments', [])),
+                'priorities' => ['low', 'medium', 'high'],
+                'customer_can_close' => !config('settings.ticket_client_closing_disabled', false),
+                'max_attachments' => 5,
+                'max_attachment_bytes' => 10 * 1024 * 1024,
+                'max_total_attachment_bytes' => 20 * 1024 * 1024,
+            ],
+        ]);
+    }
+
     public function index(array $payload, User $user): JsonResponse
     {
         if ($disabled = $this->ticketsDisabled()) {
