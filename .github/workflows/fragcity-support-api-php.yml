@@ -38,3 +38,12 @@ jobs:
           while IFS= read -r -d '' file; do
             php -l "$file"
           done < <(find extensions/Others/FragCitySupportAPI -type f -name '*.php' -print0 | sort -z)
+      - name: Verify signed identity response includes synchronized contacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          source="extensions/Others/FragCitySupportAPI/FragCitySupportAPI.php"
+          grep -Fq "version: '1.3.0'" "$source"
+          grep -Fq -- "->where('key', 'fragcity_phone')" "$source"
+          grep -Fq "'email' => \$paymenterEmail" "$source"
+          grep -Fq "'phone' => \$paymenterPhone" "$source"
