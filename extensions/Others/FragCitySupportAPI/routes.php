@@ -11,6 +11,11 @@ Route::post('/api/v1/fragcity/support/ping', [FragCitySupportAPI::class, 'ping']
 
 // Customer ticket operations. The signed SteamID64 is resolved server-side
 // to a Paymenter user; callers never submit a Paymenter user_id.
+Route::post('/api/v1/fragcity/support/tickets/options', [FragCitySupportAPI::class, 'ticketOptions'])
+    ->middleware('throttle:60,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-support-api.tickets.options');
+
 Route::post('/api/v1/fragcity/support/tickets/list', [FragCitySupportAPI::class, 'ticketsList'])
     ->middleware('throttle:60,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
