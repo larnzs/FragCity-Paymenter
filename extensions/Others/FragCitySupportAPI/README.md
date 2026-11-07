@@ -60,7 +60,7 @@ All routes use **POST + JSON + HMAC-SHA256**.
 }
 \`\`\`
 
-The supported priorities match Paymenter's customer ticket form: \`low\`, \`medium\`, and \`high\`. The example uses \`normal\` only to illustrate a common label; clients must send one of the supported values.
+The supported priorities match Paymenter's customer ticket form: \`low\`, \`medium\`, and \`high\`.
 
 The \`department\` must match one of Paymenter's configured \`ticket_departments\` values when departments are configured. When a \`service_id\` is supplied, the extension verifies that the service belongs to the resolved Paymenter user.
 
