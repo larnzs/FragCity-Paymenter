@@ -2,9 +2,7 @@
 
 namespace Paymenter\Extensions\Others\FragCitySupportAPI\Services;
 
-use App\Models\Ticket;
 use App\Models\TicketMessage;
-use App\Models\TicketMessageAttachment;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\RateLimiter;
