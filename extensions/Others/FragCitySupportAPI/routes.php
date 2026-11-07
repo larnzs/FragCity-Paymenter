@@ -29,6 +29,11 @@ Route::post('/api/v1/fragcity/support/attachments/upload', [FragCitySupportAPI::
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-support-api.attachments.upload');
 
+Route::post('/api/v1/fragcity/support/attachments/list', [FragCitySupportAPI::class, 'attachmentList'])
+    ->middleware('throttle:60,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-support-api.attachments.list');
+
 Route::post('/api/v1/fragcity/support/attachments/download', [FragCitySupportAPI::class, 'attachmentDownload'])
     ->middleware('throttle:30,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
