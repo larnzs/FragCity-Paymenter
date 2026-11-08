@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account synchronization bridge for FragCity.',
-    version: '1.4.0',
+    version: '1.4.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -75,7 +75,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.4.0',
+            'version' => '1.4.1',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -347,7 +347,7 @@ class FragCityAPI extends Extension
             $services = Service::query()
                 ->where('user_id', (int) $user->id)
                 ->where('status', '<>', Service::STATUS_CANCELLED)
-                ->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue'])
+                ->with(['product.server', 'properties', 'configs.configOption', 'configs.configValue', 'upgrade'])
                 ->orderByDesc('id')
                 ->get();
 
@@ -362,6 +362,11 @@ class FragCityAPI extends Extension
                 try {
                     $summary = ExtensionHelper::callService($service, 'getCustomerPanelSummary');
                     if (is_array($summary)) {
+                        $summary['service_upgrade_ids'] = $service->upgrade
+                            ->pluck('id')
+                            ->map(static fn ($id): int => (int) $id)
+                            ->values()
+                            ->all();
                         $servers[] = $summary;
                     }
                 } catch (Throwable $e) {
@@ -375,6 +380,11 @@ class FragCityAPI extends Extension
                         'service_id' => (int) $service->id,
                         'product_name' => (string) ($service->product?->name ?? 'CS2 Server'),
                         'service_status' => (string) $service->status,
+                        'service_upgrade_ids' => $service->upgrade
+                            ->pluck('id')
+                            ->map(static fn ($id): int => (int) $id)
+                            ->values()
+                            ->all(),
                         'state' => 'unavailable',
                         'panel' => null,
                         'server' => null,
