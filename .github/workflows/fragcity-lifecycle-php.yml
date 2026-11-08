@@ -58,7 +58,7 @@ jobs:
           set -euo pipefail
           grep -q "version: '1.4.1'" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -Fq "'version' => '1.4.1'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -q "version: '1.4.1'" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "version: '1.4.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq '$this->ensurePterodactylClientUser($service, true);' extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq 'return parent::createServer($service, $settings, $properties);' extensions/Servers/FragCityCS2/FragCityCS2.php
           ! grep -q "function reconcileCustomerLifecycle" extensions/Servers/FragCityCS2/FragCityCS2.php
