@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.4.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.4.1**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -49,7 +49,7 @@ FragCity is the identity source of truth. A successful authenticated sync refres
 
 ## Customer server inventory and panel password
 
-FragCity requests the customer's services by the authenticated SteamID64. The bridge resolves that SteamID64 through `fragcity_user_links`, lists only non-cancelled services owned by the linked Paymenter user, and exposes only products assigned to the `FragCityCS2` server extension.
+FragCity requests the customer's services by the authenticated SteamID64. The bridge resolves that SteamID64 through `fragcity_user_links`, lists only non-cancelled services owned by the linked Paymenter user, and exposes only products assigned to the `FragCityCS2` server extension. Each returned service summary also includes the IDs of its own `ServiceUpgrade` records (`service_upgrade_ids`), allowing invoice upgrade lines to be matched to their parent service without guessing.
 
 The server extension returns an allow-listed summary from the Pterodactyl Application API: service ID/status, server UUID/identifier/name, node ID, resource limits, dates, panel URL, panel username and email. Server ownership is verified by both the Pterodactyl `external_id` (Paymenter service ID) and Pterodactyl owner user ID before data is returned.
 
