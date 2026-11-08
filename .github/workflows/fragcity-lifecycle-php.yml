@@ -69,3 +69,5 @@ jobs:
           test "$routes_count" -eq 5
           test "$readme_count" -eq "$routes_count"
           grep -Fq 'POST /api/v1/fragcity/bridge/servers/username' extensions/Others/FragCityAPI/README.md
+          grep -Fq "'service_upgrade_ids' =>" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "'upgrade'" extensions/Others/FragCityAPI/FragCityAPI.php
