@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.5.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.5.1**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -69,8 +69,8 @@ The panel password is intentionally independent from FragCity and Paymenter pass
 After validation, the endpoint creates native Paymenter records:
 - an `Order`;
 - a pending `Service` assigned to the configured FragCity CS2 Product and duration Plan;
-- service properties for `servername`, `memory`, `disk`, `cpu` and the eight approved CS2 Egg Checkout variables;
-- native Paymenter `ServiceConfig` rows for the selected RAM, SSD and CPU Config Options. The bridge resolves each selected resource amount to exactly one visible Product option child by its `Environment Variable`, then requires a price for the selected Plan and currency. This preserves the choices for Paymenter's recurring-price and upgrade calculations. Missing or ambiguous mappings, or missing recurring option prices, fail closed before an order is accepted;
+- service properties for `servername` and the eight approved CS2 Egg Checkout variables only;
+- native Paymenter `ServiceConfig` rows for the selected RAM, SSD and CPU Config Options. The bridge resolves each selected resource amount to exactly one Product option child by its `Environment Variable`, then requires a price for the selected Plan and currency. These `ServiceConfig` rows are the sole persisted source of truth for RAM/SSD/CPU; `FragCityCS2` maps them to the inherited Pterodactyl `memory`, `disk` and `cpu` inputs immediately before server creation or resource upgrade. The bridge does not duplicate them as service properties. Missing or ambiguous mappings, or missing recurring option prices, fail closed before an order is accepted;
 - an invoice item linked to that service;
 - a successful Paymenter invoice transaction containing the ZarinPal reference.
 
@@ -87,10 +87,11 @@ Configure these under **Paymenter Admin → Extensions → Others → FragCity A
 | `cs2_plan_id_7_days` | Product Plan for exactly 1 week |
 | `cs2_plan_id_15_days` | Product Plan for exactly 15 days |
 | `cs2_plan_id_30_days` | Product Plan for exactly 1 month |
-| `cs2_currency_code` | Existing Paymenter currency code used by all four Plans |
-| `cs2_currency_unit` | Whether that Paymenter currency stores values in `toman` or `rial` |
+| `cs2_currency_code` | Existing Paymenter Rial currency code used by all four Plans (for example `IRR`) |
 
-Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. The API fails closed when the product, plans, currency or mappings are missing or inconsistent.
+Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. The selected RAM, disk and CPU Config Option values must also each have a price row for the selected Plan and Rial currency. The API fails closed when the product, plans, currency or mappings are missing or inconsistent.
+
+**Currency is Rial-only inside Paymenter.** The bridge always creates the Paymenter Service, Invoice item and successful Invoice Transaction using `payment.amount_rial`. `payment.amount_toman` remains the source amount used for the conversion-integrity check and order audit. The bridge verifies `amount_rial === amount_toman * 10`; it never uses the Toman amount for Paymenter monetary records.
 
 ### Signed request body
 
@@ -129,7 +130,7 @@ The HMAC signature covers the exact raw JSON request body. The website sends the
 
 The example is illustrative; the amount, reference and identity must come from the website's server-side order record and verified ZarinPal response. The two amounts must match exactly at the 10 Rial per Toman conversion. `order_ref` must be generated once by FragCity and reused unchanged for retries.
 
-Resource constraints currently mirror the FragCity storefront: RAM 1024/1280/1536 MB, disk 5120–10240 MB in 1024 MB increments, and CPU 100/200/300/400 percent. The Egg values are validated against the live `FragCityCS2` Checkout manifest, including the allowed select values. UI labels are never stored as Egg values.
+Resource constraints currently mirror the FragCity storefront: RAM 1024/1280/1536 MB, disk 5120–10240 MB in 1024 MB increments, and CPU 100/200/300/400 percent. The signed `resources` object is still sent by the website as the customer's selection snapshot so the bridge can resolve the exact matching Config Option children; it is not used to create `memory`, `disk` or `cpu` service properties. The selected Config Option children must have numeric `env_variable` values matching those amounts and a price for the selected Plan/currency. The Egg values are validated against the live `FragCityCS2` Checkout manifest, including the allowed select values. UI labels are never stored as Egg values.
 
 ### Idempotency and paid add-ons
 
@@ -139,7 +140,7 @@ Resource constraints currently mirror the FragCity storefront: RAM 1024/1280/153
 - The accepted response means the Paymenter Order/Invoice/Service records were committed and the native provisioning flow was queued. It does not claim that Pterodactyl has already finished creating the server.
 - `TICKRATE=128` and `ENABLE_GUARD=1` are rejected for now because their paid surcharges are declared in the FragCity pricing contract but are not yet incorporated into the live storefront quote. They must not be provisioned as free options.
 
-**Renewals are a separate follow-up:** the initial paid invoice uses the verified FragCity amount. Paymenter's later recurring invoice calculation uses the configured Plan and Service Config values. The current Egg selections are stored as service properties, while CPU/RAM/disk/slot surcharges are not yet represented as Paymenter recurring Config Options. Do not enable automatic renewal billing until that recurring-price mapping is completed and tested.
+**Renewals still require an end-to-end pricing test:** RAM/CPU/SSD selections are now native recurring Config Options, and the bridge verifies that each selected value has a price for the configured Plan and currency. Before enabling automatic renewal billing, verify that Paymenter's recurring total (Plan plus Config Option prices and any other paid add-ons such as slots) exactly matches FragCity's storefront quote and does not double-charge or omit any component. `TICKRATE=128` and `ENABLE_GUARD=1` remain blocked until their surcharges are implemented in the authoritative storefront quote.
 
 ## Installation
 

@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.4.0',
+    version: '1.5.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -48,8 +48,20 @@ class FragCityCS2 extends PterodactylExtension
 
     public function getProductConfig($values = []): array
     {
-        return array_merge(
+        // RAM, CPU and Storage are service-level Config Options, not static
+        // Product/Node defaults. They are translated back to Pterodactyl's
+        // internal memory/disk/cpu keys immediately before provisioning.
+        $parentFields = array_values(array_filter(
             parent::getProductConfig($values),
+            static fn ($field): bool => !in_array(
+                (string) ($field['name'] ?? ''),
+                ['memory', 'disk', 'cpu'],
+                true
+            )
+        ));
+
+        return array_merge(
+            $parentFields,
             $this->loadManifest()['paymenter']['product_fields'] ?? []
         );
     }
@@ -106,9 +118,40 @@ class FragCityCS2 extends PterodactylExtension
             $service->id
         );
 
+        // Paymenter exposes Config Option selections in $properties using each
+        // parent Config Option's env_variable. Convert the selected RAM/SSD/CPU
+        // values into the keys expected by the inherited Pterodactyl provisioner.
+        $properties = $this->applyResourceLimitsFromConfigOptions($service, $properties);
+
         $this->ensurePterodactylClientUser($service, true);
 
         return parent::createServer($service, $settings, $properties);
+    }
+
+    /**
+     * Keep resource upgrades on the same Config Option source of truth as
+     * initial provisioning. Paymenter's parent implementation still expects
+     * Pterodactyl's native memory/disk/cpu property names.
+     */
+    public function upgradeServer(Service $service, $settings, $properties)
+    {
+        $manifest = $this->loadManifest();
+
+        $settings = $this->normalizeSelectEnvironmentValues(
+            $settings,
+            $manifest,
+            $service->id
+        );
+
+        $properties = $this->normalizeSelectEnvironmentValues(
+            $properties,
+            $manifest,
+            $service->id
+        );
+
+        $properties = $this->applyResourceLimitsFromConfigOptions($service, $properties);
+
+        return parent::upgradeServer($service, $settings, $properties);
     }
 
     /**
@@ -690,6 +733,111 @@ class FragCityCS2 extends PterodactylExtension
             'updated' => true,
             'username' => (string) ($updatedAttributes['username'] ?? $username),
         ];
+    }
+
+    /**
+     * Resolve RAM, Storage and CPU from the native Paymenter ServiceConfig rows.
+     *
+     * Paymenter's ExtensionHelper exposes a selected Config Option as:
+     *   $properties[$configOption->env_variable] = $configValue->env_variable
+     *
+     * The inherited Pterodactyl extension expects its product-limit keys to be
+     * named memory, disk and cpu. Keep those implementation details in this
+     * adapter instead of duplicating the chosen limits as Service properties.
+     */
+    private function applyResourceLimitsFromConfigOptions(Service $service, array $properties): array
+    {
+        $aliases = [
+            'memory' => ['memory', 'memorymb', 'ram', 'rammb', 'memorylimit', 'ramlimit'],
+            'disk' => ['disk', 'diskmb', 'storage', 'storagemb', 'ssd', 'ssdmb', 'disklimit', 'storagelimit'],
+            'cpu' => ['cpu', 'cpupercent', 'cpulimit'],
+        ];
+
+        $normalize = static function ($value): string {
+            return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $value)));
+        };
+
+        $resolved = [];
+        $configs = $service->configs()
+            ->with(['configOption', 'configValue'])
+            ->get();
+
+        foreach ($configs as $config) {
+            $option = $config->configOption;
+            $configValue = $config->configValue;
+
+            if (!$option || !$configValue) {
+                continue;
+            }
+
+            $target = null;
+            foreach ([$option->env_variable ?? '', $option->name ?? ''] as $identifier) {
+                $normalizedIdentifier = $normalize($identifier);
+
+                foreach ($aliases as $resource => $resourceAliases) {
+                    if (in_array($normalizedIdentifier, $resourceAliases, true)) {
+                        $target = $resource;
+                        break 2;
+                    }
+                }
+            }
+
+            if ($target === null) {
+                continue;
+            }
+
+            if (array_key_exists($target, $resolved)) {
+                throw new RuntimeException(
+                    "FragCity CS2 has more than one Config Option mapped to {$target}."
+                );
+            }
+
+            $rawValue = $configValue->env_variable ?? '';
+            if (trim((string) $rawValue) === '') {
+                $rawValue = $configValue->name ?? '';
+            }
+
+            $rawValue = trim((string) $rawValue);
+            if (!preg_match('/^[0-9]+$/D', $rawValue)) {
+                throw new RuntimeException(
+                    "FragCity CS2 Config Option for {$target} must contain an integer environment value."
+                );
+            }
+
+            $resolved[$target] = (int) $rawValue;
+        }
+
+        $missing = array_values(array_diff(['memory', 'disk', 'cpu'], array_keys($resolved)));
+        if ($missing !== []) {
+            throw new RuntimeException(
+                'FragCity CS2 requires RAM, Storage and CPU Config Options; missing: '
+                . implode(', ', $missing) . '.'
+            );
+        }
+
+        if (!in_array($resolved['memory'], [1024, 1280, 1536], true)) {
+            throw new RuntimeException('FragCity CS2 RAM Config Option contains an unsupported value.');
+        }
+
+        if (
+            $resolved['disk'] < 5120
+            || $resolved['disk'] > 10240
+            || (($resolved['disk'] - 5120) % 1024) !== 0
+        ) {
+            throw new RuntimeException('FragCity CS2 Storage Config Option contains an unsupported value.');
+        }
+
+        if (!in_array($resolved['cpu'], [100, 200, 300, 400], true)) {
+            throw new RuntimeException('FragCity CS2 CPU Config Option contains an unsupported value.');
+        }
+
+        // These keys are consumed by the inherited Paymenter Pterodactyl
+        // implementation for node suitability and final server resource limits.
+        $properties['memory'] = (string) $resolved['memory'];
+        $properties['disk'] = (string) $resolved['disk'];
+        $properties['cpu'] = (string) $resolved['cpu'];
+
+        return $properties;
     }
 
     private function normalizeSelectEnvironmentValues(

@@ -27,7 +27,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account, CS2 order and service bridge for FragCity.',
-    version: '1.5.0',
+    version: '1.5.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -97,18 +97,6 @@ class FragCityAPI extends Extension
                 'required' => true,
                 'validation' => 'required|string|max:12|regex:/^[A-Za-z0-9_-]+$/',
             ],
-            [
-                'name' => 'cs2_currency_unit',
-                'label' => 'CS2 Paymenter Currency Unit',
-                'type' => 'select',
-                'description' => 'Select whether the configured Paymenter currency values are expressed in Toman or Rial.',
-                'options' => [
-                    ['value' => 'toman', 'label' => 'Toman'],
-                    ['value' => 'rial', 'label' => 'Rial'],
-                ],
-                'default' => 'toman',
-                'required' => true,
-            ],
         ];
     }
 
@@ -137,7 +125,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.5.0',
+            'version' => '1.5.1',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -442,7 +430,9 @@ class FragCityAPI extends Extension
         }
 
         $currencyCode = strtoupper(trim((string) $this->config('cs2_currency_code')));
-        $currencyUnit = strtolower(trim((string) $this->config('cs2_currency_unit')));
+        // Paymenter is the Rial system of record. FragCity receives and quotes Toman,
+        // but every Paymenter monetary record must be stored in Rial.
+        $currencyUnit = 'rial';
         $productId = (int) $this->config('cs2_product_id');
         $planSetting = [
             1 => 'cs2_plan_id_1_day',
@@ -456,7 +446,6 @@ class FragCityAPI extends Extension
             $productId < 1
             || $planId < 1
             || $currencyCode === ''
-            || !in_array($currencyUnit, ['toman', 'rial'], true)
         ) {
             return response()->json([
                 'success' => false,
@@ -464,7 +453,7 @@ class FragCityAPI extends Extension
             ], 503);
         }
 
-        $paymenterAmount = $currencyUnit === 'toman' ? $amountToman : $amountRial;
+        $paymenterAmount = $amountRial;
         $eggHashValues = $eggValues;
         ksort($eggHashValues, SORT_STRING);
         $canonicalPayload = [
@@ -617,42 +606,64 @@ class FragCityAPI extends Extension
                     throw new RuntimeException('cs2_plan_invalid');
                 }
 
-                // Persist the same native Paymenter Config Option selections that
-                // its own checkout would create. The FragCity payload already
-                // carries the selected resource amounts; resolve each amount to
-                // its unique visible Product option value by Environment Variable.
-                // These Config rows are needed for Paymenter's recurring price and
-                // upgrade calculations, while the service properties below remain
-                // the values consumed by the CS2 provisioner.
+                // Persist RAM, Storage and CPU exclusively as native Paymenter
+                // ServiceConfig selections. FragCityCS2 resolves these Config
+                // Options immediately before provisioning/upgrading and translates
+                // their values to the inherited Pterodactyl memory/disk/cpu keys.
+                // Do not duplicate those resource limits as service properties.
                 $resourceConfigTargets = [
-                    'memory_mb' => (string) $memoryMb,
-                    'disk_mb' => (string) $diskMb,
-                    'cpu_percent' => (string) $cpuPercent,
+                    'memory_mb' => [
+                        'aliases' => ['memory', 'memorymb', 'ram', 'rammb', 'memorylimit', 'ramlimit'],
+                        'value' => (string) $memoryMb,
+                    ],
+                    'disk_mb' => [
+                        'aliases' => ['disk', 'diskmb', 'storage', 'storagemb', 'ssd', 'ssdmb', 'disklimit', 'storagelimit'],
+                        'value' => (string) $diskMb,
+                    ],
+                    'cpu_percent' => [
+                        'aliases' => ['cpu', 'cpupercent', 'cpulimit'],
+                        'value' => (string) $cpuPercent,
+                    ],
                 ];
+                $normalizeResourceOptionName = static function ($value): string {
+                    return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $value)));
+                };
                 $resourceConfigSelections = [];
                 $usedConfigOptionIds = [];
 
-                foreach ($resourceConfigTargets as $resourceKey => $environmentValue) {
-                    $matchingValues = collect($product->configOptions)->flatMap(
-                        function ($configOption) use ($environmentValue) {
-                            return $configOption->children
-                                ->filter(
-                                    fn ($configValue) => trim((string) $configValue->env_variable) === $environmentValue
-                                )
-                                ->map(fn ($configValue) => [
-                                    'option' => $configOption,
-                                    'value' => $configValue,
-                                ]);
+                foreach ($resourceConfigTargets as $resourceKey => $target) {
+                    // First identify the exact parent Config Option by its own
+                    // env_variable/name. Then resolve the numeric child value
+                    // inside that option only; unrelated options may have
+                    // children with the same numeric value.
+                    $matchingOptions = collect($product->configOptions)->filter(
+                        function ($configOption) use ($target, $normalizeResourceOptionName) {
+                            $identifiers = array_map(
+                                $normalizeResourceOptionName,
+                                [
+                                    $configOption->env_variable ?? '',
+                                    $configOption->name ?? '',
+                                ]
+                            );
+
+                            return array_intersect($target['aliases'], $identifiers) !== [];
                         }
+                    );
+
+                    if ($matchingOptions->count() !== 1) {
+                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
+                    }
+
+                    $configOption = $matchingOptions->first();
+                    $matchingValues = $configOption->children->filter(
+                        fn ($configValue) => trim((string) $configValue->env_variable) === $target['value']
                     );
 
                     if ($matchingValues->count() !== 1) {
                         throw new RuntimeException('cs2_resource_config_mapping_invalid');
                     }
 
-                    $match = $matchingValues->first();
-                    $configOption = $match['option'];
-                    $configValue = $match['value'];
+                    $configValue = $matchingValues->first();
                     $configOptionId = (int) $configOption->id;
 
                     // Text and number options are stored as free-form properties by
@@ -815,9 +826,6 @@ class FragCityAPI extends Extension
 
                 $serviceProperties = [
                     'servername' => $serverName,
-                    'memory' => (string) $memoryMb,
-                    'disk' => (string) $diskMb,
-                    'cpu' => (string) $cpuPercent,
                 ] + $normalizedEggValues;
 
                 foreach ($serviceProperties as $key => $value) {
