@@ -681,6 +681,39 @@ class FragCityAPI extends Extension
                     throw new RuntimeException('egg_validation_failed');
                 }
 
+                $cs2ManifestPath = dirname(__DIR__, 2) . '/Servers/FragCityCS2/resources/cs2-egg-variables.json';
+                if (!is_file($cs2ManifestPath)) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                try {
+                    $cs2Manifest = json_decode(
+                        (string) file_get_contents($cs2ManifestPath),
+                        true,
+                        512,
+                        JSON_THROW_ON_ERROR
+                    );
+                } catch (Throwable) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $cfgOptions = $cs2Manifest['game_mode_manager']['cfg_options'] ?? [];
+                $selectedCfg = null;
+                foreach (is_array($cfgOptions) ? $cfgOptions : [] as $cfgOption) {
+                    if ((string) ($cfgOption['config'] ?? '') === (string) $normalizedEggValues['EXEC']) {
+                        $selectedCfg = $cfgOption;
+                        break;
+                    }
+                }
+
+                $compatibleMapGroups = $selectedCfg['mapGroups'] ?? [];
+                if (
+                    !is_array($compatibleMapGroups)
+                    || !in_array((string) $normalizedEggValues['MAPGROUP'], $compatibleMapGroups, true)
+                ) {
+                    throw new RuntimeException('egg_combination_invalid');
+                }
+
                 $normalizedEggValues['GUARD_BAN_MINUTES'] = (string) (
                     $normalizedEggValues['GUARD_BAN_MINUTES'] ?? 60
                 );
@@ -850,7 +883,7 @@ class FragCityAPI extends Extension
                 'order_reference_conflict', 'zarinpal_payment_already_used' => 409,
                 'paid_option_pricing_not_configured', 'invalid_egg_variable', 'egg_validation_failed',
                 'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
-                'cs2_plan_invalid', 'invalid_order_payload' => 422,
+                'cs2_plan_invalid', 'invalid_order_payload', 'egg_combination_invalid' => 422,
                 'order_processing_incomplete' => 503,
                 default => 500,
             };
