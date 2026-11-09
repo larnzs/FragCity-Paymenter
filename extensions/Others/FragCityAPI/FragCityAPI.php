@@ -416,13 +416,11 @@ class FragCityAPI extends Extension
             ], 422);
         }
 
-        // These options are marked as paid in the shared checkout contract.
-        // The FragCity storefront has not yet added their surcharges to its
-        // authoritative quote, so fail closed rather than provisioning them free.
-        if (
-            (string) ($eggValues['TICKRATE'] ?? '64') !== '64'
-            || (string) ($eggValues['ENABLE_GUARD'] ?? '0') !== '0'
-        ) {
+        // Bot Guard remains a paid add-on and is still blocked until its
+        // surcharge is included in the authoritative FragCity quote.
+        // Tickrate 64 and 128 are both free and are priced through zero-cost
+        // native Paymenter Config Option child rows.
+        if ((string) ($eggValues['ENABLE_GUARD'] ?? '0') !== '0') {
             return response()->json([
                 'success' => false,
                 'error' => 'paid_option_pricing_not_configured',
@@ -632,8 +630,8 @@ class FragCityAPI extends Extension
                     'tickrate' => [
                         'aliases' => ['tickrate'],
                         'value' => (string) ($eggValues['TICKRATE'] ?? '64'),
-                        // 128 Tick remains blocked until its price and Egg startup support are verified.
-                        'allowed_values' => ['64'],
+                        // Both Tickrate values are currently free and supported by the Egg startup argument.
+                        'allowed_values' => ['64', '128'],
                     ],
                 ];
                 $normalizeConfigOptionName = static function ($value): string {
@@ -711,6 +709,22 @@ class FragCityAPI extends Extension
                     $usedConfigOptionIds[] = $configOptionId;
                 }
 
+                $cs2ManifestPath = dirname(__DIR__, 2) . '/Servers/FragCityCS2/resources/cs2-egg-variables.json';
+                if (!is_file($cs2ManifestPath)) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                try {
+                    $cs2Manifest = json_decode(
+                        (string) file_get_contents($cs2ManifestPath),
+                        true,
+                        512,
+                        JSON_THROW_ON_ERROR
+                    );
+                } catch (Throwable) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
                 $checkoutFields = ExtensionHelper::getCheckoutConfig($product);
                 if (!is_array($checkoutFields) || $checkoutFields === []) {
                     throw new RuntimeException('cs2_checkout_manifest_unavailable');
@@ -770,6 +784,52 @@ class FragCityAPI extends Extension
                     $eggRules[$name] = array_values(array_unique($rules));
                 }
 
+                $nativeConfigOptionFields = $cs2Manifest['paymenter']['config_options'] ?? [];
+                if (!is_array($nativeConfigOptionFields) || count($nativeConfigOptionFields) !== 2) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                foreach ($nativeConfigOptionFields as $field) {
+                    $name = strtoupper(trim((string) ($field['env_variable'] ?? '')));
+                    if ($name === '' || in_array($name, $allowedEggKeys, true)) {
+                        throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                    }
+
+                    $allowedEggKeys[] = $name;
+                    $value = $eggValues[$name] ?? $field['default'] ?? null;
+                    $normalizedEggValues[$name] = $value;
+
+                    $rules = [];
+                    if (!empty($field['required'])) {
+                        $rules[] = 'required';
+                    } else {
+                        $rules[] = 'nullable';
+                    }
+
+                    $fieldRules = $field['validation'] ?? [];
+                    if (is_string($fieldRules)) {
+                        $fieldRules = array_filter(explode('|', $fieldRules));
+                    }
+                    if (is_array($fieldRules)) {
+                        $rules = array_merge($rules, $fieldRules);
+                    }
+
+                    $optionValues = array_map(
+                        static fn ($option): string => (string) ($option['value'] ?? ''),
+                        is_array($field['options'] ?? null) ? $field['options'] : []
+                    );
+                    if ($optionValues === [] || in_array('', $optionValues, true)) {
+                        throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                    }
+
+                    $rules[] = 'in:' . implode(',', array_map(
+                        static fn (string $option): string => str_replace(',', '\\,', $option),
+                        $optionValues
+                    ));
+
+                    $eggRules[$name] = array_values(array_unique($rules));
+                }
+
                 if (array_diff(array_keys($eggValues), $allowedEggKeys) !== []) {
                     throw new RuntimeException('invalid_egg_variable');
                 }
@@ -777,22 +837,6 @@ class FragCityAPI extends Extension
                 $eggValidator = Validator::make($normalizedEggValues, $eggRules);
                 if ($eggValidator->fails()) {
                     throw new RuntimeException('egg_validation_failed');
-                }
-
-                $cs2ManifestPath = dirname(__DIR__, 2) . '/Servers/FragCityCS2/resources/cs2-egg-variables.json';
-                if (!is_file($cs2ManifestPath)) {
-                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
-                }
-
-                try {
-                    $cs2Manifest = json_decode(
-                        (string) file_get_contents($cs2ManifestPath),
-                        true,
-                        512,
-                        JSON_THROW_ON_ERROR
-                    );
-                } catch (Throwable) {
-                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
                 }
 
                 $cfgOptions = $cs2Manifest['game_mode_manager']['cfg_options'] ?? [];
