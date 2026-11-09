@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.5.1',
+    version: '1.6.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -48,14 +48,14 @@ class FragCityCS2 extends PterodactylExtension
 
     public function getProductConfig($values = []): array
     {
-        // RAM, CPU and Storage are service-level Config Options, not static
-        // Product/Node defaults. They are translated back to Pterodactyl's
-        // internal memory/disk/cpu keys immediately before provisioning.
+        // RAM, CPU, Storage and Pterodactyl feature limits are service-level
+        // Config Options, not static Product/Node defaults. The adapter maps
+        // their selected child values to the keys expected by Pterodactyl.
         $parentFields = array_values(array_filter(
             parent::getProductConfig($values),
             static fn ($field): bool => !in_array(
                 (string) ($field['name'] ?? ''),
-                ['memory', 'disk', 'cpu'],
+                ['memory', 'disk', 'cpu', 'databases', 'additional_allocations', 'backups'],
                 true
             )
         ));
@@ -119,10 +119,10 @@ class FragCityCS2 extends PterodactylExtension
         );
 
         // Paymenter exposes Config Option selections in $properties using each
-        // parent Config Option's env_variable. Convert the selected RAM/SSD/CPU
-        // values into the keys expected by the inherited Pterodactyl provisioner.
+        // parent Config Option's env_variable. Convert RAM/SSD/CPU to resource
+        // limits, then map player/tickrate and feature-limit selections.
         $properties = $this->applyResourceLimitsFromConfigOptions($service, $properties);
-        $properties = $this->applyPlayerAndTickrateConfigOptions($service, $properties);
+        $properties = $this->applyNativeConfigOptions($service, $properties);
 
         $this->ensurePterodactylClientUser($service, true);
 
@@ -842,15 +842,15 @@ class FragCityCS2 extends PterodactylExtension
     }
 
     /**
-     * Resolve the customer-selected Player Slots and Tickrate values from
-     * native Paymenter Config Options. These are deliberately not Checkout
-     * fields or duplicated service properties: the Config Option child
-     * Environment Variables are the single source of truth.
+     * Resolve every non-resource native Config Option from its selected
+     * Paymenter ServiceConfig child. Egg options keep their Egg environment
+     * names; feature-limit options keep Pterodactyl's lower-case setting keys.
+     * No duplicate service properties are written for these selections.
      *
      * @param array<string,mixed> $properties
      * @return array<string,mixed>
      */
-    private function applyPlayerAndTickrateConfigOptions(Service $service, array $properties): array
+    private function applyNativeConfigOptions(Service $service, array $properties): array
     {
         $definitions = $this->loadManifest()['paymenter']['config_options'] ?? [];
         if (!is_array($definitions) || $definitions === []) {
@@ -866,7 +866,7 @@ class FragCityCS2 extends PterodactylExtension
             ->get();
 
         foreach ($definitions as $definition) {
-            $envVariable = strtoupper(trim((string) ($definition['env_variable'] ?? '')));
+            $envVariable = trim((string) ($definition['env_variable'] ?? ''));
             $optionName = trim((string) ($definition['name'] ?? ''));
             $identifiers = array_values(array_filter([
                 $normalize($envVariable),
@@ -941,7 +941,8 @@ class FragCityCS2 extends PterodactylExtension
                 );
             }
 
-            // Explicitly set the Egg environment key from the native child row.
+            // Preserve the exact key: uppercase Egg variables remain uppercase,
+            // while Pterodactyl feature-limit keys remain lower-case.
             $properties[$envVariable] = $rawValue;
         }
 
@@ -1094,6 +1095,9 @@ class FragCityCS2 extends PterodactylExtension
         foreach ($configOptionFields as $configOption) {
             $optionName = $configOption['name'] ?? null;
             $envVariable = $configOption['env_variable'] ?? null;
+            $target = (string) ($configOption['target'] ?? 'egg');
+            $isFeatureLimit = $target === 'feature_limit';
+            $variableDefinition = is_string($envVariable) ? ($variableMap[$envVariable] ?? null) : null;
 
             if (
                 !is_string($optionName)
@@ -1101,12 +1105,20 @@ class FragCityCS2 extends PterodactylExtension
                 || !is_string($envVariable)
                 || $envVariable === ''
                 || isset($configOptionMap[$envVariable])
-                || !isset($variableMap[$envVariable])
+                || !in_array($target, ['egg', 'feature_limit'], true)
+                || ($isFeatureLimit && (
+                    !in_array($envVariable, ['databases', 'additional_allocations', 'backups'], true)
+                    || $variableDefinition !== null
+                ))
+                || (!$isFeatureLimit && !is_array($variableDefinition))
             ) {
                 throw new RuntimeException('FragCity CS2 manifest contains an invalid or duplicate native Config Option.');
             }
 
-            if (($variableMap[$envVariable]['paymenter']['status'] ?? null) !== 'config_option') {
+            if (
+                !$isFeatureLimit
+                && ($variableDefinition['paymenter']['status'] ?? null) !== 'config_option'
+            ) {
                 throw new RuntimeException(
                     "Native Config Option {$envVariable} is assigned to the wrong manifest scope."
                 );
@@ -1155,9 +1167,13 @@ class FragCityCS2 extends PterodactylExtension
                 );
             }
 
-            $expectedValues = $variableMap[$envVariable]['storefront_allowed_values']
-                ?? $variableMap[$envVariable]['allowed_values']
-                ?? null;
+            $expectedValues = $isFeatureLimit
+                ? ($configOption['allowed_values'] ?? null)
+                : (
+                    $variableDefinition['storefront_allowed_values']
+                    ?? $variableDefinition['allowed_values']
+                    ?? null
+                );
 
             if (!is_array($expectedValues)) {
                 throw new RuntimeException(
