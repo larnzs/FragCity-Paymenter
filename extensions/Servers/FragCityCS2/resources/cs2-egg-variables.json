@@ -14,7 +14,7 @@
     "product_admin_fields": 21,
     "not_exposed": 3,
     "target_paymenter": "v1.5.9",
-    "native_config_options": 2
+    "native_config_options": 5
   },
   "variables": [
     {
@@ -2096,6 +2096,163 @@
           "required",
           "numeric",
           "in:64,128"
+        ],
+        "pricing": {
+          "model": "free",
+          "all_values_free": true,
+          "required_child_price": 0,
+          "price_owner": "Paymenter native Config Option child prices"
+        }
+      },
+      {
+        "name": "Databases",
+        "env_variable": "databases",
+        "type": "select",
+        "target": "feature_limit",
+        "description": "تعداد دیتابیس‌های قابل استفاده برای سرور در Pterodactyl.",
+        "options": [
+          {
+            "value": "0",
+            "label": "بدون دیتابیس"
+          },
+          {
+            "value": "1",
+            "label": "1 دیتابیس"
+          },
+          {
+            "value": "2",
+            "label": "2 دیتابیس"
+          },
+          {
+            "value": "3",
+            "label": "3 دیتابیس"
+          },
+          {
+            "value": "5",
+            "label": "5 دیتابیس"
+          },
+          {
+            "value": "10",
+            "label": "10 دیتابیس"
+          }
+        ],
+        "default": "0",
+        "required": true,
+        "validation": [
+          "required",
+          "integer",
+          "in:0,1,2,3,5,10"
+        ],
+        "allowed_values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "5",
+          "10"
+        ],
+        "pricing": {
+          "model": "free",
+          "all_values_free": true,
+          "required_child_price": 0,
+          "price_owner": "Paymenter native Config Option child prices"
+        }
+      },
+      {
+        "name": "Additional Allocations",
+        "env_variable": "additional_allocations",
+        "type": "select",
+        "target": "feature_limit",
+        "description": "تعداد پورت‌های اضافه؛ پورت اصلی سرور جداگانه و به‌صورت خودکار تخصیص داده می‌شود.",
+        "options": [
+          {
+            "value": "0",
+            "label": "فقط پورت اصلی"
+          },
+          {
+            "value": "1",
+            "label": "1 پورت اضافه"
+          },
+          {
+            "value": "2",
+            "label": "2 پورت اضافه"
+          },
+          {
+            "value": "3",
+            "label": "3 پورت اضافه"
+          },
+          {
+            "value": "5",
+            "label": "5 پورت اضافه"
+          }
+        ],
+        "default": "0",
+        "required": true,
+        "validation": [
+          "required",
+          "integer",
+          "in:0,1,2,3,5"
+        ],
+        "allowed_values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "5"
+        ],
+        "pricing": {
+          "model": "free",
+          "all_values_free": true,
+          "required_child_price": 0,
+          "price_owner": "Paymenter native Config Option child prices"
+        }
+      },
+      {
+        "name": "Backups",
+        "env_variable": "backups",
+        "type": "select",
+        "target": "feature_limit",
+        "description": "حداکثر تعداد نسخه‌های پشتیبان قابل نگهداری برای سرور.",
+        "options": [
+          {
+            "value": "0",
+            "label": "بدون بکاپ"
+          },
+          {
+            "value": "1",
+            "label": "1 بکاپ"
+          },
+          {
+            "value": "2",
+            "label": "2 بکاپ"
+          },
+          {
+            "value": "3",
+            "label": "3 بکاپ"
+          },
+          {
+            "value": "5",
+            "label": "5 بکاپ"
+          },
+          {
+            "value": "10",
+            "label": "10 بکاپ"
+          }
+        ],
+        "default": "0",
+        "required": true,
+        "validation": [
+          "required",
+          "integer",
+          "in:0,1,2,3,5,10"
+        ],
+        "allowed_values": [
+          "0",
+          "1",
+          "2",
+          "3",
+          "5",
+          "10"
         ],
         "pricing": {
           "model": "free",
