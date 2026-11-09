@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.5.1**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.7.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -69,8 +69,8 @@ The panel password is intentionally independent from FragCity and Paymenter pass
 After validation, the endpoint creates native Paymenter records:
 - an `Order`;
 - a pending `Service` assigned to the configured FragCity CS2 Product and duration Plan;
-- service properties for `servername` and the eight approved CS2 Egg Checkout variables only;
-- native Paymenter `ServiceConfig` rows for the selected RAM, SSD and CPU Config Options. The bridge resolves each selected resource amount to exactly one Product option child by its `Environment Variable`, then requires a price for the selected Plan and currency. These `ServiceConfig` rows are the sole persisted source of truth for RAM/SSD/CPU; `FragCityCS2` maps them to the inherited Pterodactyl `memory`, `disk` and `cpu` inputs immediately before server creation or resource upgrade. The bridge does not duplicate them as service properties. Missing or ambiguous mappings, or missing recurring option prices, fail closed before an order is accepted;
+- service properties for `servername` and the six remaining Egg variables. `SRCDS_MAXPLAYERS` and `TICKRATE` are not duplicated as service properties;
+- native Paymenter `ServiceConfig` rows for five Product Config Options: RAM, SSD, CPU, Player Slots and Tickrate. The bridge resolves each submitted value to exactly one child under the matching parent option, then requires a price row for the selected Plan and Rial currency. The five selected `ServiceConfig` rows are the persisted source of truth. Paymenter's `ExtensionHelper::getServiceProperties()` adds the selected child Environment Variables to the provisioning property map; `FragCityCS2` adapts RAM/SSD/CPU to Pterodactyl resource limits while Player Slots and Tickrate pass through as Egg environment values. Missing/ambiguous mappings, unsupported values or missing recurring option prices fail closed before an order is accepted;
 - an invoice item linked to that service;
 - a successful Paymenter invoice transaction containing the ZarinPal reference.
 
@@ -89,7 +89,21 @@ Configure these under **Paymenter Admin → Extensions → Others → FragCity A
 | `cs2_plan_id_30_days` | Product Plan for exactly 1 month |
 | `cs2_currency_code` | Existing Paymenter Rial currency code used by all four Plans (for example `IRR`) |
 
-Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. The selected RAM, disk and CPU Config Option values must also each have a price row for the selected Plan and Rial currency. The API fails closed when the product, plans, currency or mappings are missing or inconsistent.
+Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. Every selected RAM, disk, CPU, Player Slots and Tickrate child must also have a price row for the selected Plan and Rial currency. The API fails closed when the Product, Plan, currency, option mapping, supported value or child price is missing or inconsistent.
+
+### Required Product Config Options
+
+Attach all five Config Options to the configured CS2 Product. The parent Environment Variable must match exactly:
+
+| Config Option | Parent Environment Variable | Type | Child Environment Variables |
+| --- | --- | --- | --- |
+| RAM | `memory_mb` | Select | `1024`, `1280`, `1536` |
+| SSD Storage | `disk_mb` | Select | `5120`, `6144`, `7168`, `8192`, `9216`, `10240` |
+| CPU | `cpu_percent` | Select | `100`, `200`, `300`, `400` |
+| Player Slots | `SRCDS_MAXPLAYERS` | Select | Every integer from `5` through `64` |
+| Tickrate | `TICKRATE` | Select | `64` only for now |
+
+Use numeric child Environment Variables, not display labels. For Player Slots, the 5-slot child is the included/base capacity; each larger child represents the additional-slot surcharge. The 64-Tick child must have a zero-price row for every supported Plan/currency. Do not add the 128-Tick child yet: the bridge rejects `TICKRATE=128` until the storefront quote includes its surcharge and the Egg startup has been verified to apply it. Keep `Upgradable` disabled for Player Slots and Tickrate; the current inherited Pterodactyl upgrade method preserves already-set Egg environment values.
 
 **Currency is Rial-only inside Paymenter.** The bridge always creates the Paymenter Service, Invoice item and successful Invoice Transaction using `payment.amount_rial`. `payment.amount_toman` remains the source amount used for the conversion-integrity check and order audit. The bridge verifies `amount_rial === amount_toman * 10`; it never uses the Toman amount for Paymenter monetary records.
 
