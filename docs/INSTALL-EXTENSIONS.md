@@ -60,7 +60,7 @@ Open **Admin → Extensions → Others → FragCity API** and configure:
 - Optional exact allowlisted source IPs.
 - CS2 Product ID.
 - The 1-day, 7-day, 15-day and 30-day Plan IDs.
-- Paymenter currency code and whether its stored unit is Toman or Rial.
+- The existing Paymenter Rial currency code used by all configured Plans (for example `IRR`). Paymenter order and invoice records are always stored in Rial; FragCity's website may continue displaying Toman.
 
 The HMAC secret must match the website's private integrations.paymenter_backend.shared_secret setting. Do not put it in browser JavaScript, Git, or public configuration.
 
