@@ -56,8 +56,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "version: '1.4.1'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "'version' => '1.4.1'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -q "version: '1.5.0'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "'version' => '1.5.0'" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -q "version: '1.4.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq '$this->ensurePterodactylClientUser($service, true);' extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq 'return parent::createServer($service, $settings, $properties);' extensions/Servers/FragCityCS2/FragCityCS2.php
@@ -66,8 +66,11 @@ jobs:
 
           routes_count="$(grep -c "Route::post('/api/v1/fragcity/bridge/" extensions/Others/FragCityAPI/routes.php)"
           readme_count="$(grep -c -- '- `POST /api/v1/fragcity/bridge/' extensions/Others/FragCityAPI/README.md)"
-          test "$routes_count" -eq 5
+          test "$routes_count" -eq 6
           test "$readme_count" -eq "$routes_count"
           grep -Fq 'POST /api/v1/fragcity/bridge/servers/username' extensions/Others/FragCityAPI/README.md
+          grep -Fq 'POST /api/v1/fragcity/bridge/orders/cs2' extensions/Others/FragCityAPI/README.md
+          grep -Fq 'function createCs2Order' extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq 'order_reference_conflict' extensions/Others/FragCityAPI/FragCityAPI.php
           grep -Fq "'service_upgrade_ids' =>" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -Fq "'upgrade'" extensions/Others/FragCityAPI/FragCityAPI.php

@@ -14,6 +14,12 @@ Route::post('/api/v1/fragcity/bridge/users/sync', [FragCityAPI::class, 'syncUser
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.users.sync');
 
+
+Route::post('/api/v1/fragcity/bridge/orders/cs2', [FragCityAPI::class, 'createCs2Order'])
+    ->middleware('throttle:20,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.orders.cs2');
+
 Route::post('/api/v1/fragcity/bridge/servers/list', [FragCityAPI::class, 'myServers'])
     ->middleware('throttle:30,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
