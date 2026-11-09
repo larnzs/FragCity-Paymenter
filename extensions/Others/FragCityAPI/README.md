@@ -1,13 +1,14 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.4.1**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.5.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
-Provides a narrow private server-to-server bridge for FragCity account synchronization:
+Provides a narrow private server-to-server bridge for FragCity identity, paid CS2 orders and customer server access:
 
 - `POST /api/v1/fragcity/bridge/ping`
 - `POST /api/v1/fragcity/bridge/users/sync`
+- `POST /api/v1/fragcity/bridge/orders/cs2`
 - `POST /api/v1/fragcity/bridge/servers/list`
 - `POST /api/v1/fragcity/bridge/servers/password`
 - `POST /api/v1/fragcity/bridge/servers/username`
@@ -60,6 +61,84 @@ The `servers/password` endpoint accepts a customer-selected Pterodactyl password
 FragCity's website endpoint additionally requires an authenticated website session, CSRF token and successful re-entry of the current FragCity password. The website sends the new panel password to Paymenter only over the signed HTTPS bridge. Never expose the HMAC secret or Pterodactyl Application API key to browser JavaScript.
 
 The panel password is intentionally independent from FragCity and Paymenter passwords. It cannot be read back after setting; customers can set a new one through FragCity at any time.
+
+## Paid CS2 server orders
+
+`POST /api/v1/fragcity/bridge/orders/cs2` accepts a server-to-server order only after the FragCity website has verified the ZarinPal payment with ZarinPal's Verify API. Paymenter does **not** trust a browser redirect, a browser-supplied `Status=OK`, or a client-provided claim that a payment succeeded. The HMAC-authenticated website backend is the only caller.
+
+After validation, the endpoint creates native Paymenter records:
+- an `Order`;
+- a pending `Service` assigned to the configured FragCity CS2 Product and duration Plan;
+- service properties for `servername`, `memory`, `disk`, `cpu` and the eight approved CS2 Egg Checkout variables;
+- an invoice item linked to that service;
+- a successful Paymenter invoice transaction containing the ZarinPal reference.
+
+The endpoint then marks the invoice paid. Paymenter's native `InvoiceObserver` and `ProcessPaidInvoiceService` run after the database commit; Paymenter dispatches its normal `CreateJob`, and `FragCityCS2` delegates provisioning to Paymenter's inherited Pterodactyl extension. This endpoint does not call Pterodactyl directly.
+
+### Required API extension settings
+
+Configure these under **Paymenter Admin → Extensions → Others → FragCity API** after updating the extension:
+
+| Setting | Meaning |
+| --- | --- |
+| `cs2_product_id` | Product ID whose Server Extension is `FragCityCS2` |
+| `cs2_plan_id_1_day` | Product Plan for exactly 1 day |
+| `cs2_plan_id_7_days` | Product Plan for exactly 1 week |
+| `cs2_plan_id_15_days` | Product Plan for exactly 15 days |
+| `cs2_plan_id_30_days` | Product Plan for exactly 1 month |
+| `cs2_currency_code` | Existing Paymenter currency code used by all four Plans |
+| `cs2_currency_unit` | Whether that Paymenter currency stores values in `toman` or `rial` |
+
+Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. The API fails closed when the product, plans, currency or mappings are missing or inconsistent.
+
+### Signed request body
+
+The HMAC signature covers the exact raw JSON request body. The website sends the verified payment receipt together with the configuration snapshot:
+
+```json
+{
+  "order_ref": "32-character-unique-hex-reference",
+  "steamid64": "7656119XXXXXXXXXX",
+  "payment": {
+    "provider": "zarinpal",
+    "authority": "ZarinPal authority",
+    "ref_id": "ZarinPal verified reference",
+    "amount_toman": 749000,
+    "amount_rial": 7490000
+  },
+  "duration_days": 30,
+  "server_name": "FragCity Public",
+  "resources": {
+    "memory_mb": 1024,
+    "disk_mb": 10240,
+    "cpu_percent": 100
+  },
+  "egg": {
+    "SRCDS_MAP": "de_dust2",
+    "SRCDS_MAXPLAYERS": "10",
+    "TICKRATE": "64",
+    "EXEC": "comp.cfg",
+    "MAPGROUP": "mg_comp",
+    "COOLDOWN": "0",
+    "ENABLE_GUARD": "0",
+    "GUARD_BAN_MINUTES": "60"
+  }
+}
+```
+
+The example is illustrative; the amount, reference and identity must come from the website's server-side order record and verified ZarinPal response. The two amounts must match exactly at the 10 Rial per Toman conversion. `order_ref` must be generated once by FragCity and reused unchanged for retries.
+
+Resource constraints currently mirror the FragCity storefront: RAM 1024/1280/1536 MB, disk 5120–10240 MB in 1024 MB increments, and CPU 100/200/300/400 percent. The Egg values are validated against the live `FragCityCS2` Checkout manifest, including the allowed select values. UI labels are never stored as Egg values.
+
+### Idempotency and paid add-ons
+
+- `order_ref`, ZarinPal Authority and verified ZarinPal Ref ID have unique database constraints.
+- An exact retry with the same order reference and payload hash returns the existing Paymenter Order, Invoice and Service IDs; it never creates a second service.
+- Reusing an order reference with a different payload, or attempting to spend an already-used ZarinPal receipt, returns a conflict.
+- The accepted response means the Paymenter Order/Invoice/Service records were committed and the native provisioning flow was queued. It does not claim that Pterodactyl has already finished creating the server.
+- `TICKRATE=128` and `ENABLE_GUARD=1` are rejected for now because their paid surcharges are declared in the FragCity pricing contract but are not yet incorporated into the live storefront quote. They must not be provisioned as free options.
+
+**Renewals are a separate follow-up:** the initial paid invoice uses the verified FragCity amount. Paymenter's later recurring invoice calculation uses the configured Plan and Service Config values. The current Egg selections are stored as service properties, while CPU/RAM/disk/slot surcharges are not yet represented as Paymenter recurring Config Options. Do not enable automatic renewal billing until that recurring-price mapping is completed and tested.
 
 ## Installation
 
