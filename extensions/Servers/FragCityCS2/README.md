@@ -32,17 +32,16 @@ The panel password is independent from FragCity and Paymenter credentials. Ptero
 The manifest is audited against the source Egg:
 
 - **32 Egg environment variables** are represented.
-- **8 variables** are routed to customer Checkout.
+- **6 variables** are routed to extension-defined customer Checkout fields.
+- **2 variables** (`SRCDS_MAXPLAYERS` and `TICKRATE`) are native Paymenter Product Config Options.
 - **21 variables** are routed to Product admin settings.
 - **3 variables** are intentionally not exposed: fixed `SRCDS_APPID`, secret `AUTHKEY`, and development-only `GDB_DEBUG_PORT`.
 
 The secret `AUTHKEY` default is redacted from the FragCity repository.
 
-## Customer Checkout (8)
+## Extension-defined customer Checkout fields (6)
 
 - `SRCDS_MAP`: initial map.
-- `SRCDS_MAXPLAYERS`: maximum player count.
-- `TICKRATE`: 64 base or 128 upgrade (pricing is owned by FragCity storefront).
 - `EXEC`: GameModeManager Game Mode CFG selector, sourced only from `GameModes.Default` and `GameModes.List`.
 - `MAPGROUP`: GameModeManager Map Group selector.
 - `COOLDOWN`: cooldown policy.
@@ -52,6 +51,19 @@ The secret `AUTHKEY` default is redacted from the FragCity repository.
 The `EXEC` selector contains only the **34 unique CFG files** referenced by GameModeManager's game-mode definitions. It excludes `settings/`, `warmup/`, `custom_*`, map-specific and unrelated Egg CFG files. The `MAPGROUP` selector contains the **32 unique map groups** referenced by those definitions.
 
 **Startup dependency:** the current Egg startup command does not contain `+exec {{EXEC}}`. Selecting a CFG stores/passes the environment value but does not execute the CFG until the Egg startup is intentionally updated.
+
+## Native Product Config Options (2)
+
+These two options are deliberately **not** defined in `getCheckoutConfig()` or generated from the Egg manifest. Create and attach them through Paymenter Admin → Configuration → Config Options, then select them on the CS2 Product:
+
+| Config Option | Parent Environment Variable | Type | Child Environment Variables |
+| --- | --- | --- | --- |
+| Player Slots | `SRCDS_MAXPLAYERS` | Slider | One child per supported slot count; use the exact numeric slot count as the Child Environment Variable (for example `5`, `10`, `16`, up to `64`) |
+| Tickrate | `TICKRATE` | Select | `64`, `128` |
+
+Paymenter owns the option IDs, child values, checkout controls, per-plan prices, validation and Service Config records. The selected child Environment Variable is passed to Pterodactyl as the Egg value through Paymenter's own `ExtensionHelper::getServiceProperties()` pipeline. No FragCity API mapping or UI-label conversion is required.
+
+Set the Player Slots default child to the capacity included in the base plan. Give the 64 Tick child the base price and configure the 128 Tick child as a paid upgrade only when its surcharge is reflected in the Paymenter Plan's pricing. The Product Config Option is the source of truth for recurring pricing.
 
 ## Product admin settings (21)
 
@@ -74,9 +86,9 @@ The four fields moved out of customer Checkout for the current test phase:
 
 ## Pricing contract
 
-`ENABLE_GUARD` is a paid add-on toggle. Paymenter captures the selection as a service property; the extension does **not** calculate the surcharge. FragCity Raw PHP checkout owns that pricing using the manifest's `fragcity_pricing` metadata.
+`ENABLE_GUARD` remains an extension-defined Checkout field. Paymenter stores its selected value as a service property; the extension does **not** calculate its surcharge. Any paid add-on price must be represented in the Paymenter product/plan pricing before activation.
 
-`TICKRATE` is customer-selectable. The FragCity storefront should treat 64 as the base option and 128 as a priced upgrade. Changing a Checkout value alone does not modify an already-provisioned server; a future customer dashboard must update that server's Egg environment through the appropriate control flow.
+`TICKRATE` is now a native Product Config Option. Paymenter calculates its price per selected Plan and saves the chosen Config Value on the Service. Do not add a parallel Tickrate surcharge in the FragCity PHP quote or in the API. Changing a Config Option on an existing service requires Paymenter's upgrade flow; it is not a retroactive edit to the already-provisioned Pterodactyl server.
 
 ## Installation
 
@@ -98,15 +110,16 @@ Open **Paymenter Admin → Extensions → Servers**, enable **FragCity CS2**, an
 
 For a test Product, select **FragCity CS2** as its server extension. Inherited Pterodactyl settings (node, location, nest, egg, allocations, resource limits, etc.) remain available alongside FragCity's CS2 settings.
 
-No rows need to be manually created in Paymenter's native Config Options screen.
+Create the two native Product Config Options from the table above in Paymenter's Configuration → Config Options, then attach both options to the CS2 Product. Do not recreate them as `checkout_fields` in the Egg manifest.
 
 ## Egg value safety
 
-All select options are stored in the manifest as explicit `value` / `label` records. The `value` is the exact Egg environment value (for example, `"0"` or `"1"`); the Persian/English `label` is display-only and must never be sent to Pterodactyl.
+Extension-defined Checkout select options are stored in the manifest as explicit `value` / `label` records. The `value` is the exact Egg environment value (for example, `"0"` or `"1"`); the Persian/English `label` is display-only and must never be sent to Pterodactyl. Native Config Option children are managed separately in Paymenter; their Child Environment Variable is the exact Egg value.
 
-The extension adapts this canonical structure for each Paymenter v1.5.9 consumer:
-- Product settings pass explicit records to `FilamentInput`, which converts each record to its intended value/label option.
-- Customer Checkout converts the records to the keyed `egg_value => display_label` map expected by Paymenter's Livewire validator and default Blade template.
+The extension adapts this canonical manifest structure for Paymenter v1.5.9:
+- Product settings pass explicit records to `FilamentInput`.
+- Extension-defined Checkout converts manifest select records to the keyed `egg_value => display_label` map expected by Paymenter's Livewire validator and default Blade template.
+- Native Config Options do not pass through this adapter; Paymenter renders, validates, prices and persists them itself.
 
 This separation is required because Paymenter's Product settings and Checkout use different option consumers. It also prevents PHP's numeric-string array-key behavior from turning labels into stored values.
 
