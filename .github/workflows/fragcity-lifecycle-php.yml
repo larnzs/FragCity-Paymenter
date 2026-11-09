@@ -56,11 +56,18 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "version: '1.5.0'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "'version' => '1.5.0'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -q "version: '1.4.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -q "version: '1.5.1'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "'version' => '1.5.1'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -q "version: '1.5.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq '$this->ensurePterodactylClientUser($service, true);' extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq 'return parent::createServer($service, $settings, $properties);' extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -Fq "['memory', 'disk', 'cpu']" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -Fq 'private function applyResourceLimitsFromConfigOptions' extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -Fq 'public function upgradeServer(Service $service, $settings, $properties)' extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -Fq "\$properties['memory'] = (string) \$resolved['memory'];" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -Fq "\$properties['disk'] = (string) \$resolved['disk'];" extensions/Servers/FragCityCS2/FragCityCS2.php
+          grep -Fq "\$properties['cpu'] = (string) \$resolved['cpu'];" extensions/Servers/FragCityCS2/FragCityCS2.php
+          ! grep -Fq "'memory' => (string) \$memoryMb" extensions/Others/FragCityAPI/FragCityAPI.php
           ! grep -q "function reconcileCustomerLifecycle" extensions/Servers/FragCityCS2/FragCityCS2.php
           ! grep -q "function connectClientApi" extensions/Others/FragCityAPI/FragCityAPI.php
 
