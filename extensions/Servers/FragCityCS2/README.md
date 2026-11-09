@@ -82,12 +82,15 @@ Attach these native Paymenter Config Options to the CS2 Product:
 | CPU | `cpu_percent` | Select | `100`, `200`, `300`, `400` |
 | Player Slots | `SRCDS_MAXPLAYERS` | Select | Every integer from `5` through `64` |
 | Tickrate | `TICKRATE` | Select | `64`, `128` |
+| Databases | `databases` | Select | `0`, `1`, `2`, `3`, `5`, `10` |
+| Additional Allocations | `additional_allocations` | Select | `0`, `1`, `2`, `3`, `5` |
+| Backups | `backups` | Select | `0`, `1`, `2`, `3`, `5`, `10` |
 
-The signed FragCity API resolves and stores all five selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges those selected child Environment Variables into the property map passed to this extension. The inherited Pterodactyl provisioner then receives RAM/SSD/CPU as resource limits and Player Slots/Tickrate as Egg environment variables.
+The signed FragCity API resolves and stores all eight selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges their selected child Environment Variables into the provisioning property map. The inherited Pterodactyl provisioner receives RAM/SSD/CPU as resource limits, Player Slots/Tickrate as Egg environment variables, and the three feature-limit selections as Pterodactyl `feature_limits` values.
 
-For Player Slots, use the exact numeric value as the child Environment Variable. The 5-slot choice is the included base capacity and must have a zero-price row; child values 6–64 represent additional slots and must have their recurring surcharge priced for each supported Plan/currency. Both Tickrate children (`64` and `128`) are free: create a zero-price row for each child under every supported Plan/currency. The Egg Startup command passes the selected value through `-tickrate {{TICKRATE}}`.
+Use the exact numeric value as each child Environment Variable. For Player Slots, the 5-slot choice is the included base capacity and larger values represent the additional-slot surcharge. Both Tickrate children (`64` and `128`) are free. Databases, Additional Allocations and Backups are also free at this stage; create zero-price rows for all their values under every supported Plan/currency. The Egg Startup command passes the selected Tickrate through `-tickrate {{TICKRATE}}`.
 
-Keep Player Slots and Tickrate `Upgradable` disabled. Paymenter's inherited `upgradeServer()` intentionally preserves existing Egg environment values; a future customer-side change flow must explicitly apply environment changes before these options can safely be marked upgradable.
+Keep all eight Config Options `Upgradable` disabled. The three feature-limit values are used for initial provisioning; customers can subsequently manage eligible settings from their Pterodactyl panel according to the permissions enabled for their account.
 
 ## Pricing contract
 
@@ -113,7 +116,7 @@ php artisan optimize:clear
 
 Open **Paymenter Admin → Extensions → Servers**, enable **FragCity CS2**, and configure its Pterodactyl URL and Application API key. Paymenter stores settings separately for each server extension, so use the same host and API key as the built-in Pterodactyl connection.
 
-For a test Product, select **FragCity CS2** as its server extension. Configure the inherited Node, Location, Nest, Egg, allocation, Swap, IO and other non-resource deployment settings as usual. RAM, Storage and CPU are intentionally removed from the inherited Product-level Pterodactyl fields because they are customer/service selections, not static Node defaults.
+Configure the inherited Node, Location, Nest, Egg, allocation, Swap, IO and other non-resource deployment settings as usual. RAM, Storage, CPU, Databases, Additional Allocations and Backups are intentionally removed from the inherited Product-level Pterodactyl fields because they are customer/service selections, not static Node defaults.
 
 Create and attach three native Paymenter Config Options to the CS2 Product:
 
@@ -147,6 +150,7 @@ The manifest is also validated at runtime: variable coverage, scope assignment, 
 - Optional Product values use empty defaults; they are not mandatory for the admin to enter.
 - The current extension does not encrypt saved service-property values for masked fields at rest. Restrict database, backups, and admin access accordingly.
 - `ENABLE_GUARD` pricing is owned by FragCity checkout. Tickrate has no surcharge while both native Config Option child values remain free.
+- Databases, Additional Allocations and Backups are included/free for now; every selected child needs a zero-price and zero-setup-fee row under each supported Plan and Rial currency.
 
 ## Source
 
