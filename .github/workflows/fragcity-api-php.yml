@@ -5,11 +5,13 @@ on:
     branches: [main]
     paths:
       - "extensions/Others/FragCityAPI/**"
+      - "extensions/Servers/FragCityCS2/**"
       - ".github/workflows/fragcity-api-php.yml"
   pull_request:
     branches: [main]
     paths:
       - "extensions/Others/FragCityAPI/**"
+      - "extensions/Servers/FragCityCS2/**"
       - ".github/workflows/fragcity-api-php.yml"
   workflow_dispatch:
 
@@ -18,7 +20,7 @@ permissions:
 
 jobs:
   php-syntax-and-contract:
-    name: PHP 8.3 FragCityAPI checks
+    name: PHP 8.3 FragCity bridge and native Config Option checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -40,38 +42,54 @@ jobs:
             php -l "$file"
           done < <(find extensions/Others/FragCityAPI -type f -name '*.php' -print0 | sort -z)
 
-      - name: Validate CS2 bridge contract and idempotency guards
+      - name: Validate native checkout SSO contract
         shell: bash
         run: |
           set -euo pipefail
           api="extensions/Others/FragCityAPI/FragCityAPI.php"
           routes="extensions/Others/FragCityAPI/routes.php"
-          migration="extensions/Others/FragCityAPI/database/migrations/2026_11_09_000006_create_fragcity_server_orders_table.php"
           manifest="extensions/Servers/FragCityCS2/resources/cs2-egg-variables.json"
+          server_extension="extensions/Servers/FragCityCS2/FragCityCS2.php"
 
-          grep -Fq "version: '1.5.0'" "$api"
-          grep -Fq "function createCs2Order" "$api"
-          grep -Fq "ExtensionHelper::addPayment(" "$api"
-          grep -Fq "Invoice::STATUS_PAID" "$api"
-          grep -Fq "zarinpal_payment_already_used" "$api"
-          grep -Fq "order_reference_conflict" "$api"
-          grep -Fq "paid_option_pricing_not_configured" "$api"
-          grep -Fq "configOptions.children.plans.prices" "$api"
-          grep -Fq "cs2_resource_config_mapping_invalid" "$api"
-          grep -Fq "cs2_resource_config_price_missing" "$api"
-          grep -Fq '$service->configs()->create(' "$api"
-          grep -Fq "/api/v1/fragcity/bridge/orders/cs2" "$routes"
-          grep -Fq "fragcity_server_orders" "$migration"
-          grep -Fq "zarinpal_authority" "$migration"
-          grep -Fq "zarinpal_ref_id" "$migration"
+          grep -Fq "version: '1.6.0'" "$api"
+          grep -Fq "function createCheckoutUrl" "$api"
+          grep -Fq "function checkoutLogin" "$api"
+          grep -Fq "Cache::pull($cacheKey)" "$api"
+          grep -Fq "Auth::guard('web')->login($user, false)" "$api"
+          grep -Fq "products.checkout" "$api"
+          grep -Fq "checkout-url" "$routes"
+          grep -Fq "checkout-login/{token}" "$routes"
+          ! grep -Fq "function createCs2Order" "$api"
+          ! grep -Fq "orders/cs2" "$routes"
+          ! grep -Fq '$resourceConfigTargets' "$api"
+          ! grep -Fq 'cs2_plan_id_' "$api"
+          ! grep -Fq 'cs2_currency_unit' "$api"
+          grep -Fq "'cs2_product_id'" "$api"
+          grep -Fq "function getCheckoutConfig" "$server_extension"
+          grep -Fq "'config_option'" "$server_extension"
 
           php -r '
             $manifest = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
             $fields = array_column($manifest["paymenter"]["checkout_fields"] ?? [], "name");
-            $expected = ["SRCDS_MAP", "SRCDS_MAXPLAYERS", "TICKRATE", "EXEC", "MAPGROUP", "COOLDOWN", "ENABLE_GUARD", "GUARD_BAN_MINUTES"];
-            if (array_diff($expected, $fields) || array_diff($fields, $expected)) {
-              fwrite(STDERR, "CS2 Checkout manifest does not match the eight-field bridge contract.\\n");
+            $expected = ["SRCDS_MAP", "EXEC", "MAPGROUP", "COOLDOWN", "ENABLE_GUARD", "GUARD_BAN_MINUTES"];
+            sort($fields);
+            sort($expected);
+            if ($fields !== $expected) {
+              fwrite(STDERR, "CS2 extension Checkout manifest does not match the six-field contract.\\n");
               exit(1);
             }
-            echo "CS2 Egg Checkout manifest contract OK", PHP_EOL;
+            if ((int) ($manifest["summary"]["config_options"] ?? 0) !== 2) {
+              fwrite(STDERR, "CS2 manifest must declare two native Egg Config Options.\\n");
+              exit(1);
+            }
+            $statuses = [];
+            foreach ($manifest["variables"] ?? [] as $variable) {
+              $statuses[$variable["env_variable"] ?? ""] = $variable["paymenter"]["status"] ?? "";
+            }
+            if (($statuses["SRCDS_MAXPLAYERS"] ?? "") !== "config_option"
+                || ($statuses["TICKRATE"] ?? "") !== "config_option") {
+              fwrite(STDERR, "Player Slots and Tickrate must be native Paymenter Config Options.\\n");
+              exit(1);
+            }
+            echo "Native Paymenter Config Option manifest contract OK", PHP_EOL;
           ' "$manifest"
