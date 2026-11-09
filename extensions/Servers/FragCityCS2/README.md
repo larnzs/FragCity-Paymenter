@@ -72,11 +72,29 @@ The four fields moved out of customer Checkout for the current test phase:
 - `AUTHKEY`: secret Workshop download key.
 - `GDB_DEBUG_PORT`: development/debug-only port.
 
+## Native Product Config Options
+
+Attach these native Paymenter Config Options to the CS2 Product:
+
+| Config Option | Parent Environment Variable | Type | Child Environment Variables |
+| --- | --- | --- | --- |
+| RAM | `memory_mb` | Select | `1024`, `1280`, `1536` |
+| SSD Storage | `disk_mb` | Select | `5120`, `6144`, `7168`, `8192`, `9216`, `10240` |
+| CPU | `cpu_percent` | Select | `100`, `200`, `300`, `400` |
+| Player Slots | `SRCDS_MAXPLAYERS` | Select | Every integer from `5` through `64` |
+| Tickrate | `TICKRATE` | Select | `64` only for now |
+
+The signed FragCity API resolves and stores all five selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges those selected child Environment Variables into the property map passed to this extension. The inherited Pterodactyl provisioner then receives RAM/SSD/CPU as resource limits and Player Slots/Tickrate as Egg environment variables.
+
+For Max Players, use the exact numeric value as the child Environment Variable. The 5-slot choice is the included base capacity; child values 6–64 represent additional slots and must have their recurring surcharge priced for each supported Plan/currency. The Tickrate 64 child must have a zero-price row for every Plan/currency. Do not add 128 Tick yet: the order bridge rejects it until the Raw PHP storefront includes the upgrade surcharge and the Egg startup is verified to apply `-tickrate 128`.
+
+Keep Player Slots and Tickrate `Upgradable` disabled. Paymenter's inherited `upgradeServer()` intentionally preserves existing Egg environment values; a future customer-side change flow must explicitly apply environment changes before these options can safely be marked upgradable.
+
 ## Pricing contract
 
 `ENABLE_GUARD` is a paid add-on toggle. Paymenter captures the selection as a service property; the extension does **not** calculate the surcharge. FragCity Raw PHP checkout owns that pricing using the manifest's `fragcity_pricing` metadata.
 
-`TICKRATE` is customer-selectable. The FragCity storefront should treat 64 as the base option and 128 as a priced upgrade. Changing a Checkout value alone does not modify an already-provisioned server; a future customer dashboard must update that server's Egg environment through the appropriate control flow.
+`TICKRATE` remains 64-only for paid orders until the 128-Tick price is included in the authoritative FragCity quote and the startup behavior is tested. Changing a Checkout value alone does not modify an already-provisioned server.
 
 ## Installation
 
