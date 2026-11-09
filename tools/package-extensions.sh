@@ -105,8 +105,14 @@ for type_dir in "$ROOT"/extensions/*; do
         }
 
         direct_php_files="$(unzip -Z1 "$archive_path" | awk -F/ 'NF == 2 && $2 ~ /\.php$/ { print }')"
-        [[ "$direct_php_files" == "$extension_name/$extension_name.php" ]] || {
-            echo "ERROR: $archive_name must expose exactly one root-level PHP class file." >&2
+        grep -Fqx "$extension_name/$extension_name.php" <<< "$direct_php_files" || {
+            echo "ERROR: $archive_name is missing its root-level main class file." >&2
+            exit 1
+        }
+
+        unexpected_php_files="$(printf '%s\n' "$direct_php_files" | grep -Fvx "$extension_name/$extension_name.php" | grep -Fvx "$extension_name/routes.php" || true)"
+        [[ -z "$unexpected_php_files" ]] || {
+            echo "ERROR: Unexpected root-level PHP files in $archive_name: $unexpected_php_files" >&2
             exit 1
         }
 
