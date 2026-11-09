@@ -16,7 +16,6 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Database\QueryException;
@@ -324,62 +323,6 @@ class FragCityAPI extends Extension
                 'success' => true,
                 'data' => $result,
             ]);
-        } catch (QueryException $e) {
-            // Unique order/payment indexes are the final concurrency guard.
-            // Recover an exact retry, but never attach one ZarinPal receipt to
-            // a different order reference or payload.
-            try {
-                $existing = DB::table('fragcity_server_orders')
-                    ->where('order_ref', $orderRef)
-                    ->first();
-
-                if (
-                    $existing
-                    && hash_equals((string) $existing->payload_hash, $payloadHash)
-                    && (string) $existing->status === 'accepted'
-                ) {
-                    return response()->json([
-                        'success' => true,
-                        'data' => [
-                            'order_id' => (int) $existing->paymenter_order_id,
-                            'invoice_id' => (int) $existing->paymenter_invoice_id,
-                            'service_id' => (int) $existing->paymenter_service_id,
-                            'status' => 'accepted',
-                            'replayed' => true,
-                            'provisioning' => 'queued_by_paymenter',
-                            'currency_code' => $currencyCode,
-                            'currency_unit' => $currencyUnit,
-                        ],
-                    ]);
-                }
-
-                $paymentUsed = DB::table('fragcity_server_orders')
-                    ->where(function ($query) use ($authority, $zarinpalRef): void {
-                        $query->where('zarinpal_authority', $authority)
-                            ->orWhere('zarinpal_ref_id', $zarinpalRef);
-                    })
-                    ->exists();
-
-                if ($paymentUsed) {
-                    return response()->json([
-                        'success' => false,
-                        'error' => 'zarinpal_payment_already_used',
-                    ], 409);
-                }
-            } catch (Throwable) {
-                // Fall through to the generic persistence failure below.
-            }
-
-            Log::error('FragCity CS2 order persistence failed.', [
-                'order_ref' => $orderRef,
-                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
-                'sqlstate' => (string) $e->getCode(),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'error' => 'cs2_order_creation_failed',
-            ], 500);
         } catch (RuntimeException $e) {
             $safeErrors = [
                 'username_already_in_use',
@@ -844,6 +787,62 @@ class FragCityAPI extends Extension
                     'currency_unit' => $currencyUnit,
                 ],
             ], !empty($result['replayed']) ? 200 : 201);
+        } catch (QueryException $e) {
+            // Unique order/payment indexes are the final concurrency guard.
+            // Recover an exact retry, but never attach one ZarinPal receipt to
+            // a different order reference or payload.
+            try {
+                $existing = DB::table('fragcity_server_orders')
+                    ->where('order_ref', $orderRef)
+                    ->first();
+
+                if (
+                    $existing
+                    && hash_equals((string) $existing->payload_hash, $payloadHash)
+                    && (string) $existing->status === 'accepted'
+                ) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'order_id' => (int) $existing->paymenter_order_id,
+                            'invoice_id' => (int) $existing->paymenter_invoice_id,
+                            'service_id' => (int) $existing->paymenter_service_id,
+                            'status' => 'accepted',
+                            'replayed' => true,
+                            'provisioning' => 'queued_by_paymenter',
+                            'currency_code' => $currencyCode,
+                            'currency_unit' => $currencyUnit,
+                        ],
+                    ]);
+                }
+
+                $paymentUsed = DB::table('fragcity_server_orders')
+                    ->where(function ($query) use ($authority, $zarinpalRef): void {
+                        $query->where('zarinpal_authority', $authority)
+                            ->orWhere('zarinpal_ref_id', $zarinpalRef);
+                    })
+                    ->exists();
+
+                if ($paymentUsed) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'zarinpal_payment_already_used',
+                    ], 409);
+                }
+            } catch (Throwable) {
+                // Fall through to the generic persistence failure below.
+            }
+
+            Log::error('FragCity CS2 order persistence failed.', [
+                'order_ref' => $orderRef,
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'sqlstate' => (string) $e->getCode(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'cs2_order_creation_failed',
+            ], 500);
         } catch (RuntimeException $e) {
             $status = match ($e->getMessage()) {
                 'fragcity_user_not_linked', 'linked_paymenter_user_missing' => 404,
