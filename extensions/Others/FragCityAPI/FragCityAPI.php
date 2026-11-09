@@ -97,18 +97,6 @@ class FragCityAPI extends Extension
                 'required' => true,
                 'validation' => 'required|string|max:12|regex:/^[A-Za-z0-9_-]+$/',
             ],
-            [
-                'name' => 'cs2_currency_unit',
-                'label' => 'CS2 Paymenter Currency Unit',
-                'type' => 'select',
-                'description' => 'Select whether the configured Paymenter currency values are expressed in Toman or Rial.',
-                'options' => [
-                    ['value' => 'toman', 'label' => 'Toman'],
-                    ['value' => 'rial', 'label' => 'Rial'],
-                ],
-                'default' => 'toman',
-                'required' => true,
-            ],
         ];
     }
 
@@ -442,7 +430,9 @@ class FragCityAPI extends Extension
         }
 
         $currencyCode = strtoupper(trim((string) $this->config('cs2_currency_code')));
-        $currencyUnit = strtolower(trim((string) $this->config('cs2_currency_unit')));
+        // Paymenter is the Rial system of record. FragCity receives and quotes Toman,
+        // but every Paymenter monetary record must be stored in Rial.
+        $currencyUnit = 'rial';
         $productId = (int) $this->config('cs2_product_id');
         $planSetting = [
             1 => 'cs2_plan_id_1_day',
@@ -456,7 +446,6 @@ class FragCityAPI extends Extension
             $productId < 1
             || $planId < 1
             || $currencyCode === ''
-            || !in_array($currencyUnit, ['toman', 'rial'], true)
         ) {
             return response()->json([
                 'success' => false,
@@ -464,7 +453,7 @@ class FragCityAPI extends Extension
             ], 503);
         }
 
-        $paymenterAmount = $currencyUnit === 'toman' ? $amountToman : $amountRial;
+        $paymenterAmount = $amountRial;
         $eggHashValues = $eggValues;
         ksort($eggHashValues, SORT_STRING);
         $canonicalPayload = [
