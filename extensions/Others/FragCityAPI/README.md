@@ -87,10 +87,11 @@ Configure these under **Paymenter Admin → Extensions → Others → FragCity A
 | `cs2_plan_id_7_days` | Product Plan for exactly 1 week |
 | `cs2_plan_id_15_days` | Product Plan for exactly 15 days |
 | `cs2_plan_id_30_days` | Product Plan for exactly 1 month |
-| `cs2_currency_code` | Existing Paymenter currency code used by all four Plans |
-| `cs2_currency_unit` | Whether that Paymenter currency stores values in `toman` or `rial` |
+| `cs2_currency_code` | Existing Paymenter Rial currency code used by all four Plans (for example `IRR`) |
 
-Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. The API fails closed when the product, plans, currency or mappings are missing or inconsistent.
+Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. The selected RAM, disk and CPU Config Option values must also each have a price row for the selected Plan and Rial currency. The API fails closed when the product, plans, currency or mappings are missing or inconsistent.
+
+**Currency is Rial-only inside Paymenter.** The bridge always creates the Paymenter Service, Invoice item and successful Invoice Transaction using `payment.amount_rial`. `payment.amount_toman` is retained only as the source amount for the conversion-integrity check and order audit. The bridge verifies that `amount_rial === amount_toman * 10`; it never uses the Toman amount to write Paymenter monetary records.
 
 ### Signed request body
 
