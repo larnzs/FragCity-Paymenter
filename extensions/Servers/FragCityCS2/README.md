@@ -32,17 +32,16 @@ The panel password is independent from FragCity and Paymenter credentials. Ptero
 The manifest is audited against the source Egg:
 
 - **32 Egg environment variables** are represented.
-- **8 variables** are routed to customer Checkout.
+- **6 variables** are routed to customer Checkout.
+- **2 variables** are routed to native Product Config Options.
 - **21 variables** are routed to Product admin settings.
 - **3 variables** are intentionally not exposed: fixed `SRCDS_APPID`, secret `AUTHKEY`, and development-only `GDB_DEBUG_PORT`.
 
 The secret `AUTHKEY` default is redacted from the FragCity repository.
 
-## Customer Checkout (8)
+## Customer Checkout (6)
 
 - `SRCDS_MAP`: initial map.
-- `SRCDS_MAXPLAYERS`: maximum player count.
-- `TICKRATE`: 64 base or 128 upgrade (pricing is owned by FragCity storefront).
 - `EXEC`: GameModeManager Game Mode CFG selector, sourced only from `GameModes.Default` and `GameModes.List`.
 - `MAPGROUP`: GameModeManager Map Group selector.
 - `COOLDOWN`: cooldown policy.
@@ -82,11 +81,11 @@ Attach these native Paymenter Config Options to the CS2 Product:
 | SSD Storage | `disk_mb` | Select | `5120`, `6144`, `7168`, `8192`, `9216`, `10240` |
 | CPU | `cpu_percent` | Select | `100`, `200`, `300`, `400` |
 | Player Slots | `SRCDS_MAXPLAYERS` | Select | Every integer from `5` through `64` |
-| Tickrate | `TICKRATE` | Select | `64` only for now |
+| Tickrate | `TICKRATE` | Select | `64`, `128` |
 
 The signed FragCity API resolves and stores all five selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges those selected child Environment Variables into the property map passed to this extension. The inherited Pterodactyl provisioner then receives RAM/SSD/CPU as resource limits and Player Slots/Tickrate as Egg environment variables.
 
-For Max Players, use the exact numeric value as the child Environment Variable. The 5-slot choice is the included base capacity; child values 6–64 represent additional slots and must have their recurring surcharge priced for each supported Plan/currency. The Tickrate 64 child must have a zero-price row for every Plan/currency. Do not add 128 Tick yet: the order bridge rejects it until the Raw PHP storefront includes the upgrade surcharge and the Egg startup is verified to apply `-tickrate 128`.
+For Player Slots, use the exact numeric value as the child Environment Variable. The 5-slot choice is the included base capacity and must have a zero-price row; child values 6–64 represent additional slots and must have their recurring surcharge priced for each supported Plan/currency. Both Tickrate children (`64` and `128`) are free: create a zero-price row for each child under every supported Plan/currency. The Egg Startup command passes the selected value through `-tickrate {{TICKRATE}}`.
 
 Keep Player Slots and Tickrate `Upgradable` disabled. Paymenter's inherited `upgradeServer()` intentionally preserves existing Egg environment values; a future customer-side change flow must explicitly apply environment changes before these options can safely be marked upgradable.
 
@@ -94,7 +93,7 @@ Keep Player Slots and Tickrate `Upgradable` disabled. Paymenter's inherited `upg
 
 `ENABLE_GUARD` is a paid add-on toggle. Paymenter captures the selection as a service property; the extension does **not** calculate the surcharge. FragCity Raw PHP checkout owns that pricing using the manifest's `fragcity_pricing` metadata.
 
-`TICKRATE` remains 64-only for paid orders until the 128-Tick price is included in the authoritative FragCity quote and the startup behavior is tested. Changing a Checkout value alone does not modify an already-provisioned server.
+`TICKRATE` is selected only through its native Paymenter Config Option; both `64` and `128` are currently free. Changing a Config Option selection alone does not modify an already-provisioned server.
 
 ## Installation
 
@@ -147,7 +146,7 @@ The manifest is also validated at runtime: variable coverage, scope assignment, 
 - `STEAM_ACC`, `PASSWORD`, `WORKSHOP`, and `CONSOLE_LOG_LEVEL` are currently Product-level settings shared by services on the Product.
 - Optional Product values use empty defaults; they are not mandatory for the admin to enter.
 - The current extension does not encrypt saved service-property values for masked fields at rest. Restrict database, backups, and admin access accordingly.
-- `ENABLE_GUARD` and `TICKRATE` surcharges are not calculated by the Paymenter extension.
+- `ENABLE_GUARD` pricing is owned by FragCity checkout. Tickrate has no surcharge while both native Config Option child values remain free.
 
 ## Source
 
