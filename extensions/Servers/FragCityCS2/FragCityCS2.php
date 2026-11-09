@@ -908,10 +908,11 @@ class FragCityCS2 extends PterodactylExtension
 
             if (
                 !$configValue
-                || !in_array(strtolower((string) ($configOption->type ?? '')), ['select', 'radio'], true)
+                || strtolower((string) ($configOption->type ?? '')) !== 'select'
+                || (bool) ($configOption->upgradable ?? false)
             ) {
                 throw new RuntimeException(
-                    "FragCity CS2 Config Option {$envVariable} must be a Select or Radio option with a selected child value."
+                    "FragCity CS2 Config Option {$envVariable} must be a non-upgradable Select option with a selected child value."
                 );
             }
 
