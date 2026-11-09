@@ -7,7 +7,7 @@ Paymenter v1.5.9 gateway extension for ZarinPal v4.
 Enable **ZarinPal Gateway** under Paymenter Admin → Extensions → Gateways, then configure:
 
 - Merchant ID: the production or sandbox ZarinPal merchant ID.
-- Paymenter currency unit: choose Toman only when the Paymenter currency's stored values are Toman; otherwise choose Rial.
+- Paymenter currency code: the exact Paymenter Currency code this gateway should accept (for example, the code configured for the CS2 plans).\n- Paymenter currency unit: choose Toman only when the selected Paymenter currency's stored values are Toman; otherwise choose Rial.
 - Sandbox mode: use only with a ZarinPal sandbox merchant.
 - Description prefix: a short invoice description shown in the payment gateway.
 
