@@ -829,24 +829,30 @@ class FragCityAPI extends Extension
                     ->where('order_ref', $orderRef)
                     ->first();
 
-                if (
-                    $existing
-                    && hash_equals((string) $existing->payload_hash, $payloadHash)
-                    && (string) $existing->status === 'accepted'
-                ) {
+                if ($existing) {
+                    if (
+                        hash_equals((string) $existing->payload_hash, $payloadHash)
+                        && (string) $existing->status === 'accepted'
+                    ) {
+                        return response()->json([
+                            'success' => true,
+                            'data' => [
+                                'order_id' => (int) $existing->paymenter_order_id,
+                                'invoice_id' => (int) $existing->paymenter_invoice_id,
+                                'service_id' => (int) $existing->paymenter_service_id,
+                                'status' => 'accepted',
+                                'replayed' => true,
+                                'provisioning' => 'queued_by_paymenter',
+                                'currency_code' => $currencyCode,
+                                'currency_unit' => $currencyUnit,
+                            ],
+                        ]);
+                    }
+
                     return response()->json([
-                        'success' => true,
-                        'data' => [
-                            'order_id' => (int) $existing->paymenter_order_id,
-                            'invoice_id' => (int) $existing->paymenter_invoice_id,
-                            'service_id' => (int) $existing->paymenter_service_id,
-                            'status' => 'accepted',
-                            'replayed' => true,
-                            'provisioning' => 'queued_by_paymenter',
-                            'currency_code' => $currencyCode,
-                            'currency_unit' => $currencyUnit,
-                        ],
-                    ]);
+                        'success' => false,
+                        'error' => 'order_reference_conflict',
+                    ], 409);
                 }
 
                 $paymentUsed = DB::table('fragcity_server_orders')
@@ -879,7 +885,7 @@ class FragCityAPI extends Extension
         } catch (RuntimeException $e) {
             $status = match ($e->getMessage()) {
                 'fragcity_user_not_linked', 'linked_paymenter_user_missing' => 404,
-                'cs2_checkout_not_configured' => 503,
+                'cs2_checkout_not_configured', 'cs2_checkout_manifest_unavailable' => 503,
                 'order_reference_conflict', 'zarinpal_payment_already_used' => 409,
                 'paid_option_pricing_not_configured', 'invalid_egg_variable', 'egg_validation_failed',
                 'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
