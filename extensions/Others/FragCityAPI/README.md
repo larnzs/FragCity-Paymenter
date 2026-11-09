@@ -70,6 +70,7 @@ After validation, the endpoint creates native Paymenter records:
 - an `Order`;
 - a pending `Service` assigned to the configured FragCity CS2 Product and duration Plan;
 - service properties for `servername`, `memory`, `disk`, `cpu` and the eight approved CS2 Egg Checkout variables;
+- native Paymenter `ServiceConfig` rows for the selected RAM, SSD and CPU Config Options. The bridge resolves each selected resource amount to exactly one visible Product option child by its `Environment Variable`, then requires a price for the selected Plan and currency. This preserves the choices for Paymenter's recurring-price and upgrade calculations. Missing or ambiguous mappings, or missing recurring option prices, fail closed before an order is accepted;
 - an invoice item linked to that service;
 - a successful Paymenter invoice transaction containing the ZarinPal reference.
 
