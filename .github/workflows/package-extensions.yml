@@ -1,12 +1,15 @@
-name: Package Paymenter Extensions
+name: Release FragCity Packages
 
 on:
   push:
     branches: [main]
     paths:
       - "extensions/**"
+      - "themes/fragcity/**"
       - "tools/package-extensions.sh"
+      - "tools/package-release.sh"
       - "docs/INSTALL-EXTENSIONS.md"
+      - "README.md"
       - ".github/workflows/package-extensions.yml"
   workflow_dispatch:
 
@@ -14,83 +17,99 @@ permissions:
   contents: write
 
 concurrency:
-  group: package-paymenter-extensions-main
+  group: fragcity-release-main
   cancel-in-progress: false
 
 jobs:
-  package:
-    name: Build drag-and-drop extension ZIPs
+  release:
+    name: Build and publish one versioned Release
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Build and validate individual extension ZIPs
+      - name: Generate unique Release tag
+        id: release-meta
         shell: bash
         run: |
           set -Eeuo pipefail
-          bash tools/package-extensions.sh "$RUNNER_TEMP/fragcity-extension-packages"
+          release_tag="fragcity-$(date -u +%Y.%m.%d)-\${GITHUB_RUN_NUMBER}"
+          echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
+          echo "Release tag: $release_tag"
 
-      - name: Upload the package bundle
+      - name: Build and validate Extension and Theme packages
+        shell: bash
+        env:
+          RELEASE_TAG: \${{ steps.release-meta.outputs.release_tag }}
+        run: |
+          set -Eeuo pipefail
+          bash tools/package-release.sh "$RUNNER_TEMP/fragcity-release" "$RELEASE_TAG"
+
+      - name: Prepare Release notes
+        shell: bash
+        env:
+          RELEASE_TAG: \${{ steps.release-meta.outputs.release_tag }}
+        run: |
+          set -Eeuo pipefail
+          cat > "$RUNNER_TEMP/FRAGCITY-RELEASE-NOTES.md" <<'NOTES'
+          # FragCity Release
+
+          This Release contains the current FragCity Paymenter add-ons and the FragCity Paymenter theme source bundle, built from the exact source commit shown on this Release.
+
+          ## Paymenter Extensions
+
+          Upload each of these ZIPs separately from Admin → Extensions → Upload Extension:
+
+          1. FragCityAPI-v*.zip — install under Others.
+          2. FragCitySupportAPI-v*.zip — install under Others.
+          3. FragCityCS2-v*.zip — install under Servers.
+
+          Install/update order: FragCityAPI → FragCitySupportAPI → FragCityCS2.
+
+          ## FragCity Paymenter Theme
+
+          FragCityPaymenterTheme-*.zip is a source bundle, not a Paymenter Extension. Do not upload it through Extension Uploader.
+
+          Extract its fragcity/ directory into the Paymenter installation's themes/ directory. From the Paymenter installation root, rebuild its Vite assets with:
+
+          npm run build -- fragcity
+
+          This uses the Node dependencies already installed for the matching Paymenter version. The theme ZIP does not contain Paymenter Core, vendor, node_modules, runtime settings or secrets.
+
+          ## Integrity
+
+          Verify downloaded ZIPs with SHA256SUMS. PACKAGES.txt lists the packaged components and source revision. THEME-PACKAGE.txt explains the theme bundle boundary.
+
+          ## Compatibility and safety
+
+          Compatibility target: Paymenter v1.5.9, PHP 8.3/8.4. Back up the active extension/theme directories and database before updating. Never overwrite a newer installed FragCityAPI version with an older one without reviewing the code differences.
+          NOTES
+
+      - name: Upload a secondary Actions artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fragcity-paymenter-extensions-${{ github.sha }}
-          path: ${{ runner.temp }}/fragcity-extension-packages/
+          name: fragcity-release-\${{ steps.release-meta.outputs.release_tag }}
+          path: |
+            \${{ runner.temp }}/fragcity-release/
+            \${{ runner.temp }}/FRAGCITY-RELEASE-NOTES.md
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
 
-      - name: Publish ready-to-upload ZIPs into the repository
-        if: github.ref == 'refs/heads/main'
+      - name: Publish GitHub Release with all install packages
         shell: bash
         env:
-          SOURCE_SHA: ${{ github.sha }}
+          GH_TOKEN: \${{ github.token }}
+          RELEASE_TAG: \${{ steps.release-meta.outputs.release_tag }}
         run: |
           set -Eeuo pipefail
-
-          package_dir="$RUNNER_TEMP/fragcity-extension-packages"
-          publish_dir="dist/extensions"
-          mkdir -p "$publish_dir"
-
-          # Remove older generated package versions so the folder contains
-          # only the current ZIP for each extension.
-          find "$publish_dir" -maxdepth 1 -type f \\
-            \( -name 'FragCityAPI-v*.zip' \\
-               -o -name 'FragCitySupportAPI-v*.zip' \\
-               -o -name 'FragCityCS2-v*.zip' \\
-               -o -name 'SHA256SUMS' \\
-               -o -name 'PACKAGES.txt' \\
-               -o -name 'README.md' \) -delete
-
-          cp "$package_dir"/*.zip "$publish_dir/"
-          cp "$package_dir/SHA256SUMS" "$publish_dir/"
-          cp "$package_dir/PACKAGES.txt" "$publish_dir/"
-
-          cat > "$publish_dir/README.md" <<'README'
-          # FragCity Paymenter Extension Packages
-
-          Ready-to-upload extension ZIPs built from the repository's `main` branch.
-
-          Upload each ZIP separately using Paymenter Admin → Extensions → Upload Extension.
-          Do not upload the outer GitHub Actions artifact ZIP.
-
-          | Extension | Paymenter section |
-          | --- | --- |
-          | FragCityAPI | Others |
-          | FragCitySupportAPI | Others |
-          | FragCityCS2 | Servers |
-
-          `PACKAGES.txt` records the package versions and source commit.
-          `SHA256SUMS` contains SHA-256 hashes for all extension ZIP files.
-          README
-
-          git add "$publish_dir"
-          if git diff --cached --quiet; then
-            echo "Repository packages are already up to date."
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "Publish Paymenter extension ZIPs from ${SOURCE_SHA:0:12}"
-          git push origin HEAD:main
+          package_dir="$RUNNER_TEMP/fragcity-release"
+          gh release create "$RELEASE_TAG" \
+            "$package_dir"/*.zip \
+            "$package_dir/SHA256SUMS" \
+            "$package_dir/PACKAGES.txt" \
+            "$package_dir/THEME-PACKAGE.txt" \
+            --target "$GITHUB_SHA" \
+            --title "FragCity $RELEASE_TAG" \
+            --notes-file "$RUNNER_TEMP/FRAGCITY-RELEASE-NOTES.md"
+          echo "Published: $(gh release view "$RELEASE_TAG" --json url --jq .url)"
