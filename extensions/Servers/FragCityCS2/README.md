@@ -18,7 +18,7 @@ If an existing client is found by email with an empty `external_id`, the extensi
 
 ## Customer server management
 
-Extension version: **1.2.0**.
+Extension version: **1.5.0**.
 
 The extension exposes two narrow methods for the signed FragCity API bridge:
 
@@ -96,9 +96,17 @@ php artisan optimize:clear
 
 Open **Paymenter Admin → Extensions → Servers**, enable **FragCity CS2**, and configure its Pterodactyl URL and Application API key. Paymenter stores settings separately for each server extension, so use the same host and API key as the built-in Pterodactyl connection.
 
-For a test Product, select **FragCity CS2** as its server extension. Inherited Pterodactyl settings (node, location, nest, egg, allocations, resource limits, etc.) remain available alongside FragCity's CS2 settings.
+For a test Product, select **FragCity CS2** as its server extension. Configure the inherited Node, Location, Nest, Egg, allocation, Swap, IO and other non-resource deployment settings as usual. RAM, Storage and CPU are intentionally removed from the inherited Product-level Pterodactyl fields because they are customer/service selections, not static Node defaults.
 
-No rows need to be manually created in Paymenter's native Config Options screen.
+Create and attach three native Paymenter Config Options to the CS2 Product:
+
+| Resource | Recommended parent `env_variable` | Allowed child `env_variable` values |
+| --- | --- | --- |
+| RAM | `memory_mb` | `1024`, `1280`, `1536` |
+| Storage / SSD | `disk_mb` | `5120`, `6144`, `7168`, `8192`, `9216`, `10240` |
+| CPU | `cpu_percent` | `100`, `200`, `300`, `400` |
+
+Use a selectable Config Option type (not free-form `text` or `number`), attach each parent option to the Product, and set a price for every child under each supported billing Plan and currency. Child `env_variable` values must be numeric and exact; labels are display-only. The FragCity API creates the native ServiceConfig rows from these values. At provisioning and upgrade time, this extension translates those rows into the `memory`, `disk` and `cpu` keys expected by Paymenter's inherited Pterodactyl implementation. If a required option is missing, duplicated or has an unsupported value, provisioning stops rather than creating an incorrectly limited server.
 
 ## Egg value safety
 
