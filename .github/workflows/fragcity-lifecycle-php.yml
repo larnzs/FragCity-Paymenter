@@ -58,6 +58,9 @@ jobs:
           set -euo pipefail
           grep -q "version: '1.5.1'" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -Fq "'version' => '1.5.1'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "\$currencyUnit = 'rial'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq '\$paymenterAmount = \$amountRial;' extensions/Others/FragCityAPI/FragCityAPI.php
+          ! grep -Fq "'name' => 'cs2_currency_unit'" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -q "version: '1.5.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq '$this->ensurePterodactylClientUser($service, true);' extensions/Servers/FragCityCS2/FragCityCS2.php
           grep -Fq 'return parent::createServer($service, $settings, $properties);' extensions/Servers/FragCityCS2/FragCityCS2.php
