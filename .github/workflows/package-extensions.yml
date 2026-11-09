@@ -11,7 +11,11 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: package-paymenter-extensions-main
+  cancel-in-progress: false
 
 jobs:
   package:
@@ -35,3 +39,58 @@ jobs:
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
+
+      - name: Publish ready-to-upload ZIPs into the repository
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          SOURCE_SHA: ${{ github.sha }}
+        run: |
+          set -Eeuo pipefail
+
+          package_dir="$RUNNER_TEMP/fragcity-extension-packages"
+          publish_dir="dist/extensions"
+          mkdir -p "$publish_dir"
+
+          # Remove older generated package versions so the folder contains
+          # only the current ZIP for each extension.
+          find "$publish_dir" -maxdepth 1 -type f \\
+            \( -name 'FragCityAPI-v*.zip' \\
+               -o -name 'FragCitySupportAPI-v*.zip' \\
+               -o -name 'FragCityCS2-v*.zip' \\
+               -o -name 'SHA256SUMS' \\
+               -o -name 'PACKAGES.txt' \\
+               -o -name 'README.md' \) -delete
+
+          cp "$package_dir"/*.zip "$publish_dir/"
+          cp "$package_dir/SHA256SUMS" "$publish_dir/"
+          cp "$package_dir/PACKAGES.txt" "$publish_dir/"
+
+          cat > "$publish_dir/README.md" <<'README'
+          # FragCity Paymenter Extension Packages
+
+          Ready-to-upload extension ZIPs built from the repository's `main` branch.
+
+          Upload each ZIP separately using Paymenter Admin → Extensions → Upload Extension.
+          Do not upload the outer GitHub Actions artifact ZIP.
+
+          | Extension | Paymenter section |
+          | --- | --- |
+          | FragCityAPI | Others |
+          | FragCitySupportAPI | Others |
+          | FragCityCS2 | Servers |
+
+          `PACKAGES.txt` records the package versions and source commit.
+          `SHA256SUMS` contains SHA-256 hashes for all extension ZIP files.
+          README
+
+          git add "$publish_dir"
+          if git diff --cached --quiet; then
+            echo "Repository packages are already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Publish Paymenter extension ZIPs from ${SOURCE_SHA:0:12}"
+          git push origin HEAD:main
