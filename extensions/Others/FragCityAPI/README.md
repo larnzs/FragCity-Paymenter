@@ -137,7 +137,6 @@ The HMAC signature covers the exact raw JSON request body. The website sends the
     "additional_allocations": 0,
     "backups": 0
   },
-  },
   "egg": {
     "SRCDS_MAP": "de_dust2",
     "SRCDS_MAXPLAYERS": "10",
