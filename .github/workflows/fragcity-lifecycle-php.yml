@@ -75,7 +75,7 @@ jobs:
           grep -Fq 'return parent::createServer($service, $settings, $properties);' "$server"
           grep -Fq "function createCheckoutUrl" "$api"
           grep -Fq "function checkoutLogin" "$api"
-          grep -Fq "Cache::pull($cacheKey)" "$api"
+          grep -Fq 'Cache::pull($cacheKey)' "$api"
           ! grep -Fq "function createCs2Order" "$api"
           ! grep -Fq "orders/cs2" "$routes"
           ! grep -Fq '$resourceConfigTargets' "$api"
