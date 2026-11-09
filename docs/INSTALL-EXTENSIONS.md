@@ -18,14 +18,17 @@ The ZarinPal Gateway is intentionally not packaged from main. ZarinPal payment v
 
 ## Download the packages
 
-1. Open the repository's GitHub Actions page: https://github.com/larnzs/FragCity-Paymenter/actions/workflows/package-extensions.yml
-2. Open the latest successful run named **Package Paymenter Extensions**.
-3. Download the artifact named like fragcity-paymenter-extensions-<commit>.
-4. Extract the downloaded artifact once. It contains the individual extension ZIPs, PACKAGES.txt and SHA256SUMS.
+The latest ready-to-upload ZIPs are committed directly into the repository:
 
-The downloaded Actions artifact is only a bundle for convenience. Do **not** upload that outer bundle to Paymenter. Upload each contained extension ZIP separately.
+- [FragCityAPI ZIP](../dist/extensions/FragCityAPI-v1.5.1.zip)
+- [FragCitySupportAPI ZIP](../dist/extensions/FragCitySupportAPI-v1.3.0.zip)
+- [FragCityCS2 ZIP](../dist/extensions/FragCityCS2-v1.5.0.zip)
+- [Package manifest](../dist/extensions/PACKAGES.txt)
+- [SHA256 checksums](../dist/extensions/SHA256SUMS)
 
-The workflow rebuilds packages automatically after relevant changes are pushed to main. Use **Run workflow** to rebuild them manually at any time. Artifacts are retained for 30 days.
+Open the [dist/extensions folder](../dist/extensions) to see the current packages. Download each extension ZIP directly and upload it separately to Paymenter. Never upload the ZIPs' containing GitHub Actions bundle as an extension.
+
+The package workflow rebuilds these files after relevant changes are pushed to `main`, then commits the refreshed ZIPs and checksums back into `dist/extensions/`. A GitHub Actions artifact is also retained as a secondary download option for 30 days.
 
 ## Install order
 
