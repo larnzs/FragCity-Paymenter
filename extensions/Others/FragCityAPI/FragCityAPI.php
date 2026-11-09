@@ -611,7 +611,7 @@ class FragCityAPI extends Extension
                 // values into the Pterodactyl Egg property map before provisioning.
                 // FragCityCS2 translates only RAM/Storage/CPU to resource limits;
                 // Max Players and Tickrate remain Egg environment values.
-                $resourceConfigTargets = [
+                $configOptionTargets = [
                     'memory_mb' => [
                         'aliases' => ['memory', 'memorymb', 'ram', 'rammb', 'memorylimit', 'ramlimit'],
                         'value' => (string) $memoryMb,
@@ -636,13 +636,13 @@ class FragCityAPI extends Extension
                         'allowed_values' => ['64'],
                     ],
                 ];
-                $normalizeResourceOptionName = static function ($value): string {
+                $normalizeConfigOptionName = static function ($value): string {
                     return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $value)));
                 };
-                $resourceConfigSelections = [];
+                $configOptionSelections = [];
                 $usedConfigOptionIds = [];
 
-                foreach ($resourceConfigTargets as $resourceKey => $target) {
+                foreach ($configOptionTargets as $resourceKey => $target) {
                     if (
                         isset($target['allowed_values'])
                         && !in_array($target['value'], $target['allowed_values'], true)
@@ -655,9 +655,9 @@ class FragCityAPI extends Extension
                     // inside that option only; unrelated options may have
                     // children with the same numeric value.
                     $matchingOptions = collect($product->configOptions)->filter(
-                        function ($configOption) use ($target, $normalizeResourceOptionName) {
+                        function ($configOption) use ($target, $normalizeConfigOptionName) {
                             $identifiers = array_map(
-                                $normalizeResourceOptionName,
+                                $normalizeConfigOptionName,
                                 [
                                     $configOption->env_variable ?? '',
                                     $configOption->name ?? '',
@@ -704,7 +704,7 @@ class FragCityAPI extends Extension
                         throw new RuntimeException('cs2_config_option_price_missing');
                     }
 
-                    $resourceConfigSelections[] = [
+                    $configOptionSelections[] = [
                         'config_option_id' => $configOptionId,
                         'config_value_id' => (int) $configValue->id,
                     ];
@@ -858,7 +858,7 @@ class FragCityAPI extends Extension
                     );
                 }
 
-                foreach ($resourceConfigSelections as $configSelection) {
+                foreach ($configOptionSelections as $configSelection) {
                     $service->configs()->create($configSelection);
                 }
 
