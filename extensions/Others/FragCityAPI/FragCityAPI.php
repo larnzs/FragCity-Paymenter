@@ -692,13 +692,30 @@ class FragCityAPI extends Extension
                     }
 
                     $configPrice = $configValue->price(
-                        null,
+                        (int) $plan->id,
                         (int) $plan->billing_period,
                         (string) $plan->billing_unit,
                         $currencyCode
                     );
 
                     if (!$configPrice->available) {
+                        throw new RuntimeException('cs2_config_option_price_missing');
+                    }
+
+                    // The five-slot base and every Tickrate choice are included.
+                    // Refuse a non-zero recurring price/setup fee so Paymenter
+                    // can never charge more than the verified FragCity storefront quote.
+                    $mustBeFree =
+                        ($resourceKey === 'max_players' && $target['value'] === '5')
+                        || $resourceKey === 'tickrate';
+
+                    if (
+                        $mustBeFree
+                        && (
+                            (float) $configPrice->price !== 0.0
+                            || (float) ($configPrice->setup_fee ?? 0) !== 0.0
+                        )
+                    ) {
                         throw new RuntimeException('cs2_config_option_price_missing');
                     }
 
