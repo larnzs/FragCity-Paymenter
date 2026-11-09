@@ -10,10 +10,11 @@
   },
   "summary": {
     "total_egg_variables": 32,
-    "checkout_fields": 8,
+    "checkout_fields": 6,
     "product_admin_fields": 21,
     "not_exposed": 3,
-    "target_paymenter": "v1.5.9"
+    "target_paymenter": "v1.5.9",
+    "config_options": 2
   },
   "variables": [
     {
@@ -56,14 +57,13 @@
       "description": "The maximum number of players the server can host.",
       "default_value": "32",
       "default_redacted": false,
-      "user_viewable": false,
-      "user_editable": false,
+      "user_viewable": true,
+      "user_editable": true,
       "rules": "required|numeric|max:64|min:5",
       "field_type": "text",
       "paymenter": {
-        "status": "checkout",
-        "field_name": "SRCDS_MAXPLAYERS",
-        "field_type": "number"
+        "status": "config_option",
+        "note": "Create this as a native Paymenter Config Option on the CS2 Product. Parent Environment Variable: SRCDS_MAXPLAYERS. Child Environment Variables are the exact allowed slot counts."
       }
     },
     {
@@ -482,9 +482,8 @@
         "128"
       ],
       "paymenter": {
-        "status": "checkout",
-        "field_name": "TICKRATE",
-        "field_type": "select"
+        "status": "config_option",
+        "note": "Create this as a native Paymenter Config Option on the CS2 Product. Parent Environment Variable: TICKRATE. Child Environment Variables: 64 and 128."
       }
     },
     {
@@ -1014,39 +1013,6 @@
           "alpha_dash"
         ],
         "placeholder": "de_dust2"
-      },
-      {
-        "name": "SRCDS_MAXPLAYERS",
-        "label": "ظرفیت بازیکن هم‌زمان",
-        "type": "number",
-        "description": "حداکثر تعداد بازیکنانی که می‌توانند هم‌زمان وارد سرور شوند؛ مقدار مجاز بین 5 و 64 است.",
-        "default": "32",
-        "required": true,
-        "validation": [
-          "required",
-          "numeric",
-          "min:5",
-          "max:64"
-        ],
-        "placeholder": "32"
-      },
-      {
-        "name": "TICKRATE",
-        "label": "Tickrate سرور",
-        "type": "select",
-        "description": "Tickrate قابل انتخاب برای سرور.",
-        "options": [
-          {
-            "value": "64",
-            "label": "64"
-          },
-          {
-            "value": "128",
-            "label": "128"
-          }
-        ],
-        "default": "64",
-        "required": true
       },
       {
         "name": "EXEC",
