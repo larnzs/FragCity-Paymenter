@@ -19,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use RuntimeException;
@@ -323,6 +324,62 @@ class FragCityAPI extends Extension
                 'success' => true,
                 'data' => $result,
             ]);
+        } catch (QueryException $e) {
+            // Unique order/payment indexes are the final concurrency guard.
+            // Recover an exact retry, but never attach one ZarinPal receipt to
+            // a different order reference or payload.
+            try {
+                $existing = DB::table('fragcity_server_orders')
+                    ->where('order_ref', $orderRef)
+                    ->first();
+
+                if (
+                    $existing
+                    && hash_equals((string) $existing->payload_hash, $payloadHash)
+                    && (string) $existing->status === 'accepted'
+                ) {
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'order_id' => (int) $existing->paymenter_order_id,
+                            'invoice_id' => (int) $existing->paymenter_invoice_id,
+                            'service_id' => (int) $existing->paymenter_service_id,
+                            'status' => 'accepted',
+                            'replayed' => true,
+                            'provisioning' => 'queued_by_paymenter',
+                            'currency_code' => $currencyCode,
+                            'currency_unit' => $currencyUnit,
+                        ],
+                    ]);
+                }
+
+                $paymentUsed = DB::table('fragcity_server_orders')
+                    ->where(function ($query) use ($authority, $zarinpalRef): void {
+                        $query->where('zarinpal_authority', $authority)
+                            ->orWhere('zarinpal_ref_id', $zarinpalRef);
+                    })
+                    ->exists();
+
+                if ($paymentUsed) {
+                    return response()->json([
+                        'success' => false,
+                        'error' => 'zarinpal_payment_already_used',
+                    ], 409);
+                }
+            } catch (Throwable) {
+                // Fall through to the generic persistence failure below.
+            }
+
+            Log::error('FragCity CS2 order persistence failed.', [
+                'order_ref' => $orderRef,
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'sqlstate' => (string) $e->getCode(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'cs2_order_creation_failed',
+            ], 500);
         } catch (RuntimeException $e) {
             $safeErrors = [
                 'username_already_in_use',
@@ -465,6 +522,8 @@ class FragCityAPI extends Extension
         }
 
         $paymenterAmount = $currencyUnit === 'toman' ? $amountToman : $amountRial;
+        $eggHashValues = $eggValues;
+        ksort($eggHashValues, SORT_STRING);
         $canonicalPayload = [
             'order_ref' => $orderRef,
             'steamid64' => $steamId,
@@ -482,7 +541,7 @@ class FragCityAPI extends Extension
                 'disk_mb' => $diskMb,
                 'cpu_percent' => $cpuPercent,
             ],
-            'egg' => $eggValues,
+            'egg' => $eggHashValues,
             'currency_code' => $currencyCode,
             'currency_unit' => $currencyUnit,
             'product_id' => $productId,
@@ -647,10 +706,18 @@ class FragCityAPI extends Extension
 
                     if (in_array((string) ($field['type'] ?? ''), ['select', 'radio'], true)) {
                         $options = $field['options'] ?? [];
-                        $optionValues = array_map(
-                            static fn ($option): string => (string) (is_array($option) ? ($option['value'] ?? '') : $option),
-                            is_array($options) ? $options : []
-                        );
+                        if (is_array($options) && array_is_list($options) && isset($options[0]) && is_array($options[0])) {
+                            $optionValues = array_map(
+                                static fn ($option): string => (string) ($option['value'] ?? ''),
+                                $options
+                            );
+                        } else {
+                            // FragCityCS2 adapts manifest select records to Paymenter's
+                            // associative [egg_value => label] Checkout contract.
+                            $optionValues = is_array($options)
+                                ? array_map('strval', array_keys($options))
+                                : [];
+                        }
                         if ($optionValues !== []) {
                             $rules[] = 'in:' . implode(',', array_map(
                                 static fn (string $option): string => str_replace(',', '\\,', $option),
