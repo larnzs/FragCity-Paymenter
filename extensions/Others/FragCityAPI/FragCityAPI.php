@@ -27,7 +27,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account, CS2 order and service bridge for FragCity.',
-    version: '1.5.1',
+    version: '1.7.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -606,11 +606,11 @@ class FragCityAPI extends Extension
                     throw new RuntimeException('cs2_plan_invalid');
                 }
 
-                // Persist RAM, Storage and CPU exclusively as native Paymenter
-                // ServiceConfig selections. FragCityCS2 resolves these Config
-                // Options immediately before provisioning/upgrading and translates
-                // their values to the inherited Pterodactyl memory/disk/cpu keys.
-                // Do not duplicate those resource limits as service properties.
+                // Persist RAM, Storage, CPU, Max Players and Tickrate as native Paymenter
+                // ServiceConfig selections. Paymenter's ExtensionHelper merges these
+                // values into the Pterodactyl Egg property map before provisioning.
+                // FragCityCS2 translates only RAM/Storage/CPU to resource limits;
+                // Max Players and Tickrate remain Egg environment values.
                 $resourceConfigTargets = [
                     'memory_mb' => [
                         'aliases' => ['memory', 'memorymb', 'ram', 'rammb', 'memorylimit', 'ramlimit'],
@@ -624,6 +624,17 @@ class FragCityAPI extends Extension
                         'aliases' => ['cpu', 'cpupercent', 'cpulimit'],
                         'value' => (string) $cpuPercent,
                     ],
+                    'max_players' => [
+                        'aliases' => ['srcdsmaxplayers'],
+                        'value' => (string) ($eggValues['SRCDS_MAXPLAYERS'] ?? ''),
+                        'allowed_values' => array_map('strval', range(5, 64)),
+                    ],
+                    'tickrate' => [
+                        'aliases' => ['tickrate'],
+                        'value' => (string) ($eggValues['TICKRATE'] ?? '64'),
+                        // 128 Tick remains blocked until its price and Egg startup support are verified.
+                        'allowed_values' => ['64'],
+                    ],
                 ];
                 $normalizeResourceOptionName = static function ($value): string {
                     return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $value)));
@@ -632,6 +643,13 @@ class FragCityAPI extends Extension
                 $usedConfigOptionIds = [];
 
                 foreach ($resourceConfigTargets as $resourceKey => $target) {
+                    if (
+                        isset($target['allowed_values'])
+                        && !in_array($target['value'], $target['allowed_values'], true)
+                    ) {
+                        throw new RuntimeException('cs2_config_option_mapping_invalid');
+                    }
+
                     // First identify the exact parent Config Option by its own
                     // env_variable/name. Then resolve the numeric child value
                     // inside that option only; unrelated options may have
@@ -651,7 +669,7 @@ class FragCityAPI extends Extension
                     );
 
                     if ($matchingOptions->count() !== 1) {
-                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
+                        throw new RuntimeException('cs2_config_option_mapping_invalid');
                     }
 
                     $configOption = $matchingOptions->first();
@@ -660,7 +678,7 @@ class FragCityAPI extends Extension
                     );
 
                     if ($matchingValues->count() !== 1) {
-                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
+                        throw new RuntimeException('cs2_config_option_mapping_invalid');
                     }
 
                     $configValue = $matchingValues->first();
@@ -672,7 +690,7 @@ class FragCityAPI extends Extension
                         in_array((string) $configOption->type, ['text', 'number'], true)
                         || in_array($configOptionId, $usedConfigOptionIds, true)
                     ) {
-                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
+                        throw new RuntimeException('cs2_config_option_mapping_invalid');
                     }
 
                     $configPrice = $configValue->price(
@@ -683,7 +701,7 @@ class FragCityAPI extends Extension
                     );
 
                     if (!$configPrice->available) {
-                        throw new RuntimeException('cs2_resource_config_price_missing');
+                        throw new RuntimeException('cs2_config_option_price_missing');
                     }
 
                     $resourceConfigSelections[] = [
@@ -823,6 +841,11 @@ class FragCityAPI extends Extension
                     'quantity' => 1,
                     'status' => Service::STATUS_PENDING,
                 ]);
+
+                // Max Players and Tickrate now have one authoritative persisted
+                // source: their native ServiceConfig rows. They are reintroduced
+                // by ExtensionHelper::getServiceProperties when Paymenter provisions.
+                unset($normalizedEggValues['SRCDS_MAXPLAYERS'], $normalizedEggValues['TICKRATE']);
 
                 $serviceProperties = [
                     'servername' => $serverName,
@@ -971,7 +994,7 @@ class FragCityAPI extends Extension
                 'paid_option_pricing_not_configured', 'invalid_egg_variable', 'egg_validation_failed',
                 'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
                 'cs2_plan_invalid', 'invalid_order_payload', 'egg_combination_invalid' => 422,
-                'cs2_resource_config_mapping_invalid', 'cs2_resource_config_price_missing' => 503,
+                'cs2_config_option_mapping_invalid', 'cs2_config_option_price_missing' => 503,
                 'order_processing_incomplete' => 503,
                 default => 500,
             };
