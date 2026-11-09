@@ -89,7 +89,7 @@ Configure these under **Paymenter Admin → Extensions → Others → FragCity A
 | `cs2_plan_id_30_days` | Product Plan for exactly 1 month |
 | `cs2_currency_code` | Existing Paymenter Rial currency code used by all four Plans (for example `IRR`) |
 
-Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. Every selected RAM, disk, CPU, Player Slots and Tickrate child must also have a price row for the selected Plan and Rial currency. The API fails closed when the Product, Plan, currency, option mapping, supported value or child price is missing or inconsistent.
+Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. Every selected RAM, disk, CPU, Player Slots and Tickrate child must also have a price row for the selected Plan and Rial currency. The Player Slots 5-child and both Tickrate children (64 and 128) must have zero-price rows; Player Slots 6–64 use the configured capacity surcharge. The API fails closed when the Product, Plan, currency, option mapping, supported value or child price is missing or inconsistent.
 
 ### Required Product Config Options
 
@@ -101,9 +101,9 @@ Attach all five Config Options to the configured CS2 Product. The parent Environ
 | SSD Storage | `disk_mb` | Select | `5120`, `6144`, `7168`, `8192`, `9216`, `10240` |
 | CPU | `cpu_percent` | Select | `100`, `200`, `300`, `400` |
 | Player Slots | `SRCDS_MAXPLAYERS` | Select | Every integer from `5` through `64` |
-| Tickrate | `TICKRATE` | Select | `64` only for now |
+| Tickrate | `TICKRATE` | Select | `64`, `128` |
 
-Use numeric child Environment Variables, not display labels. For Player Slots, the 5-slot child is the included/base capacity; each larger child represents the additional-slot surcharge. The 64-Tick child must have a zero-price row for every supported Plan/currency. Do not add the 128-Tick child yet: the bridge rejects `TICKRATE=128` until the storefront quote includes its surcharge and the Egg startup has been verified to apply it. Keep `Upgradable` disabled for Player Slots and Tickrate; the current inherited Pterodactyl upgrade method preserves already-set Egg environment values.
+Use numeric child Environment Variables, not display labels. For Player Slots, the 5-slot child is the included/base capacity and must have a zero-price row; each larger child represents the additional-slot surcharge. Both Tickrate children (`64` and `128`) must have zero-price rows for every supported Plan/currency. The Egg Startup command passes the selected value through `-tickrate {{TICKRATE}}`. Keep `Upgradable` disabled for Player Slots and Tickrate; the current inherited Pterodactyl upgrade method preserves already-set Egg environment values.
 
 **Currency is Rial-only inside Paymenter.** The bridge always creates the Paymenter Service, Invoice item and successful Invoice Transaction using `payment.amount_rial`. `payment.amount_toman` remains the source amount used for the conversion-integrity check and order audit. The bridge verifies `amount_rial === amount_toman * 10`; it never uses the Toman amount for Paymenter monetary records.
 
@@ -152,9 +152,9 @@ Resource constraints currently mirror the FragCity storefront: RAM 1024/1280/153
 - An exact retry with the same order reference and payload hash returns the existing Paymenter Order, Invoice and Service IDs; it never creates a second service.
 - Reusing an order reference with a different payload, or attempting to spend an already-used ZarinPal receipt, returns a conflict.
 - The accepted response means the Paymenter Order/Invoice/Service records were committed and the native provisioning flow was queued. It does not claim that Pterodactyl has already finished creating the server.
-- `TICKRATE=128` and `ENABLE_GUARD=1` are rejected for now because their paid surcharges are declared in the FragCity pricing contract but are not yet incorporated into the live storefront quote. They must not be provisioned as free options.
+- `TICKRATE=64` and `TICKRATE=128` are both accepted as free native Config Option values. `ENABLE_GUARD=1` remains blocked until its paid surcharge is included in the authoritative storefront quote.
 
-**Renewals still require an end-to-end pricing test:** RAM/CPU/SSD selections are now native recurring Config Options, and the bridge verifies that each selected value has a price for the configured Plan and currency. Before enabling automatic renewal billing, verify that Paymenter's recurring total (Plan plus Config Option prices and any other paid add-ons such as slots) exactly matches FragCity's storefront quote and does not double-charge or omit any component. `TICKRATE=128` and `ENABLE_GUARD=1` remain blocked until their surcharges are implemented in the authoritative storefront quote.
+**Renewals still require an end-to-end pricing test:** RAM/CPU/SSD selections are now native recurring Config Options, and the bridge verifies that each selected value has a price for the configured Plan and currency. Before enabling automatic renewal billing, verify that Paymenter's recurring total (Plan plus Config Option prices and any other paid add-ons such as slots) exactly matches FragCity's storefront quote and does not double-charge or omit any component. `ENABLE_GUARD=1` remains blocked until its surcharge is implemented in the authoritative storefront quote. Both Tickrate values are free and must remain zero-priced in Paymenter's native Config Options.
 
 ## Installation
 
