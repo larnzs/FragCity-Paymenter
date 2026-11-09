@@ -72,7 +72,7 @@ Configure its own dedicated HMAC secret and optional exact source IP allowlist. 
 
 Configure the Pterodactyl HTTPS host and Application API key inherited from Paymenter's Pterodactyl extension. Configure the optional read-only dashboard API key separately when available.
 
-Then open the CS2 Product and select **FragCity CS2** as its Server extension. Configure its Product-level Egg variables, Nest/Egg, node, location, allocation and resource defaults. The native RAM/CPU/SSD Config Options remain separate Product choices used by the FragCity checkout contract and Paymenter's recurring price calculations.
+Then open the CS2 Product and select **FragCity CS2** as its Server extension. Configure Product-level Egg variables, Nest/Egg, node, location and allocation settings. Do not configure RAM, Storage or CPU in the inherited Pterodactyl Product fields; those fields are hidden by FragCityCS2. Attach the three native RAM/SSD/CPU Config Options to this Product and price their child values for every supported Plan/currency. Their selected values are stored as native ServiceConfig records and translated to Pterodactyl limits at provisioning/upgrade time.
 
 See each extension's README for exact settings, routes, permissions and integration contracts.
 
