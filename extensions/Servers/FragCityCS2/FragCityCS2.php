@@ -940,6 +940,8 @@ class FragCityCS2 extends PterodactylExtension
             }
         }
 
+        $nativeConfigOptionCount = 0;
+
         foreach ($variableMap as $name => $variable) {
             $status = $variable['paymenter']['status'] ?? null;
 
@@ -950,6 +952,17 @@ class FragCityCS2 extends PterodactylExtension
                     );
                 }
 
+                continue;
+            }
+
+            if ($status === 'config_option') {
+                if (isset($fieldMap[$name])) {
+                    throw new RuntimeException(
+                        "Native Config Option Egg variable {$name} must not also be declared as a custom Checkout or Product field."
+                    );
+                }
+
+                $nativeConfigOptionCount++;
                 continue;
             }
 
@@ -966,6 +979,7 @@ class FragCityCS2 extends PterodactylExtension
             (int) ($summary['total_egg_variables'] ?? -1) !== count($variableMap)
             || (int) ($summary['checkout_fields'] ?? -1) !== count($checkoutFields)
             || (int) ($summary['product_admin_fields'] ?? -1) !== count($productFields)
+            || (int) ($summary['config_options'] ?? -1) !== $nativeConfigOptionCount
         ) {
             throw new RuntimeException('FragCity CS2 manifest summary does not match its actual variable mapping.');
         }
