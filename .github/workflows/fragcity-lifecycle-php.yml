@@ -56,8 +56,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          grep -q "version: '1.5.1'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "'version' => '1.5.1'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -q "version: '1.7.0'" extensions/Others/FragCityAPI/FragCityAPI.php
+          grep -Fq "'version' => '1.7.0'" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -Fq "\$currencyUnit = 'rial'" extensions/Others/FragCityAPI/FragCityAPI.php
           grep -Fq '$paymenterAmount = $amountRial;' extensions/Others/FragCityAPI/FragCityAPI.php
           ! grep -Fq "'name' => 'cs2_currency_unit'" extensions/Others/FragCityAPI/FragCityAPI.php
