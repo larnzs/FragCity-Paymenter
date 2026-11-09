@@ -27,7 +27,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account, CS2 order and service bridge for FragCity.',
-    version: '1.7.0',
+    version: '1.7.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
