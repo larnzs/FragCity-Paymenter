@@ -87,15 +87,15 @@ Paymenter's uploader detects an existing extension directory, replaces its files
 
 ### Important: prevent accidental API downgrade
 
-Packages are built from the repository's **main** branch only. At the time this guide was added, main contains:
+Packages are built from the repository's **main** branch only. The current main-branch packages are:
 
-- FragCityAPI **1.5.0**
+- FragCityAPI **1.5.1**
 - FragCitySupportAPI **1.3.0**
-- FragCityCS2 **1.4.0**
+- FragCityCS2 **1.5.0**
 
-The separate native-paymenter-config-options branch has a different FragCityAPI 1.6.0 code line and also contains the old Paymenter-side ZarinPal Gateway. It is not the source for these main-branch packages.
+The experimental native-Paymenter-Checkout proposal (PR #4, closed without merging) used a separate FragCityAPI 1.6.0 code line and included a Paymenter-side ZarinPal Gateway. That implementation was intentionally not merged because FragCity remains the storefront and payment-verification source of truth; Paymenter receives only the authenticated, verified order.
 
-If an existing Paymenter instance reports FragCityAPI **1.6.0**, do not upload the main-branch 1.5.0 ZIP as an update until that instance's code and the main-branch Bridge changes have been reconciled. Paymenter's uploader replaces the code directory; it does not block semantic-version downgrades.
+If an existing Paymenter instance reports FragCityAPI **1.6.0**, do not upload the main-branch 1.5.1 ZIP as an update until that instance's code and the main-branch Bridge changes have been reconciled. Paymenter's uploader replaces the code directory; it does not block semantic-version downgrades.
 
 ## Safety and boundaries
 
