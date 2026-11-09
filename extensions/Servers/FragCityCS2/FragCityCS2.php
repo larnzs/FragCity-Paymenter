@@ -122,6 +122,7 @@ class FragCityCS2 extends PterodactylExtension
         // parent Config Option's env_variable. Convert the selected RAM/SSD/CPU
         // values into the keys expected by the inherited Pterodactyl provisioner.
         $properties = $this->applyResourceLimitsFromConfigOptions($service, $properties);
+        $properties = $this->applyPlayerAndTickrateConfigOptions($service, $properties);
 
         $this->ensurePterodactylClientUser($service, true);
 
@@ -840,6 +841,112 @@ class FragCityCS2 extends PterodactylExtension
         return $properties;
     }
 
+    /**
+     * Resolve the customer-selected Player Slots and Tickrate values from
+     * native Paymenter Config Options. These are deliberately not Checkout
+     * fields or duplicated service properties: the Config Option child
+     * Environment Variables are the single source of truth.
+     *
+     * @param array<string,mixed> $properties
+     * @return array<string,mixed>
+     */
+    private function applyPlayerAndTickrateConfigOptions(Service $service, array $properties): array
+    {
+        $definitions = $this->loadManifest()['paymenter']['config_options'] ?? [];
+        if (!is_array($definitions) || $definitions === []) {
+            throw new RuntimeException('FragCity CS2 native Config Option definitions are missing.');
+        }
+
+        $normalize = static function ($value): string {
+            return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $value)));
+        };
+
+        $configs = $service->configs()
+            ->with(['configOption', 'configValue'])
+            ->get();
+
+        foreach ($definitions as $definition) {
+            $envVariable = strtoupper(trim((string) ($definition['env_variable'] ?? '')));
+            $optionName = trim((string) ($definition['name'] ?? ''));
+            $identifiers = array_values(array_filter([
+                $normalize($envVariable),
+                $normalize($optionName),
+            ]));
+
+            if ($envVariable === '' || $optionName === '' || $identifiers === []) {
+                throw new RuntimeException('FragCity CS2 contains an invalid native Config Option definition.');
+            }
+
+            $matchingConfigs = $configs->filter(
+                function ($config) use ($identifiers, $normalize): bool {
+                    $option = $config->configOption;
+                    if (!$option) {
+                        return false;
+                    }
+
+                    $optionIdentifiers = array_map(
+                        $normalize,
+                        [
+                            $option->env_variable ?? '',
+                            $option->name ?? '',
+                        ]
+                    );
+
+                    return array_intersect($identifiers, $optionIdentifiers) !== [];
+                }
+            );
+
+            if ($matchingConfigs->count() !== 1) {
+                throw new RuntimeException(
+                    "FragCity CS2 requires exactly one native Paymenter Config Option selection for {$envVariable}."
+                );
+            }
+
+            $selectedConfig = $matchingConfigs->first();
+            $configOption = $selectedConfig->configOption;
+            $configValue = $selectedConfig->configValue;
+
+            if (
+                !$configValue
+                || !in_array(strtolower((string) ($configOption->type ?? '')), ['select', 'radio'], true)
+            ) {
+                throw new RuntimeException(
+                    "FragCity CS2 Config Option {$envVariable} must be a Select or Radio option with a selected child value."
+                );
+            }
+
+            $rawValue = trim((string) ($configValue->env_variable ?? ''));
+            $allowedValues = array_map(
+                static fn ($option): string => (string) ($option['value'] ?? ''),
+                $definition['options'] ?? []
+            );
+
+            if (
+                $rawValue === ''
+                || !in_array($rawValue, $allowedValues, true)
+            ) {
+                throw new RuntimeException(
+                    "FragCity CS2 Config Option {$envVariable} contains an unsupported child Environment Variable."
+                );
+            }
+
+            if (
+                isset($properties[$envVariable])
+                && trim((string) $properties[$envVariable]) !== ''
+                && trim((string) $properties[$envVariable]) !== $rawValue
+            ) {
+                throw new RuntimeException(
+                    "FragCity CS2 Config Option {$envVariable} does not match the resolved service property."
+                );
+            }
+
+            // Explicitly set the Egg environment key from the native child row.
+            $properties[$envVariable] = $rawValue;
+        }
+
+        return $properties;
+    }
+
     private function normalizeSelectEnvironmentValues(
         array $values,
         array $manifest,
@@ -970,12 +1077,106 @@ class FragCityCS2 extends PterodactylExtension
 
         $checkoutFields = $manifest['paymenter']['checkout_fields'] ?? [];
         $productFields = $manifest['paymenter']['product_fields'] ?? [];
+        $configOptionFields = $manifest['paymenter']['config_options'] ?? [];
 
-        if (!is_array($checkoutFields) || !is_array($productFields)) {
+        if (
+            !is_array($checkoutFields)
+            || !is_array($productFields)
+            || !is_array($configOptionFields)
+        ) {
             throw new RuntimeException('FragCity CS2 manifest field lists are invalid.');
         }
 
         $fieldMap = [];
+        $configOptionMap = [];
+
+        foreach ($configOptionFields as $configOption) {
+            $optionName = $configOption['name'] ?? null;
+            $envVariable = $configOption['env_variable'] ?? null;
+
+            if (
+                !is_string($optionName)
+                || $optionName === ''
+                || !is_string($envVariable)
+                || $envVariable === ''
+                || isset($configOptionMap[$envVariable])
+                || !isset($variableMap[$envVariable])
+            ) {
+                throw new RuntimeException('FragCity CS2 manifest contains an invalid or duplicate native Config Option.');
+            }
+
+            if (($variableMap[$envVariable]['paymenter']['status'] ?? null) !== 'config_option') {
+                throw new RuntimeException(
+                    "Native Config Option {$envVariable} is assigned to the wrong manifest scope."
+                );
+            }
+
+            if (($configOption['type'] ?? null) !== 'select') {
+                throw new RuntimeException(
+                    "Native Config Option {$envVariable} must use the Select type."
+                );
+            }
+
+            $options = $configOption['options'] ?? null;
+            if (!is_array($options) || !array_is_list($options) || $options === []) {
+                throw new RuntimeException(
+                    "Native Config Option {$envVariable} must define an explicit list of value/label options."
+                );
+            }
+
+            $optionValues = [];
+            foreach ($options as $option) {
+                if (
+                    !is_array($option)
+                    || !array_key_exists('value', $option)
+                    || !array_key_exists('label', $option)
+                    || !is_scalar($option['value'])
+                    || !is_scalar($option['label'])
+                ) {
+                    throw new RuntimeException(
+                        "Native Config Option {$envVariable} contains an invalid option; expected value and label."
+                    );
+                }
+
+                $optionValues[] = (string) $option['value'];
+            }
+
+            if (count($optionValues) !== count(array_unique($optionValues))) {
+                throw new RuntimeException(
+                    "Native Config Option {$envVariable} contains duplicate Egg values."
+                );
+            }
+
+            $default = (string) ($configOption['default'] ?? '');
+            if (!in_array($default, $optionValues, true)) {
+                throw new RuntimeException(
+                    "Default value for native Config Option {$envVariable} is not one of its Egg options."
+                );
+            }
+
+            $expectedValues = $variableMap[$envVariable]['storefront_allowed_values']
+                ?? $variableMap[$envVariable]['allowed_values']
+                ?? null;
+
+            if (!is_array($expectedValues)) {
+                throw new RuntimeException(
+                    "Native Config Option {$envVariable} has no declared Egg allowed-value contract."
+                );
+            }
+
+            $actualValueSet = $optionValues;
+            $expectedValueSet = array_map('strval', $expectedValues);
+            sort($actualValueSet, SORT_STRING);
+            sort($expectedValueSet, SORT_STRING);
+
+            if ($actualValueSet !== $expectedValueSet) {
+                throw new RuntimeException(
+                    "Native Config Option values for {$envVariable} do not match the declared Egg values."
+                );
+            }
+
+            $configOptionMap[$envVariable] = $configOption;
+        }
 
         foreach ([
             'checkout' => $checkoutFields,
@@ -1101,6 +1302,16 @@ class FragCityCS2 extends PterodactylExtension
                 continue;
             }
 
+            if ($status === 'config_option') {
+                if (!isset($configOptionMap[$name])) {
+                    throw new RuntimeException(
+                        "Egg variable {$name} is missing its declared native Paymenter Config Option."
+                    );
+                }
+
+                continue;
+            }
+
             if (!in_array($status, ['checkout', 'product_setting'], true) || !isset($fieldMap[$name])) {
                 throw new RuntimeException(
                     "Egg variable {$name} is missing its declared Paymenter field."
@@ -1114,6 +1325,7 @@ class FragCityCS2 extends PterodactylExtension
             (int) ($summary['total_egg_variables'] ?? -1) !== count($variableMap)
             || (int) ($summary['checkout_fields'] ?? -1) !== count($checkoutFields)
             || (int) ($summary['product_admin_fields'] ?? -1) !== count($productFields)
+            || (int) ($summary['native_config_options'] ?? -1) !== count($configOptionMap)
         ) {
             throw new RuntimeException('FragCity CS2 manifest summary does not match its actual variable mapping.');
         }
