@@ -1,19 +1,19 @@
 <?php
 
-namespace Paymenter\\Extensions\\Gateways\\ZarinPal;
+namespace Paymenter\Extensions\Gateways\ZarinPal;
 
-use App\\Attributes\\ExtensionMeta;
-use App\\Classes\\Extension\\Gateway;
-use App\\Enums\\InvoiceTransactionStatus;
-use App\\Exceptions\\DisplayException;
-use App\\Helpers\\ExtensionHelper;
-use App\\Models\\Invoice;
-use App\\Models\\InvoiceTransaction;
-use Illuminate\\Http\\Request;
-use Illuminate\\Support\\Facades\\Cache;
-use Illuminate\\Support\\Facades\\Http;
-use Illuminate\\Support\\Facades\\Log;
-use Illuminate\\Support\\Facades\\Route;
+use App\Attributes\ExtensionMeta;
+use App\Classes\Extension\Gateway;
+use App\Enums\InvoiceTransactionStatus;
+use App\Exceptions\DisplayException;
+use App\Helpers\ExtensionHelper;
+use App\Models\Invoice;
+use App\Models\InvoiceTransaction;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Route;
 use RuntimeException;
 use Throwable;
 
