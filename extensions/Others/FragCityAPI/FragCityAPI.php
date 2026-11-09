@@ -27,7 +27,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account, CS2 order and service bridge for FragCity.',
-    version: '1.5.0',
+    version: '1.5.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -137,7 +137,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.5.0',
+            'version' => '1.5.1',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -617,13 +617,11 @@ class FragCityAPI extends Extension
                     throw new RuntimeException('cs2_plan_invalid');
                 }
 
-                // Persist the same native Paymenter Config Option selections that
-                // its own checkout would create. The FragCity payload already
-                // carries the selected resource amounts; resolve each amount to
-                // its unique visible Product option value by Environment Variable.
-                // These Config rows are needed for Paymenter's recurring price and
-                // upgrade calculations, while the service properties below remain
-                // the values consumed by the CS2 provisioner.
+                // Persist RAM, Storage and CPU exclusively as native Paymenter
+                // ServiceConfig selections. FragCityCS2 resolves these Config
+                // Options immediately before provisioning/upgrading and translates
+                // their values to the inherited Pterodactyl memory/disk/cpu keys.
+                // Do not duplicate those resource limits as service properties.
                 $resourceConfigTargets = [
                     'memory_mb' => (string) $memoryMb,
                     'disk_mb' => (string) $diskMb,
@@ -815,9 +813,6 @@ class FragCityAPI extends Extension
 
                 $serviceProperties = [
                     'servername' => $serverName,
-                    'memory' => (string) $memoryMb,
-                    'disk' => (string) $diskMb,
-                    'cpu' => (string) $cpuPercent,
                 ] + $normalizedEggValues;
 
                 foreach ($serviceProperties as $key => $value) {
