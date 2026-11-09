@@ -8,9 +8,6 @@ on:
       - "themes/fragcity/**"
       - "tools/package-extensions.sh"
       - "tools/package-release.sh"
-      - "docs/INSTALL-EXTENSIONS.md"
-      - "README.md"
-      - ".github/workflows/package-extensions.yml"
   workflow_dispatch:
 
 permissions:
@@ -33,14 +30,14 @@ jobs:
         shell: bash
         run: |
           set -Eeuo pipefail
-          release_tag="fragcity-$(date -u +%Y.%m.%d)-\${GITHUB_RUN_NUMBER}"
+          release_tag="fragcity-$(date -u +%Y.%m.%d)-${GITHUB_RUN_NUMBER}"
           echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "Release tag: $release_tag"
 
       - name: Build and validate Extension and Theme packages
         shell: bash
         env:
-          RELEASE_TAG: \${{ steps.release-meta.outputs.release_tag }}
+          RELEASE_TAG: ${{ steps.release-meta.outputs.release_tag }}
         run: |
           set -Eeuo pipefail
           bash tools/package-release.sh "$RUNNER_TEMP/fragcity-release" "$RELEASE_TAG"
@@ -48,7 +45,7 @@ jobs:
       - name: Prepare Release notes
         shell: bash
         env:
-          RELEASE_TAG: \${{ steps.release-meta.outputs.release_tag }}
+          RELEASE_TAG: ${{ steps.release-meta.outputs.release_tag }}
         run: |
           set -Eeuo pipefail
           cat > "$RUNNER_TEMP/FRAGCITY-RELEASE-NOTES.md" <<'NOTES'
@@ -88,10 +85,10 @@ jobs:
       - name: Upload a secondary Actions artifact
         uses: actions/upload-artifact@v4
         with:
-          name: fragcity-release-\${{ steps.release-meta.outputs.release_tag }}
+          name: fragcity-release-${{ steps.release-meta.outputs.release_tag }}
           path: |
-            \${{ runner.temp }}/fragcity-release/
-            \${{ runner.temp }}/FRAGCITY-RELEASE-NOTES.md
+            ${{ runner.temp }}/fragcity-release/
+            ${{ runner.temp }}/FRAGCITY-RELEASE-NOTES.md
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
@@ -99,8 +96,8 @@ jobs:
       - name: Publish GitHub Release with all install packages
         shell: bash
         env:
-          GH_TOKEN: \${{ github.token }}
-          RELEASE_TAG: \${{ steps.release-meta.outputs.release_tag }}
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.release-meta.outputs.release_tag }}
         run: |
           set -Eeuo pipefail
           package_dir="$RUNNER_TEMP/fragcity-release"
