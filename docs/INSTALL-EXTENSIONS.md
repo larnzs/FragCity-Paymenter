@@ -18,17 +18,31 @@ The ZarinPal Gateway is intentionally not packaged from main. ZarinPal payment v
 
 ## Download the packages
 
-The latest ready-to-upload ZIPs are committed directly into the repository:
+All deployable packages are published together in GitHub Releases:
 
-- [FragCityAPI ZIP](../dist/extensions/FragCityAPI-v1.5.1.zip)
-- [FragCitySupportAPI ZIP](../dist/extensions/FragCitySupportAPI-v1.3.0.zip)
-- [FragCityCS2 ZIP](../dist/extensions/FragCityCS2-v1.5.0.zip)
-- [Package manifest](../dist/extensions/PACKAGES.txt)
-- [SHA256 checksums](../dist/extensions/SHA256SUMS)
+- [Latest FragCity Release](https://github.com/larnzs/FragCity-Paymenter/releases/latest)
+- [All previous Releases](https://github.com/larnzs/FragCity-Paymenter/releases)
 
-Open the [dist/extensions folder](../dist/extensions) to see the current packages. Download each extension ZIP directly and upload it separately to Paymenter. Never upload the ZIPs' containing GitHub Actions bundle as an extension.
+Each Release contains three independent Paymenter Extension ZIPs, one FragCity Paymenter Theme source ZIP, a package manifest and SHA-256 checksums. Download only the assets you need. The GitHub Actions artifact is kept as a secondary copy for 30 days.
 
-The package workflow rebuilds these files after relevant changes are pushed to `main`, then commits the refreshed ZIPs and checksums back into `dist/extensions/`. A GitHub Actions artifact is also retained as a secondary download option for 30 days.
+### What to install from a Release
+
+- `FragCityAPI-v*.zip`, `FragCitySupportAPI-v*.zip` and `FragCityCS2-v*.zip`: upload each separately through Paymenter Admin → Extensions → Upload Extension.
+- `FragCityPaymenterTheme-*.zip`: this is a theme source bundle, not an Extension. Do not upload it through Extension Uploader.
+- `SHA256SUMS`: verify the downloaded ZIP assets before deployment.
+- `PACKAGES.txt` and `THEME-PACKAGE.txt`: package versions, source revision and installation boundary.
+
+### Install or update the FragCity Paymenter Theme
+
+Extract the Theme ZIP. It contains a top-level `fragcity/` directory. Copy/extract that directory into the Paymenter installation's `themes/` directory so the final path is `themes/fragcity/`.
+
+From the Paymenter installation root, rebuild the theme's Vite assets using the Node dependencies already installed for that Paymenter version:
+
+```bash
+npm run build -- fragcity
+```
+
+The Theme ZIP contains only FragCity theme source files. It does not contain Paymenter Core, `vendor`, `node_modules`, runtime configuration or secrets. Keep a backup of the current `themes/fragcity/` directory before replacing it.
 
 ## Install order
 
@@ -82,8 +96,8 @@ See each extension's README for exact settings, routes, permissions and integrat
 ## Updating an existing extension
 
 1. Back up the Paymenter database and the extension's current directory.
-2. Download and extract the latest Actions artifact.
-3. Upload the newer ZIP for that extension using **Admin → Extensions → Upload Extension**.
+2. Open the [latest FragCity Release](https://github.com/larnzs/FragCity-Paymenter/releases/latest) and download the newer ZIP for that extension.
+3. Upload only that extension ZIP using **Admin → Extensions → Upload Extension**.
 4. Keep the existing extension registration. Do not uninstall it first.
 
 Paymenter's uploader detects an existing extension directory, replaces its files and invokes the upgraded() lifecycle hook when the extension provides one. Database-backed settings remain in Paymenter; FragCityAPI runs its extension migrations from its install/upgrade hooks. Review the extension-specific README and test in staging before production updates.
