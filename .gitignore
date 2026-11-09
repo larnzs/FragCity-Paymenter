@@ -18,9 +18,12 @@ auth.json
 # Generated frontend assets
 /public/
 
+# Generated extension packages
+/build/
+
 # Build artifacts
 *.log
-.phpunit.cache/
+.phpunit.cache
 .phpunit.result.cache
 
 # Editors and operating systems

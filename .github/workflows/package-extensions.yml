@@ -1,0 +1,37 @@
+name: Package Paymenter Extensions
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "extensions/**"
+      - "tools/package-extensions.sh"
+      - "docs/INSTALL-EXTENSIONS.md"
+      - ".github/workflows/package-extensions.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Build drag-and-drop extension ZIPs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build and validate individual extension ZIPs
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          bash tools/package-extensions.sh "$RUNNER_TEMP/fragcity-extension-packages"
+
+      - name: Upload the package bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: fragcity-paymenter-extensions-${{ github.sha }}
+          path: ${{ runner.temp }}/fragcity-extension-packages/
+          if-no-files-found: error
+          retention-days: 30
+          compression-level: 0
