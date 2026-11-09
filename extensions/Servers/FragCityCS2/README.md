@@ -18,7 +18,7 @@ If an existing client is found by email with an empty `external_id`, the extensi
 
 ## Customer server management
 
-Extension version: **1.5.0**.
+Extension version: **1.5.1**.
 
 The extension exposes two narrow methods for the signed FragCity API bridge:
 
