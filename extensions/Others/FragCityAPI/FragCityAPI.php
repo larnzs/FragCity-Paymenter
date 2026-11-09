@@ -685,7 +685,11 @@ class FragCityAPI extends Extension
                     // Text and number options are stored as free-form properties by
                     // Paymenter checkout, not as ServiceConfig value relations.
                     if (
-                        in_array((string) $configOption->type, ['text', 'number'], true)
+                        (string) $configOption->type !== 'select'
+                        || (
+                            in_array($resourceKey, ['max_players', 'tickrate'], true)
+                            && (bool) ($configOption->upgradable ?? false)
+                        )
                         || in_array($configOptionId, $usedConfigOptionIds, true)
                     ) {
                         throw new RuntimeException('cs2_config_option_mapping_invalid');
