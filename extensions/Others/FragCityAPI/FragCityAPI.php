@@ -570,7 +570,11 @@ class FragCityAPI extends Extension
                 }
 
                 $product = Product::query()
-                    ->with(['server', 'plans.prices'])
+                    ->with([
+                        'server',
+                        'plans.prices',
+                        'configOptions.children.plans.prices',
+                    ])
                     ->lockForUpdate()
                     ->find($productId);
 
@@ -611,6 +615,71 @@ class FragCityAPI extends Extension
                     || !$plan->prices->contains('currency_code', $currencyCode)
                 ) {
                     throw new RuntimeException('cs2_plan_invalid');
+                }
+
+                // Persist the same native Paymenter Config Option selections that
+                // its own checkout would create. The FragCity payload already
+                // carries the selected resource amounts; resolve each amount to
+                // its unique visible Product option value by Environment Variable.
+                // These Config rows are needed for Paymenter's recurring price and
+                // upgrade calculations, while the service properties below remain
+                // the values consumed by the CS2 provisioner.
+                $resourceConfigTargets = [
+                    'memory_mb' => (string) $memoryMb,
+                    'disk_mb' => (string) $diskMb,
+                    'cpu_percent' => (string) $cpuPercent,
+                ];
+                $resourceConfigSelections = [];
+                $usedConfigOptionIds = [];
+
+                foreach ($resourceConfigTargets as $resourceKey => $environmentValue) {
+                    $matchingValues = collect($product->configOptions)->flatMap(
+                        function ($configOption) use ($environmentValue) {
+                            return $configOption->children
+                                ->filter(
+                                    fn ($configValue) => trim((string) $configValue->env_variable) === $environmentValue
+                                )
+                                ->map(fn ($configValue) => [
+                                    'option' => $configOption,
+                                    'value' => $configValue,
+                                ]);
+                        }
+                    );
+
+                    if ($matchingValues->count() !== 1) {
+                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
+                    }
+
+                    $match = $matchingValues->first();
+                    $configOption = $match['option'];
+                    $configValue = $match['value'];
+                    $configOptionId = (int) $configOption->id;
+
+                    // Text and number options are stored as free-form properties by
+                    // Paymenter checkout, not as ServiceConfig value relations.
+                    if (
+                        in_array((string) $configOption->type, ['text', 'number'], true)
+                        || in_array($configOptionId, $usedConfigOptionIds, true)
+                    ) {
+                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
+                    }
+
+                    $configPrice = $configValue->price(
+                        null,
+                        (int) $plan->billing_period,
+                        (string) $plan->billing_unit,
+                        $currencyCode
+                    );
+
+                    if (!$configPrice->available) {
+                        throw new RuntimeException('cs2_resource_config_price_missing');
+                    }
+
+                    $resourceConfigSelections[] = [
+                        'config_option_id' => $configOptionId,
+                        'config_value_id' => (int) $configValue->id,
+                    ];
+                    $usedConfigOptionIds[] = $configOptionId;
                 }
 
                 $checkoutFields = ExtensionHelper::getCheckoutConfig($product);
@@ -758,6 +827,10 @@ class FragCityAPI extends Extension
                     );
                 }
 
+                foreach ($resourceConfigSelections as $configSelection) {
+                    $service->configs()->create($configSelection);
+                }
+
                 $invoice->items()->create([
                     'reference_id' => (int) $service->id,
                     'reference_type' => Service::class,
@@ -890,6 +963,7 @@ class FragCityAPI extends Extension
                 'paid_option_pricing_not_configured', 'invalid_egg_variable', 'egg_validation_failed',
                 'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
                 'cs2_plan_invalid', 'invalid_order_payload', 'egg_combination_invalid' => 422,
+                'cs2_resource_config_mapping_invalid', 'cs2_resource_config_price_missing' => 503,
                 'order_processing_incomplete' => 503,
                 default => 500,
             };
