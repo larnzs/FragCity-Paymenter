@@ -17,23 +17,26 @@ This repository is **not** a Paymenter fork or a full Paymenter installation. Up
 - extensions/Servers/FragCityCS2: CS2 Egg contract, validation and Pterodactyl provisioning layer.
 - themes/fragcity: retained FragCity theme assets. This is a theme, not a Paymenter Extension.
 
-## Plug-and-play ZIP packages
+## Versioned Releases and ready-to-deploy packages
 
-Every relevant push to main builds a fresh package set automatically:
+Every relevant push to main that changes a FragCity Extension or the Paymenter theme automatically builds a new [GitHub Release](https://github.com/larnzs/FragCity-Paymenter/releases/latest).
 
-[Open the latest extension package builds](https://github.com/larnzs/FragCity-Paymenter/actions/workflows/package-extensions.yml)
+Each Release contains:
+- Three separate Paymenter Extension ZIPs for native Drag & Drop upload.
+- A separate FragCity Paymenter Theme source ZIP for manual theme deployment.
+- SHA-256 checksums and package manifests.
 
-Download the latest successful **Package Paymenter Extensions** artifact and extract it. It contains one independently uploadable ZIP per extension plus checksums. In Paymenter, use **Admin → Extensions → Upload Extension** and upload the three ZIPs individually.
-
-Install order:
+Install order for Extensions:
 
 1. FragCityAPI under **Others**.
 2. FragCitySupportAPI under **Others**.
 3. FragCityCS2 under **Servers**.
 
-The ZIP structure is validated against Paymenter v1.5.9's native uploader. The combined GitHub Actions artifact is only a download bundle; do not upload that outer ZIP to Paymenter.
+The theme is not an Extension: extract its fragcity/ directory into Paymenter's themes/ directory and rebuild Vite assets from the Paymenter installation root with `npm run build -- fragcity`.
 
-The ZarinPal Gateway is intentionally not included in main-branch packages. ZarinPal verification and payment remain on the FragCity website; Paymenter accepts only the signed, verified order from the backend bridge.
+Previous Releases remain available for rollback. The Actions artifact is retained only as a secondary 30-day copy.
+
+The ZarinPal Gateway is intentionally not included. ZarinPal verification and payment remain on the FragCity website; Paymenter accepts only the signed, verified order from the backend bridge.
 
 Full instructions, configuration and update safeguards: [Plug-and-play installation guide](docs/INSTALL-EXTENSIONS.md).
 
