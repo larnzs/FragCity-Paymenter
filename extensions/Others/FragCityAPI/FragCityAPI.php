@@ -455,13 +455,14 @@ class FragCityAPI extends Extension
         Auth::guard('web')->login($user, false);
         request()->session()->regenerate();
 
-        return redirect()->route('products.checkout', [
+        $response = redirect()->route('products.checkout', [
             'category' => $product->category->slug,
             'product' => $product->slug,
-        ])->withHeaders([
-            'Cache-Control' => 'no-store, private',
-            'Referrer-Policy' => 'no-referrer',
         ]);
+        $response->headers->set('Cache-Control', 'no-store, private');
+        $response->headers->set('Referrer-Policy', 'no-referrer');
+
+        return $response;
     }
 
     public function myServers(Request $request): JsonResponse
