@@ -46,6 +46,14 @@ class ZarinPal extends Gateway
                 'validation' => 'required|string|max:64',
             ],
             [
+                'name' => 'currency_code',
+                'label' => 'Paymenter currency code',
+                'type' => 'text',
+                'required' => true,
+                'validation' => 'required|string|max:12',
+                'description' => 'Only invoices using this exact Paymenter currency code will show the gateway.',
+            ],
+            [
                 'name' => 'currency_unit',
                 'label' => 'Paymenter currency unit',
                 'type' => 'select',
@@ -74,9 +82,19 @@ class ZarinPal extends Gateway
         ];
     }
 
+    public function canUseGateway($total, $currency, $type, $items = []): bool
+    {
+        return strtoupper(trim((string) $currency))
+            === strtoupper(trim((string) $this->config('currency_code')));
+    }
+
     public function pay(Invoice $invoice, $total)
     {
         $merchantId = trim((string) $this->config('merchant_id'));
+        $configuredCurrency = strtoupper(trim((string) $this->config('currency_code')));
+        if ($configuredCurrency === '' || strtoupper((string) $invoice->currency_code) !== $configuredCurrency) {
+            throw new DisplayException('This Paymenter invoice uses a currency not configured for ZarinPal.');
+        }
         $currencyUnit = strtolower(trim((string) $this->config('currency_unit')));
         $amountPaymenter = round((float) $total, 2);
 
@@ -223,6 +241,7 @@ class ZarinPal extends Gateway
 
         if (
             !in_array($currencyUnit, ['toman', 'rial'], true)
+            || strtoupper((string) $invoice->currency_code) !== strtoupper(trim((string) $this->config('currency_code')))
             || $amountRial < 10
             || !hash_equals((string) $context['currency_code'], (string) $invoice->currency_code)
             || $expectedRial !== $amountRial
