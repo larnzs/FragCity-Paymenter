@@ -4,21 +4,17 @@ namespace Paymenter\Extensions\Others\FragCityAPI;
 
 use App\Attributes\ExtensionMeta;
 use App\Classes\Extension\Extension;
-use App\Enums\InvoiceTransactionStatus;
 use App\Helpers\ExtensionHelper;
-use App\Models\Invoice;
-use App\Models\Order;
-use App\Models\Plan;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
 use RuntimeException;
@@ -26,8 +22,8 @@ use Throwable;
 
 #[ExtensionMeta(
     name: 'FragCity API',
-    description: 'Private signed server-to-server account, CS2 order and service bridge for FragCity.',
-    version: '1.5.0',
+    description: 'Private signed account, checkout SSO and customer service bridge for FragCity.',
+    version: '1.6.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -49,65 +45,17 @@ class FragCityAPI extends Extension
                 'name' => 'allowed_ips',
                 'label' => 'Allowed Source IPs',
                 'type' => 'textarea',
-                'description' => 'Optional comma- or newline-separated exact source IP allowlist. Leave empty only when the hosting provider cannot guarantee a stable egress IP; HMAC authentication remains mandatory.',
+                'description' => 'Optional comma- or newline-separated exact source IP allowlist. HMAC authentication remains mandatory.',
                 'required' => false,
                 'default' => '',
             ],
             [
                 'name' => 'cs2_product_id',
-                'label' => 'FragCity CS2 Product ID',
+                'label' => 'FragCity CS2 Checkout Product ID',
                 'type' => 'number',
-                'description' => 'Paymenter Product ID assigned to the FragCity CS2 server extension.',
+                'description' => 'Enabled Paymenter Product ID using the FragCityCS2 server extension. Its native Plans and Config Options are used by Paymenter Checkout.',
                 'required' => true,
                 'validation' => 'required|integer|min:1',
-            ],
-            [
-                'name' => 'cs2_plan_id_1_day',
-                'label' => 'CS2 1-day Plan ID',
-                'type' => 'number',
-                'required' => true,
-                'validation' => 'required|integer|min:1',
-            ],
-            [
-                'name' => 'cs2_plan_id_7_days',
-                'label' => 'CS2 7-day Plan ID',
-                'type' => 'number',
-                'required' => true,
-                'validation' => 'required|integer|min:1',
-            ],
-            [
-                'name' => 'cs2_plan_id_15_days',
-                'label' => 'CS2 15-day Plan ID',
-                'type' => 'number',
-                'required' => true,
-                'validation' => 'required|integer|min:1',
-            ],
-            [
-                'name' => 'cs2_plan_id_30_days',
-                'label' => 'CS2 30-day Plan ID',
-                'type' => 'number',
-                'required' => true,
-                'validation' => 'required|integer|min:1',
-            ],
-            [
-                'name' => 'cs2_currency_code',
-                'label' => 'CS2 Paymenter Currency Code',
-                'type' => 'text',
-                'description' => 'Currency code used by the configured CS2 plans, for example the code already created in Paymenter for Toman or Rial.',
-                'required' => true,
-                'validation' => 'required|string|max:12|regex:/^[A-Za-z0-9_-]+$/',
-            ],
-            [
-                'name' => 'cs2_currency_unit',
-                'label' => 'CS2 Paymenter Currency Unit',
-                'type' => 'select',
-                'description' => 'Select whether the configured Paymenter currency values are expressed in Toman or Rial.',
-                'options' => [
-                    ['value' => 'toman', 'label' => 'Toman'],
-                    ['value' => 'rial', 'label' => 'Rial'],
-                ],
-                'default' => 'toman',
-                'required' => true,
             ],
         ];
     }
@@ -137,7 +85,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.5.0',
+            'version' => '1.6.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -371,7 +319,19 @@ class FragCityAPI extends Extension
      *
      * This method never calls Pterodactyl directly and never trusts browser data.
      */
-    public function createCs2Order(Request $request): JsonResponse
+
+    /**
+     * Return the authenticated customer's FragCity CS2 services and
+     * allow-listed Pterodactyl access details. No password is ever returned.
+     */
+    /**
+     * Create a short-lived, single-use URL that signs the authenticated
+     * FragCity Steam account into Paymenter and opens its native CS2 Checkout.
+     *
+     * This endpoint does not create Orders, Invoices, Services, Config rows or
+     * server records. Paymenter's own Checkout and Cart own that lifecycle.
+     */
+    public function createCheckoutUrl(Request $request): JsonResponse
     {
         $authError = $this->authenticateBridgeRequest($request);
         if ($authError) {
@@ -380,659 +340,130 @@ class FragCityAPI extends Extension
 
         $payload = $request->attributes->get('fragcity_bridge_payload');
         $validator = Validator::make(is_array($payload) ? $payload : [], [
-            'order_ref' => ['required', 'string', 'regex:/^[a-f0-9]{32}$/i'],
             'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
-            'payment.provider' => ['required', 'in:zarinpal'],
-            'payment.authority' => ['required', 'string', 'max:128', 'regex:/^[A-Za-z0-9_-]+$/'],
-            'payment.ref_id' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_-]+$/'],
-            'payment.amount_toman' => ['required', 'integer', 'min:1'],
-            'payment.amount_rial' => ['required', 'integer', 'min:10'],
-            'duration_days' => ['required', 'integer', 'in:1,7,15,30'],
-            'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9 ]+$/'],
-            'resources.memory_mb' => ['required', 'integer', 'in:1024,1280,1536'],
-            'resources.disk_mb' => ['required', 'integer', 'min:5120', 'max:10240'],
-            'resources.cpu_percent' => ['required', 'integer', 'in:100,200,300,400'],
-            'egg' => ['required', 'array'],
         ]);
 
         if ($validator->fails()) {
             return response()->json([
                 'success' => false,
                 'error' => 'validation_failed',
-                'fields' => $validator->errors()->keys(),
             ], 422);
         }
-
-        $data = $validator->validated();
-        $orderRef = strtolower((string) $data['order_ref']);
-        $steamId = (string) $data['steamid64'];
-        $authority = (string) $data['payment']['authority'];
-        $zarinpalRef = (string) $data['payment']['ref_id'];
-        $amountToman = (int) $data['payment']['amount_toman'];
-        $amountRial = (int) $data['payment']['amount_rial'];
-        $durationDays = (int) $data['duration_days'];
-        $serverName = trim((string) $data['server_name']);
-        $memoryMb = (int) $data['resources']['memory_mb'];
-        $diskMb = (int) $data['resources']['disk_mb'];
-        $cpuPercent = (int) $data['resources']['cpu_percent'];
-        $eggValues = is_array($data['egg']) ? $data['egg'] : [];
-
-        if (
-            $amountToman > intdiv(PHP_INT_MAX, 10)
-            || $amountRial !== $amountToman * 10
-            || (($diskMb - 5120) % 1024) !== 0
-        ) {
-            return response()->json([
-                'success' => false,
-                'error' => 'invalid_order_payload',
-            ], 422);
-        }
-
-        // These options are marked as paid in the shared checkout contract.
-        // The FragCity storefront has not yet added their surcharges to its
-        // authoritative quote, so fail closed rather than provisioning them free.
-        if (
-            (string) ($eggValues['TICKRATE'] ?? '64') !== '64'
-            || (string) ($eggValues['ENABLE_GUARD'] ?? '0') !== '0'
-        ) {
-            return response()->json([
-                'success' => false,
-                'error' => 'paid_option_pricing_not_configured',
-            ], 422);
-        }
-
-        $currencyCode = strtoupper(trim((string) $this->config('cs2_currency_code')));
-        $currencyUnit = strtolower(trim((string) $this->config('cs2_currency_unit')));
-        $productId = (int) $this->config('cs2_product_id');
-        $planSetting = [
-            1 => 'cs2_plan_id_1_day',
-            7 => 'cs2_plan_id_7_days',
-            15 => 'cs2_plan_id_15_days',
-            30 => 'cs2_plan_id_30_days',
-        ];
-        $planId = (int) $this->config($planSetting[$durationDays] ?? '');
-
-        if (
-            $productId < 1
-            || $planId < 1
-            || $currencyCode === ''
-            || !in_array($currencyUnit, ['toman', 'rial'], true)
-        ) {
-            return response()->json([
-                'success' => false,
-                'error' => 'cs2_checkout_not_configured',
-            ], 503);
-        }
-
-        $paymenterAmount = $currencyUnit === 'toman' ? $amountToman : $amountRial;
-        $eggHashValues = $eggValues;
-        ksort($eggHashValues, SORT_STRING);
-        $canonicalPayload = [
-            'order_ref' => $orderRef,
-            'steamid64' => $steamId,
-            'payment' => [
-                'provider' => 'zarinpal',
-                'authority' => $authority,
-                'ref_id' => $zarinpalRef,
-                'amount_toman' => $amountToman,
-                'amount_rial' => $amountRial,
-            ],
-            'duration_days' => $durationDays,
-            'server_name' => $serverName,
-            'resources' => [
-                'memory_mb' => $memoryMb,
-                'disk_mb' => $diskMb,
-                'cpu_percent' => $cpuPercent,
-            ],
-            'egg' => $eggHashValues,
-            'currency_code' => $currencyCode,
-            'currency_unit' => $currencyUnit,
-            'product_id' => $productId,
-            'plan_id' => $planId,
-        ];
-        $payloadHash = hash(
-            'sha256',
-            json_encode($canonicalPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)
-        );
 
         try {
-            $result = DB::transaction(function () use (
-                $orderRef,
-                $steamId,
-                $authority,
-                $zarinpalRef,
-                $amountToman,
-                $amountRial,
-                $durationDays,
-                $serverName,
-                $memoryMb,
-                $diskMb,
-                $cpuPercent,
-                $eggValues,
-                $payloadHash,
-                $currencyCode,
-                $currencyUnit,
-                $productId,
-                $planId,
-                $paymenterAmount
-            ): array {
-                $existing = DB::table('fragcity_server_orders')
-                    ->where('order_ref', $orderRef)
-                    ->lockForUpdate()
-                    ->first();
+            $steamId = (string) $validator->validated()['steamid64'];
+            $link = DB::table('fragcity_user_links')
+                ->where('steamid64', $steamId)
+                ->first();
 
-                if ($existing) {
-                    if (!hash_equals((string) $existing->payload_hash, $payloadHash)) {
-                        throw new RuntimeException('order_reference_conflict');
-                    }
+            if (!$link) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'fragcity_user_not_linked',
+                ], 404);
+            }
 
-                    if ((string) $existing->status !== 'accepted') {
-                        throw new RuntimeException('order_processing_incomplete');
-                    }
+            $user = User::query()->find((int) $link->user_id);
+            $product = Product::query()
+                ->with(['category', 'server'])
+                ->find((int) $this->config('cs2_product_id'));
 
-                    return [
-                        'order_id' => (int) $existing->paymenter_order_id,
-                        'invoice_id' => (int) $existing->paymenter_invoice_id,
-                        'service_id' => (int) $existing->paymenter_service_id,
-                        'status' => 'accepted',
-                        'replayed' => true,
-                    ];
-                }
+            if (
+                !$user
+                || !$product
+                || !(bool) $product->enabled
+                || $product->server?->extension !== 'FragCityCS2'
+                || !$product->category
+            ) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'paymenter_checkout_unavailable',
+                ], 503);
+            }
 
-                $usedPayment = DB::table('fragcity_server_orders')
-                    ->where(function ($query) use ($authority, $zarinpalRef): void {
-                        $query->where('zarinpal_authority', $authority)
-                            ->orWhere('zarinpal_ref_id', $zarinpalRef);
-                    })
-                    ->lockForUpdate()
-                    ->first();
+            $token = bin2hex(random_bytes(32));
+            $cacheKey = 'fragcity_checkout_login:' . hash('sha256', $token);
 
-                if ($usedPayment) {
-                    throw new RuntimeException('zarinpal_payment_already_used');
-                }
-
-                $userLink = DB::table('fragcity_user_links')
-                    ->where('steamid64', $steamId)
-                    ->lockForUpdate()
-                    ->first();
-
-                if (!$userLink) {
-                    throw new RuntimeException('fragcity_user_not_linked');
-                }
-
-                $user = User::query()
-                    ->with('properties')
-                    ->lockForUpdate()
-                    ->find((int) $userLink->user_id);
-
-                if (!$user) {
-                    throw new RuntimeException('linked_paymenter_user_missing');
-                }
-
-                $product = Product::query()
-                    ->with([
-                        'server',
-                        'plans.prices',
-                        'configOptions.children.plans.prices',
-                    ])
-                    ->lockForUpdate()
-                    ->find($productId);
-
-                if (
-                    !$product
-                    || !(bool) $product->enabled
-                    || $product->server?->extension !== 'FragCityCS2'
-                ) {
-                    throw new RuntimeException('cs2_product_invalid');
-                }
-
-                if ($product->stock !== null && (int) $product->stock < 1) {
-                    throw new RuntimeException('cs2_product_out_of_stock');
-                }
-
-                $perUserLimit = (int) ($product->per_user_limit ?? 0);
-                if (
-                    $perUserLimit > 0
-                    && $user->services()->where('product_id', $product->id)->count() >= $perUserLimit
-                ) {
-                    throw new RuntimeException('cs2_product_user_limit');
-                }
-
-                $plan = $product->plans->firstWhere('id', $planId);
-                $expectedPlan = match ($durationDays) {
-                    1 => [1, 'day'],
-                    7 => [1, 'week'],
-                    15 => [15, 'day'],
-                    30 => [1, 'month'],
-                };
-
-                if (
-                    !$plan
-                    || (string) $plan->type === 'free'
-                    || (string) $plan->type === 'one-time'
-                    || (int) $plan->billing_period !== $expectedPlan[0]
-                    || (string) $plan->billing_unit !== $expectedPlan[1]
-                    || !$plan->prices->contains('currency_code', $currencyCode)
-                ) {
-                    throw new RuntimeException('cs2_plan_invalid');
-                }
-
-                // Persist the same native Paymenter Config Option selections that
-                // its own checkout would create. The FragCity payload already
-                // carries the selected resource amounts; resolve each amount to
-                // its unique visible Product option value by Environment Variable.
-                // These Config rows are needed for Paymenter's recurring price and
-                // upgrade calculations, while the service properties below remain
-                // the values consumed by the CS2 provisioner.
-                $resourceConfigTargets = [
-                    'memory_mb' => (string) $memoryMb,
-                    'disk_mb' => (string) $diskMb,
-                    'cpu_percent' => (string) $cpuPercent,
-                ];
-                $resourceConfigSelections = [];
-                $usedConfigOptionIds = [];
-
-                foreach ($resourceConfigTargets as $resourceKey => $environmentValue) {
-                    $matchingValues = collect($product->configOptions)->flatMap(
-                        function ($configOption) use ($environmentValue) {
-                            return $configOption->children
-                                ->filter(
-                                    fn ($configValue) => trim((string) $configValue->env_variable) === $environmentValue
-                                )
-                                ->map(fn ($configValue) => [
-                                    'option' => $configOption,
-                                    'value' => $configValue,
-                                ]);
-                        }
-                    );
-
-                    if ($matchingValues->count() !== 1) {
-                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
-                    }
-
-                    $match = $matchingValues->first();
-                    $configOption = $match['option'];
-                    $configValue = $match['value'];
-                    $configOptionId = (int) $configOption->id;
-
-                    // Text and number options are stored as free-form properties by
-                    // Paymenter checkout, not as ServiceConfig value relations.
-                    if (
-                        in_array((string) $configOption->type, ['text', 'number'], true)
-                        || in_array($configOptionId, $usedConfigOptionIds, true)
-                    ) {
-                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
-                    }
-
-                    $configPrice = $configValue->price(
-                        null,
-                        (int) $plan->billing_period,
-                        (string) $plan->billing_unit,
-                        $currencyCode
-                    );
-
-                    if (!$configPrice->available) {
-                        throw new RuntimeException('cs2_resource_config_price_missing');
-                    }
-
-                    $resourceConfigSelections[] = [
-                        'config_option_id' => $configOptionId,
-                        'config_value_id' => (int) $configValue->id,
-                    ];
-                    $usedConfigOptionIds[] = $configOptionId;
-                }
-
-                $checkoutFields = ExtensionHelper::getCheckoutConfig($product);
-                if (!is_array($checkoutFields) || $checkoutFields === []) {
-                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
-                }
-
-                $allowedEggKeys = [];
-                $eggRules = [];
-                $normalizedEggValues = [];
-
-                foreach ($checkoutFields as $field) {
-                    $name = (string) ($field['name'] ?? '');
-                    if ($name === '') {
-                        continue;
-                    }
-
-                    $allowedEggKeys[] = $name;
-                    $value = $eggValues[$name] ?? $field['default'] ?? null;
-                    $normalizedEggValues[$name] = $value;
-
-                    $rules = [];
-                    if (!empty($field['required'])) {
-                        $rules[] = 'required';
-                    } else {
-                        $rules[] = 'nullable';
-                    }
-
-                    $fieldRules = $field['validation'] ?? [];
-                    if (is_string($fieldRules)) {
-                        $fieldRules = array_filter(explode('|', $fieldRules));
-                    }
-                    if (is_array($fieldRules)) {
-                        $rules = array_merge($rules, $fieldRules);
-                    }
-
-                    if (in_array((string) ($field['type'] ?? ''), ['select', 'radio'], true)) {
-                        $options = $field['options'] ?? [];
-                        if (is_array($options) && array_is_list($options) && isset($options[0]) && is_array($options[0])) {
-                            $optionValues = array_map(
-                                static fn ($option): string => (string) ($option['value'] ?? ''),
-                                $options
-                            );
-                        } else {
-                            // FragCityCS2 adapts manifest select records to Paymenter's
-                            // associative [egg_value => label] Checkout contract.
-                            $optionValues = is_array($options)
-                                ? array_map('strval', array_keys($options))
-                                : [];
-                        }
-                        if ($optionValues !== []) {
-                            $rules[] = 'in:' . implode(',', array_map(
-                                static fn (string $option): string => str_replace(',', '\\,', $option),
-                                $optionValues
-                            ));
-                        }
-                    }
-
-                    $eggRules[$name] = array_values(array_unique($rules));
-                }
-
-                if (array_diff(array_keys($eggValues), $allowedEggKeys) !== []) {
-                    throw new RuntimeException('invalid_egg_variable');
-                }
-
-                $eggValidator = Validator::make($normalizedEggValues, $eggRules);
-                if ($eggValidator->fails()) {
-                    throw new RuntimeException('egg_validation_failed');
-                }
-
-                $cs2ManifestPath = dirname(__DIR__, 2) . '/Servers/FragCityCS2/resources/cs2-egg-variables.json';
-                if (!is_file($cs2ManifestPath)) {
-                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
-                }
-
-                try {
-                    $cs2Manifest = json_decode(
-                        (string) file_get_contents($cs2ManifestPath),
-                        true,
-                        512,
-                        JSON_THROW_ON_ERROR
-                    );
-                } catch (Throwable) {
-                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
-                }
-
-                $cfgOptions = $cs2Manifest['game_mode_manager']['cfg_options'] ?? [];
-                $selectedCfg = null;
-                foreach (is_array($cfgOptions) ? $cfgOptions : [] as $cfgOption) {
-                    if ((string) ($cfgOption['config'] ?? '') === (string) $normalizedEggValues['EXEC']) {
-                        $selectedCfg = $cfgOption;
-                        break;
-                    }
-                }
-
-                $compatibleMapGroups = $selectedCfg['mapGroups'] ?? [];
-                if (
-                    !is_array($compatibleMapGroups)
-                    || !in_array((string) $normalizedEggValues['MAPGROUP'], $compatibleMapGroups, true)
-                ) {
-                    throw new RuntimeException('egg_combination_invalid');
-                }
-
-                $normalizedEggValues['GUARD_BAN_MINUTES'] = (string) (
-                    $normalizedEggValues['GUARD_BAN_MINUTES'] ?? 60
-                );
-
-                $now = now();
-                $order = new Order([
+            Cache::put(
+                $cacheKey,
+                [
                     'user_id' => (int) $user->id,
-                    'currency_code' => $currencyCode,
-                ]);
-                $order->send_create_email = false;
-                $order->save();
-
-                $invoice = new Invoice([
-                    'user_id' => (int) $user->id,
-                    'due_at' => $now,
-                    'currency_code' => $currencyCode,
-                ]);
-                $invoice->send_create_email = false;
-                $invoice->save();
-
-                $service = $order->services()->create([
-                    'user_id' => (int) $user->id,
-                    'currency_code' => $currencyCode,
                     'product_id' => (int) $product->id,
-                    'plan_id' => (int) $plan->id,
-                    'price' => number_format($paymenterAmount, 2, '.', ''),
-                    'quantity' => 1,
-                    'status' => Service::STATUS_PENDING,
-                ]);
-
-                $serviceProperties = [
-                    'servername' => $serverName,
-                    'memory' => (string) $memoryMb,
-                    'disk' => (string) $diskMb,
-                    'cpu' => (string) $cpuPercent,
-                ] + $normalizedEggValues;
-
-                foreach ($serviceProperties as $key => $value) {
-                    $service->properties()->updateOrCreate(
-                        ['key' => (string) $key],
-                        ['value' => (string) $value]
-                    );
-                }
-
-                foreach ($resourceConfigSelections as $configSelection) {
-                    $service->configs()->create($configSelection);
-                }
-
-                $invoice->items()->create([
-                    'reference_id' => (int) $service->id,
-                    'reference_type' => Service::class,
-                    'price' => number_format($paymenterAmount, 2, '.', ''),
-                    'quantity' => 1,
-                    'description' => 'FragCity CS2 Server — ' . $serverName . ' (' . $durationDays . ' days)',
-                ]);
-
-                ExtensionHelper::addPayment(
-                    $invoice,
-                    null,
-                    $paymenterAmount,
-                    null,
-                    'zarinpal:' . $zarinpalRef,
-                    InvoiceTransactionStatus::Succeeded
-                );
-
-                if ($product->stock !== null) {
-                    $product->stock = max(0, (int) $product->stock - 1);
-                    $product->save();
-                }
-
-                $invoice->status = Invoice::STATUS_PAID;
-                $invoice->save();
-
-                DB::table('fragcity_server_orders')->insert([
-                    'order_ref' => $orderRef,
-                    'steamid64' => $steamId,
-                    'zarinpal_authority' => $authority,
-                    'zarinpal_ref_id' => $zarinpalRef,
-                    'amount_toman' => $amountToman,
-                    'amount_rial' => $amountRial,
-                    'currency_code' => $currencyCode,
-                    'currency_unit' => $currencyUnit,
-                    'duration_days' => $durationDays,
-                    'payload_hash' => $payloadHash,
-                    'paymenter_user_id' => (int) $user->id,
-                    'paymenter_order_id' => (int) $order->id,
-                    'paymenter_invoice_id' => (int) $invoice->id,
-                    'paymenter_service_id' => (int) $service->id,
-                    'status' => 'accepted',
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
-
-                return [
-                    'order_id' => (int) $order->id,
-                    'invoice_id' => (int) $invoice->id,
-                    'service_id' => (int) $service->id,
-                    'status' => 'accepted',
-                    'replayed' => false,
-                ];
-            }, 3);
+                ],
+                now()->addMinutes(2)
+            );
 
             return response()->json([
                 'success' => true,
-                'data' => $result + [
-                    'provisioning' => 'queued_by_paymenter',
-                    'currency_code' => $currencyCode,
-                    'currency_unit' => $currencyUnit,
+                'data' => [
+                    'checkout_url' => route('extensions.fragcity-api.checkout-login', [
+                        'token' => $token,
+                    ]),
+                    'expires_in' => 120,
                 ],
-            ], !empty($result['replayed']) ? 200 : 201);
-        } catch (QueryException $e) {
-            // Unique order/payment indexes are the final concurrency guard.
-            // Recover an exact retry, but never attach one ZarinPal receipt to
-            // a different order reference or payload.
-            try {
-                $existing = DB::table('fragcity_server_orders')
-                    ->where('order_ref', $orderRef)
-                    ->first();
-
-                if ($existing) {
-                    if (
-                        hash_equals((string) $existing->payload_hash, $payloadHash)
-                        && (string) $existing->status === 'accepted'
-                    ) {
-                        return response()->json([
-                            'success' => true,
-                            'data' => [
-                                'order_id' => (int) $existing->paymenter_order_id,
-                                'invoice_id' => (int) $existing->paymenter_invoice_id,
-                                'service_id' => (int) $existing->paymenter_service_id,
-                                'status' => 'accepted',
-                                'replayed' => true,
-                                'provisioning' => 'queued_by_paymenter',
-                                'currency_code' => $currencyCode,
-                                'currency_unit' => $currencyUnit,
-                            ],
-                        ]);
-                    }
-
-                    return response()->json([
-                        'success' => false,
-                        'error' => 'order_reference_conflict',
-                    ], 409);
-                }
-
-                $paymentUsed = DB::table('fragcity_server_orders')
-                    ->where(function ($query) use ($authority, $zarinpalRef): void {
-                        $query->where('zarinpal_authority', $authority)
-                            ->orWhere('zarinpal_ref_id', $zarinpalRef);
-                    })
-                    ->exists();
-
-                if ($paymentUsed) {
-                    return response()->json([
-                        'success' => false,
-                        'error' => 'zarinpal_payment_already_used',
-                    ], 409);
-                }
-            } catch (Throwable) {
-                // Fall through to the generic persistence failure below.
-            }
-
-            Log::error('FragCity CS2 order persistence failed.', [
-                'order_ref' => $orderRef,
-                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
-                'sqlstate' => (string) $e->getCode(),
             ]);
-
-            return response()->json([
-                'success' => false,
-                'error' => 'cs2_order_creation_failed',
-            ], 500);
-        } catch (RuntimeException $e) {
-            $status = match ($e->getMessage()) {
-                'fragcity_user_not_linked', 'linked_paymenter_user_missing' => 404,
-                'cs2_checkout_not_configured', 'cs2_checkout_manifest_unavailable' => 503,
-                'order_reference_conflict', 'zarinpal_payment_already_used' => 409,
-                'paid_option_pricing_not_configured', 'invalid_egg_variable', 'egg_validation_failed',
-                'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
-                'cs2_plan_invalid', 'invalid_order_payload', 'egg_combination_invalid' => 422,
-                'cs2_resource_config_mapping_invalid', 'cs2_resource_config_price_missing' => 503,
-                'order_processing_incomplete' => 503,
-                default => 500,
-            };
-
-            if ($status === 500) {
-                Log::error('FragCity CS2 order creation failed.', [
-                    'order_ref' => $orderRef,
-                    'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
-                    'exception' => get_class($e),
-                    'reason' => $e->getMessage(),
-                ]);
-                return response()->json([
-                    'success' => false,
-                    'error' => 'cs2_order_creation_failed',
-                ], 500);
-            }
-
-            return response()->json([
-                'success' => false,
-                'error' => $e->getMessage(),
-            ], $status);
         } catch (Throwable $e) {
-            // A client may retry after a transport timeout that happened after
-            // the DB commit. Recover only an exact payload/order-ref match.
-            try {
-                $existing = DB::table('fragcity_server_orders')
-                    ->where('order_ref', $orderRef)
-                    ->first();
-
-                if (
-                    $existing
-                    && hash_equals((string) $existing->payload_hash, $payloadHash)
-                    && (string) $existing->status === 'accepted'
-                ) {
-                    return response()->json([
-                        'success' => true,
-                        'data' => [
-                            'order_id' => (int) $existing->paymenter_order_id,
-                            'invoice_id' => (int) $existing->paymenter_invoice_id,
-                            'service_id' => (int) $existing->paymenter_service_id,
-                            'status' => 'accepted',
-                            'replayed' => true,
-                            'provisioning' => 'queued_by_paymenter',
-                            'currency_code' => $currencyCode,
-                            'currency_unit' => $currencyUnit,
-                        ],
-                    ]);
-                }
-            } catch (Throwable) {
-                // Keep the original failure; the website can retry with this order_ref.
-            }
-
-            Log::error('FragCity CS2 order bridge failed.', [
-                'order_ref' => $orderRef,
-                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+            Log::warning('FragCity native checkout URL creation failed.', [
+                'steamid_hash' => substr(hash('sha256', (string) ($payload['steamid64'] ?? '')), 0, 16),
                 'exception' => get_class($e),
             ]);
 
             return response()->json([
                 'success' => false,
-                'error' => 'cs2_order_creation_failed',
-            ], 500);
+                'error' => 'paymenter_checkout_unavailable',
+            ], 503);
         }
     }
 
     /**
-     * Return the authenticated customer's FragCity CS2 services and
-     * allow-listed Pterodactyl access details. No password is ever returned.
+     * Consume a one-time FragCity SSO token, establish the native Paymenter
+     * session, and redirect to the configured Product's native Checkout.
      */
+    public function checkoutLogin(string $token)
+    {
+        $token = strtolower(trim($token));
+        if (!preg_match('/^[a-f0-9]{64}$/D', $token)) {
+            abort(404);
+        }
+
+        $cacheKey = 'fragcity_checkout_login:' . hash('sha256', $token);
+        $context = Cache::pull($cacheKey);
+
+        if (
+            !is_array($context)
+            || (int) ($context['user_id'] ?? 0) < 1
+            || (int) ($context['product_id'] ?? 0) < 1
+        ) {
+            abort(410, 'This checkout link has expired or has already been used.');
+        }
+
+        $user = User::query()->find((int) $context['user_id']);
+        $product = Product::query()
+            ->with(['category', 'server'])
+            ->find((int) $context['product_id']);
+
+        if (
+            !$user
+            || !$product
+            || !(bool) $product->enabled
+            || $product->server?->extension !== 'FragCityCS2'
+            || !$product->category
+        ) {
+            abort(404);
+        }
+
+        Auth::guard('web')->login($user, false);
+        request()->session()->regenerate();
+
+        return redirect()->route('products.checkout', [
+            'category' => $product->category->slug,
+            'product' => $product->slug,
+        ])->withHeaders([
+            'Cache-Control' => 'no-store, private',
+            'Referrer-Policy' => 'no-referrer',
+        ]);
+    }
+
     public function myServers(Request $request): JsonResponse
     {
         $authError = $this->authenticateBridgeRequest($request);
