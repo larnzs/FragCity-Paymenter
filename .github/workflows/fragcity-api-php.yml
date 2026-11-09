@@ -55,7 +55,7 @@ jobs:
           grep -Fq "function createCheckoutUrl" "$api"
           grep -Fq "function checkoutLogin" "$api"
           grep -Fq 'Cache::pull($cacheKey)' "$api"
-          grep -Fq 'Auth::guard("web")->login($user, false)' "$api"
+          grep -Fq "Auth::guard('web')->login(\$user, false)" "$api"
           grep -Fq "products.checkout" "$api"
           grep -Fq "checkout-url" "$routes"
           grep -Fq "checkout-login/{token}" "$routes"
