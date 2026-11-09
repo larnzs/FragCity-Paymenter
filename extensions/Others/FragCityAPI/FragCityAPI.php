@@ -27,7 +27,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server account, CS2 order and service bridge for FragCity.',
-    version: '1.7.1',
+    version: '1.8.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -380,6 +380,10 @@ class FragCityAPI extends Extension
             'resources.memory_mb' => ['required', 'integer', 'in:1024,1280,1536'],
             'resources.disk_mb' => ['required', 'integer', 'min:5120', 'max:10240'],
             'resources.cpu_percent' => ['required', 'integer', 'in:100,200,300,400'],
+            'feature_limits' => ['sometimes', 'array'],
+            'feature_limits.databases' => ['sometimes', 'integer', 'in:0,1,2,3,5,10'],
+            'feature_limits.additional_allocations' => ['sometimes', 'integer', 'in:0,1,2,3,5'],
+            'feature_limits.backups' => ['sometimes', 'integer', 'in:0,1,2,3,5,10'],
             'egg' => ['required', 'array'],
         ]);
 
@@ -403,6 +407,12 @@ class FragCityAPI extends Extension
         $memoryMb = (int) $data['resources']['memory_mb'];
         $diskMb = (int) $data['resources']['disk_mb'];
         $cpuPercent = (int) $data['resources']['cpu_percent'];
+        $featureLimitInput = is_array($data['feature_limits'] ?? null) ? $data['feature_limits'] : [];
+        $featureLimits = [
+            'databases' => (int) ($featureLimitInput['databases'] ?? 0),
+            'additional_allocations' => (int) ($featureLimitInput['additional_allocations'] ?? 0),
+            'backups' => (int) ($featureLimitInput['backups'] ?? 0),
+        ];
         $eggValues = is_array($data['egg']) ? $data['egg'] : [];
 
         if (
@@ -471,6 +481,7 @@ class FragCityAPI extends Extension
                 'disk_mb' => $diskMb,
                 'cpu_percent' => $cpuPercent,
             ],
+            'feature_limits' => $featureLimits,
             'egg' => $eggHashValues,
             'currency_code' => $currencyCode,
             'currency_unit' => $currencyUnit,
@@ -495,6 +506,7 @@ class FragCityAPI extends Extension
                 $memoryMb,
                 $diskMb,
                 $cpuPercent,
+                $featureLimits,
                 $eggValues,
                 $payloadHash,
                 $currencyCode,
@@ -633,6 +645,21 @@ class FragCityAPI extends Extension
                         // Both Tickrate values are currently free and supported by the Egg startup argument.
                         'allowed_values' => ['64', '128'],
                     ],
+                    'databases' => [
+                        'aliases' => ['databases'],
+                        'value' => (string) $featureLimits['databases'],
+                        'allowed_values' => ['0', '1', '2', '3', '5', '10'],
+                    ],
+                    'additional_allocations' => [
+                        'aliases' => ['additionalallocations'],
+                        'value' => (string) $featureLimits['additional_allocations'],
+                        'allowed_values' => ['0', '1', '2', '3', '5'],
+                    ],
+                    'backups' => [
+                        'aliases' => ['backups'],
+                        'value' => (string) $featureLimits['backups'],
+                        'allowed_values' => ['0', '1', '2', '3', '5', '10'],
+                    ],
                 ];
                 $normalizeConfigOptionName = static function ($value): string {
                     return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $value)));
@@ -686,10 +713,7 @@ class FragCityAPI extends Extension
                     // Paymenter checkout, not as ServiceConfig value relations.
                     if (
                         (string) $configOption->type !== 'select'
-                        || (
-                            in_array($resourceKey, ['max_players', 'tickrate'], true)
-                            && (bool) ($configOption->upgradable ?? false)
-                        )
+                        || (bool) ($configOption->upgradable ?? false)
                         || in_array($configOptionId, $usedConfigOptionIds, true)
                     ) {
                         throw new RuntimeException('cs2_config_option_mapping_invalid');
@@ -706,12 +730,17 @@ class FragCityAPI extends Extension
                         throw new RuntimeException('cs2_config_option_price_missing');
                     }
 
-                    // The five-slot base and every Tickrate choice are included.
-                    // Refuse a non-zero recurring price/setup fee so Paymenter
-                    // can never charge more than the verified FragCity storefront quote.
+                    // The five-slot base, both Tickrate choices and the three
+                    // feature-limit options are included for now. Until the
+                    // storefront quote prices these features, reject any charge.
                     $mustBeFree =
                         ($resourceKey === 'max_players' && $target['value'] === '5')
-                        || $resourceKey === 'tickrate';
+                        || in_array($resourceKey, [
+                            'tickrate',
+                            'databases',
+                            'additional_allocations',
+                            'backups',
+                        ], true);
 
                     if (
                         $mustBeFree
@@ -806,12 +835,38 @@ class FragCityAPI extends Extension
                 }
 
                 $nativeConfigOptionFields = $cs2Manifest['paymenter']['config_options'] ?? [];
-                if (!is_array($nativeConfigOptionFields) || count($nativeConfigOptionFields) !== 2) {
+                if (!is_array($nativeConfigOptionFields) || count($nativeConfigOptionFields) !== 5) {
                     throw new RuntimeException('cs2_checkout_manifest_unavailable');
                 }
 
                 foreach ($nativeConfigOptionFields as $field) {
-                    $name = strtoupper(trim((string) ($field['env_variable'] ?? '')));
+                    $fieldTarget = (string) ($field['target'] ?? 'egg');
+                    $envVariable = trim((string) ($field['env_variable'] ?? ''));
+
+                    if ($fieldTarget === 'feature_limit') {
+                        $optionValues = array_map(
+                            static fn ($option): string => (string) ($option['value'] ?? ''),
+                            is_array($field['options'] ?? null) ? $field['options'] : []
+                        );
+                        if (
+                            $envVariable === ''
+                            || !array_key_exists($envVariable, $featureLimits)
+                            || in_array($envVariable, $allowedEggKeys, true)
+                            || !in_array((string) $featureLimits[$envVariable], $optionValues, true)
+                        ) {
+                            throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                        }
+
+                        // These selections are Pterodactyl feature limits, not Egg variables.
+                        // They are persisted exclusively as ServiceConfig rows.
+                        continue;
+                    }
+
+                    if ($fieldTarget !== 'egg') {
+                        throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                    }
+
+                    $name = strtoupper($envVariable);
                     if ($name === '' || in_array($name, $allowedEggKeys, true)) {
                         throw new RuntimeException('cs2_checkout_manifest_unavailable');
                     }
@@ -907,9 +962,9 @@ class FragCityAPI extends Extension
                     'status' => Service::STATUS_PENDING,
                 ]);
 
-                // Max Players and Tickrate now have one authoritative persisted
-                // source: their native ServiceConfig rows. They are reintroduced
-                // by ExtensionHelper::getServiceProperties when Paymenter provisions.
+                // Native Config Option selections are stored only as ServiceConfig
+                // rows. ExtensionHelper restores their exact Pterodactyl/Egg keys
+                // when Paymenter invokes FragCityCS2 for provisioning.
                 unset($normalizedEggValues['SRCDS_MAXPLAYERS'], $normalizedEggValues['TICKRATE']);
 
                 $serviceProperties = [
