@@ -616,11 +616,10 @@ class FragCityAPI extends Extension
                     throw new RuntimeException('cs2_plan_invalid');
                 }
 
-                // Persist RAM, Storage, CPU, Max Players and Tickrate as native Paymenter
-                // ServiceConfig selections. Paymenter's ExtensionHelper merges these
-                // values into the Pterodactyl Egg property map before provisioning.
-                // FragCityCS2 translates only RAM/Storage/CPU to resource limits;
-                // Max Players and Tickrate remain Egg environment values.
+                // Persist RAM, Storage, CPU, Max Players, Tickrate and Pterodactyl
+                // feature limits as native Paymenter ServiceConfig selections.
+                // ExtensionHelper merges their child values into the provisioning
+                // property map; FragCityCS2 maps resources, Egg values and limits.
                 $configOptionTargets = [
                     'memory_mb' => [
                         'aliases' => ['memory', 'memorymb', 'ram', 'rammb', 'memorylimit', 'ramlimit'],
