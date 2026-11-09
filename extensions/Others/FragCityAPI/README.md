@@ -70,7 +70,7 @@ After validation, the endpoint creates native Paymenter records:
 - an `Order`;
 - a pending `Service` assigned to the configured FragCity CS2 Product and duration Plan;
 - service properties for `servername` and the six remaining Egg variables. `SRCDS_MAXPLAYERS` and `TICKRATE` are not duplicated as service properties;
-- native Paymenter `ServiceConfig` rows for five Product Config Options: RAM, SSD, CPU, Player Slots and Tickrate. The bridge resolves each submitted value to exactly one child under the matching parent option, then requires a price row for the selected Plan and Rial currency. The five selected `ServiceConfig` rows are the persisted source of truth. Paymenter's `ExtensionHelper::getServiceProperties()` adds the selected child Environment Variables to the provisioning property map; `FragCityCS2` adapts RAM/SSD/CPU to Pterodactyl resource limits while Player Slots and Tickrate pass through as Egg environment values. Missing/ambiguous mappings, unsupported values or missing recurring option prices fail closed before an order is accepted;
+- native Paymenter `ServiceConfig` rows for eight Product Config Options: RAM, SSD, CPU, Player Slots, Tickrate, Databases, Additional Allocations and Backups. The bridge resolves each submitted value to exactly one child under the matching parent option, then requires a price row for the selected Plan and Rial currency. These `ServiceConfig` rows are the persisted source of truth. Paymenter's `ExtensionHelper::getServiceProperties()` adds the selected child Environment Variables to the provisioning property map; `FragCityCS2` adapts RAM/SSD/CPU to Pterodactyl resource limits, passes Player Slots/Tickrate to Egg environment values, and maps the three feature-limit selections to Pterodactyl's `feature_limits.databases`, `feature_limits.allocations` and `feature_limits.backups`. Missing/ambiguous mappings, unsupported values or missing recurring option prices fail closed before an order is accepted;
 - an invoice item linked to that service;
 - a successful Paymenter invoice transaction containing the ZarinPal reference.
 
@@ -89,11 +89,11 @@ Configure these under **Paymenter Admin → Extensions → Others → FragCity A
 | `cs2_plan_id_30_days` | Product Plan for exactly 1 month |
 | `cs2_currency_code` | Existing Paymenter Rial currency code used by all four Plans (for example `IRR`) |
 
-Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. Every selected RAM, disk, CPU, Player Slots and Tickrate child must also have a price row for the selected Plan and Rial currency. The Player Slots 5-child and both Tickrate children (64 and 128) must have zero-price rows; Player Slots 6–64 use the configured capacity surcharge. The API fails closed when the Product, Plan, currency, option mapping, supported value or child price is missing or inconsistent.
+Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. Every selected RAM, disk, CPU, Player Slots, Tickrate, Databases, Additional Allocations and Backups child must also have a price row for the selected Plan and Rial currency. The Player Slots 5-child and every Tickrate/feature-limit child must have zero-price rows; Player Slots above the included capacity use the configured capacity surcharge. The API fails closed when the Product, Plan, currency, option mapping, supported value or child price is missing or inconsistent.
 
 ### Required Product Config Options
 
-Attach all five Config Options to the configured CS2 Product. The parent Environment Variable must match exactly:
+Attach all eight Config Options to the configured CS2 Product. The parent Environment Variable must match exactly:
 
 | Config Option | Parent Environment Variable | Type | Child Environment Variables |
 | --- | --- | --- | --- |
@@ -102,8 +102,11 @@ Attach all five Config Options to the configured CS2 Product. The parent Environ
 | CPU | `cpu_percent` | Select | `100`, `200`, `300`, `400` |
 | Player Slots | `SRCDS_MAXPLAYERS` | Select | Every integer from `5` through `64` |
 | Tickrate | `TICKRATE` | Select | `64`, `128` |
+| Databases | `databases` | Select | `0`, `1`, `2`, `3`, `5`, `10` |
+| Additional Allocations | `additional_allocations` | Select | `0`, `1`, `2`, `3`, `5` |
+| Backups | `backups` | Select | `0`, `1`, `2`, `3`, `5`, `10` |
 
-Use numeric child Environment Variables, not display labels. For Player Slots, the 5-slot child is the included/base capacity and must have a zero-price row; each larger child represents the additional-slot surcharge. Both Tickrate children (`64` and `128`) must have zero-price rows for every supported Plan/currency. The Egg Startup command passes the selected value through `-tickrate {{TICKRATE}}`. Keep `Upgradable` disabled for Player Slots and Tickrate; the current inherited Pterodactyl upgrade method preserves already-set Egg environment values.
+Use exact numeric child Environment Variables, not display labels. Keep `Upgradable` disabled for all eight Config Options. For Player Slots, the 5-slot child is the included/base capacity and larger values represent the additional-slot surcharge. Both Tickrate children and every Databases/Additional Allocations/Backups child must have zero-price and zero-setup-fee rows for every supported Plan/currency until the storefront quote supports those surcharges. The Egg Startup command passes the selected Tickrate through `-tickrate {{TICKRATE}}`. The three feature-limit options are not Egg variables: `FragCityCS2` maps them directly to Pterodactyl's server feature limits.
 
 **Currency is Rial-only inside Paymenter.** The bridge always creates the Paymenter Service, Invoice item and successful Invoice Transaction using `payment.amount_rial`. `payment.amount_toman` remains the source amount used for the conversion-integrity check and order audit. The bridge verifies `amount_rial === amount_toman * 10`; it never uses the Toman amount for Paymenter monetary records.
 
@@ -129,6 +132,12 @@ The HMAC signature covers the exact raw JSON request body. The website sends the
     "disk_mb": 10240,
     "cpu_percent": 100
   },
+  "feature_limits": {
+    "databases": 0,
+    "additional_allocations": 0,
+    "backups": 0
+  },
+  },
   "egg": {
     "SRCDS_MAP": "de_dust2",
     "SRCDS_MAXPLAYERS": "10",
@@ -148,13 +157,15 @@ Resource constraints currently mirror the FragCity storefront: RAM 1024/1280/153
 
 ### Idempotency and paid add-ons
 
+- Databases, Additional Allocations and Backups are included/free for now. Every selected child must have a zero-price and zero-setup-fee row for the chosen Plan and Rial currency.
+
 - `order_ref`, ZarinPal Authority and verified ZarinPal Ref ID have unique database constraints.
 - An exact retry with the same order reference and payload hash returns the existing Paymenter Order, Invoice and Service IDs; it never creates a second service.
 - Reusing an order reference with a different payload, or attempting to spend an already-used ZarinPal receipt, returns a conflict.
 - The accepted response means the Paymenter Order/Invoice/Service records were committed and the native provisioning flow was queued. It does not claim that Pterodactyl has already finished creating the server.
 - `TICKRATE=64` and `TICKRATE=128` are both accepted as free native Config Option values. `ENABLE_GUARD=1` remains blocked until its paid surcharge is included in the authoritative storefront quote.
 
-**Renewals still require an end-to-end pricing test:** RAM/CPU/SSD selections are now native recurring Config Options, and the bridge verifies that each selected value has a price for the configured Plan and currency. Before enabling automatic renewal billing, verify that Paymenter's recurring total (Plan plus Config Option prices and any other paid add-ons such as slots) exactly matches FragCity's storefront quote and does not double-charge or omit any component. `ENABLE_GUARD=1` remains blocked until its surcharge is implemented in the authoritative storefront quote. Both Tickrate values are free and must remain zero-priced in Paymenter's native Config Options.
+**Renewals still require an end-to-end pricing test:** RAM/CPU/SSD, Player Slots, Tickrate, Databases, Additional Allocations and Backups are native recurring Config Options, and the bridge verifies that each selected value has a price for the configured Plan and currency. Before enabling automatic renewal billing, verify that Paymenter's recurring total (Plan plus Config Option prices and any other paid add-ons such as slots) exactly matches FragCity's storefront quote and does not double-charge or omit any component. `ENABLE_GUARD=1` remains blocked until its surcharge is implemented in the authoritative storefront quote.
 
 ## Installation
 
