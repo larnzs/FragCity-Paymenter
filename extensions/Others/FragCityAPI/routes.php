@@ -15,10 +15,14 @@ Route::post('/api/v1/fragcity/bridge/users/sync', [FragCityAPI::class, 'syncUser
     ->name('extensions.fragcity-api.users.sync');
 
 
-Route::post('/api/v1/fragcity/bridge/orders/cs2', [FragCityAPI::class, 'createCs2Order'])
+Route::post('/api/v1/fragcity/bridge/checkout-url', [FragCityAPI::class, 'createCheckoutUrl'])
     ->middleware('throttle:20,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
-    ->name('extensions.fragcity-api.orders.cs2');
+    ->name('extensions.fragcity-api.checkout-url');
+
+Route::get('/extensions/fragcity-api/checkout-login/{token}', [FragCityAPI::class, 'checkoutLogin'])
+    ->middleware(['web', 'throttle:20,1'])
+    ->name('extensions.fragcity-api.checkout-login');
 
 Route::post('/api/v1/fragcity/bridge/servers/list', [FragCityAPI::class, 'myServers'])
     ->middleware('throttle:30,1')
