@@ -64,7 +64,7 @@ jobs:
           grep -Fq '$matchingOptions->count() !== 1' "$api"
           grep -Fq '$configOption->children->filter(' "$api"
           grep -Fq "\$currencyUnit = 'rial'" "$api"
-          grep -Fq '\$paymenterAmount = \$amountRial;' "$api"
+          grep -Fq '$paymenterAmount = $amountRial;' "$api"
           ! grep -Fq "'name' => 'cs2_currency_unit'" "$api"
           ! grep -Fq "'memory' => (string) \$memoryMb" "$api"
           ! grep -Fq "'disk' => (string) \$diskMb" "$api"
