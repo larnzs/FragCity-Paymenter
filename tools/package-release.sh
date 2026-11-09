@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-ROOT="$(cd "$(dirname "\${BASH_SOURCE[0]}")/.." && pwd)"
-OUT_DIR="\${1:?Usage: package-release.sh OUTPUT_DIR RELEASE_TAG}"
-RELEASE_TAG="\${2:?Usage: package-release.sh OUTPUT_DIR RELEASE_TAG}"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+OUT_DIR="${1:?Usage: package-release.sh OUTPUT_DIR RELEASE_TAG}"
+RELEASE_TAG="${2:?Usage: package-release.sh OUTPUT_DIR RELEASE_TAG}"
 
 if [[ ! "$RELEASE_TAG" =~ ^[A-Za-z0-9._-]+$ ]]; then
     echo "ERROR: Invalid release tag: $RELEASE_TAG" >&2
@@ -17,7 +17,7 @@ OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 bash "$ROOT/tools/package-extensions.sh" "$OUT_DIR"
 
 THEME_DIR="$ROOT/themes/fragcity"
-THEME_ARCHIVE="FragCityPaymenterTheme-\${RELEASE_TAG}.zip"
+THEME_ARCHIVE="FragCityPaymenterTheme-${RELEASE_TAG}.zip"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -77,7 +77,7 @@ mv "$TMP_DIR/$THEME_ARCHIVE" "$OUT_DIR/$THEME_ARCHIVE"
 {
     echo "FragCity Paymenter Theme source bundle"
     echo "Release: $RELEASE_TAG"
-    echo "Source branch: \${GITHUB_REF_NAME:-$(git -C "$ROOT" branch --show-current 2>/dev/null || echo unknown)}"
+    echo "Source branch: ${GITHUB_REF_NAME:-$(git -C "$ROOT" branch --show-current 2>/dev/null || echo unknown)}"
     echo "Source commit: $(git -C "$ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
     echo "Theme source: themes/fragcity/"
     echo
