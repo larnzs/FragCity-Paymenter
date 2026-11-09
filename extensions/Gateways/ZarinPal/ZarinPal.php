@@ -274,13 +274,29 @@ class ZarinPal extends Gateway
 
             $body = $response->json();
             $code = (int) data_get($body, 'data.code', 0);
-            $verifiedAmount = (int) data_get($body, 'data.amount', $amountRial);
 
-            // Code 101 means this authority was already verified. It is safe
-            // only because the unguessable callback token is bound in cache to
-            // this exact invoice and authority.
-            if (!in_array($code, [100, 101], true) || $verifiedAmount !== $amountRial) {
-                throw new RuntimeException('ZarinPal did not verify the expected payment.');
+            if ($code === 101) {
+                // ZarinPal's already-verified response may omit the amount.
+                // Treat it as idempotent only when Paymenter already has the
+                // matching successful transaction for this exact invoice.
+                $alreadyRecorded = InvoiceTransaction::query()
+                    ->where('transaction_id', $transactionId)
+                    ->where('invoice_id', $invoice->id)
+                    ->first();
+
+                if ($alreadyRecorded && $alreadyRecorded->status === InvoiceTransactionStatus::Succeeded) {
+                    $context['status'] = 'succeeded';
+                    Cache::put($cacheKey, $context, now()->addMinutes(self::CACHE_TTL_MINUTES));
+
+                    return redirect()->route('invoices.show', $invoice);
+                }
+
+                throw new RuntimeException('ZarinPal reports an already-verified payment without a matching Paymenter transaction.');
+            }
+
+            $verifiedAmount = (int) data_get($body, 'data.amount', 0);
+            if ($code !== 100 || $verifiedAmount !== $amountRial) {
+                throw new RuntimeException('ZarinPal did not verify the expected payment amount.');
             }
 
             $existing = InvoiceTransaction::query()
