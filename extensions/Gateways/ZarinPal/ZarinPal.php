@@ -177,7 +177,7 @@ class ZarinPal extends Gateway
             $transactionContext['authority'] = $authority;
             Cache::put($cacheKey, $transactionContext, now()->addMinutes(self::CACHE_TTL_MINUTES));
 
-            return redirect()->away($paymentBase . rawurlencode($authority));
+            return $paymentBase . rawurlencode($authority);
         } catch (Throwable $e) {
             Cache::forget($cacheKey);
             Log::warning('FragCity ZarinPal payment request failed.', [
