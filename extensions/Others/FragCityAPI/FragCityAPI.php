@@ -623,34 +623,58 @@ class FragCityAPI extends Extension
                 // their values to the inherited Pterodactyl memory/disk/cpu keys.
                 // Do not duplicate those resource limits as service properties.
                 $resourceConfigTargets = [
-                    'memory_mb' => (string) $memoryMb,
-                    'disk_mb' => (string) $diskMb,
-                    'cpu_percent' => (string) $cpuPercent,
+                    'memory_mb' => [
+                        'aliases' => ['memory', 'memorymb', 'ram', 'rammb', 'memorylimit', 'ramlimit'],
+                        'value' => (string) $memoryMb,
+                    ],
+                    'disk_mb' => [
+                        'aliases' => ['disk', 'diskmb', 'storage', 'storagemb', 'ssd', 'ssdmb', 'disklimit', 'storagelimit'],
+                        'value' => (string) $diskMb,
+                    ],
+                    'cpu_percent' => [
+                        'aliases' => ['cpu', 'cpupercent', 'cpulimit'],
+                        'value' => (string) $cpuPercent,
+                    ],
                 ];
+                $normalizeResourceOptionName = static function ($value): string {
+                    return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $value)));
+                };
                 $resourceConfigSelections = [];
                 $usedConfigOptionIds = [];
 
-                foreach ($resourceConfigTargets as $resourceKey => $environmentValue) {
-                    $matchingValues = collect($product->configOptions)->flatMap(
-                        function ($configOption) use ($environmentValue) {
-                            return $configOption->children
-                                ->filter(
-                                    fn ($configValue) => trim((string) $configValue->env_variable) === $environmentValue
-                                )
-                                ->map(fn ($configValue) => [
-                                    'option' => $configOption,
-                                    'value' => $configValue,
-                                ]);
+                foreach ($resourceConfigTargets as $resourceKey => $target) {
+                    // First identify the exact parent Config Option by its own
+                    // env_variable/name. Then resolve the numeric child value
+                    // inside that option only; unrelated options may have
+                    // children with the same numeric value.
+                    $matchingOptions = collect($product->configOptions)->filter(
+                        function ($configOption) use ($target, $normalizeResourceOptionName) {
+                            $identifiers = array_map(
+                                $normalizeResourceOptionName,
+                                [
+                                    $configOption->env_variable ?? '',
+                                    $configOption->name ?? '',
+                                ]
+                            );
+
+                            return array_intersect($target['aliases'], $identifiers) !== [];
                         }
+                    );
+
+                    if ($matchingOptions->count() !== 1) {
+                        throw new RuntimeException('cs2_resource_config_mapping_invalid');
+                    }
+
+                    $configOption = $matchingOptions->first();
+                    $matchingValues = $configOption->children->filter(
+                        fn ($configValue) => trim((string) $configValue->env_variable) === $target['value']
                     );
 
                     if ($matchingValues->count() !== 1) {
                         throw new RuntimeException('cs2_resource_config_mapping_invalid');
                     }
 
-                    $match = $matchingValues->first();
-                    $configOption = $match['option'];
-                    $configValue = $match['value'];
+                    $configValue = $matchingValues->first();
                     $configOptionId = (int) $configOption->id;
 
                     // Text and number options are stored as free-form properties by
