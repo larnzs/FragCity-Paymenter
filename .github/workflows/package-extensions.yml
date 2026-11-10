@@ -10,6 +10,7 @@ on:
       - "tools/package-extensions.sh"
       - "tools/package-release.sh"
       - "tools/package-theme-deploy.sh"
+      - "tools/fix-theme-permissions.sh"
       - "tools/validate-fragcity-paymenter.sh"
       - "tools/validate-fragcity-theme-views.php"
       - "README.md"
@@ -138,17 +139,19 @@ jobs:
 
           FragCityPaymenterTheme-*.zip is a Laravel Theme overlay, not a Paymenter Extension. Never upload it through the Extension Uploader.
 
-          The ZIP includes both:
+          The ZIP includes:
           - themes/fragcity/ — Blade views, theme.php, CSS and JS source.
           - public/fragcity/ — Vite manifest and precompiled production assets.
+          - fragcity-fix-permissions.sh — scoped PHP-FPM group and permission setup.
 
-          For a shared host without SSH:
+          Install:
           1. Back up the existing themes/fragcity and public/fragcity folders.
           2. Upload the ZIP through File Manager to the Paymenter application root.
           3. Extract it at the application root and merge the themes/ and public/ directories.
-          4. Keep/select FragCity in Paymenter Settings → Theme after both paths exist.
+          4. On a Linux host with SSH/root, run: sudo bash ./fragcity-fix-permissions.sh
+          5. Keep/select FragCity in Paymenter Settings → Theme after the helper succeeds.
 
-          No Node.js, npm, Composer or SSH command is required on the hosting account. Do not overwrite .env, vendor, app, database, storage or bootstrap.
+          The helper only changes themes/fragcity, public/fragcity and group inheritance on themes/ and public/. It never changes .env, vendor, app, database, storage or bootstrap. No Node.js, npm or Composer is required on the host.
 
           ## Integrity
 
