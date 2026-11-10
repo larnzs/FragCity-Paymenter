@@ -57,8 +57,8 @@ test "$(grep -Fc 'applyNativeConfigOptions($service, $properties)' "$cs2")" -ge 
 # All eight service-level Config Options must survive Paymenter's native upgrade flow.
 grep -Fq "!(bool) ($configOption->upgradable ?? false)" "$api"
 grep -Fq "!(bool) ($option->upgradable ?? false)" "$cs2"
-grep -Fq "all eight Config Options `Upgradable` enabled" "$cs2_readme"
-grep -Fq "all eight Config Options `Upgradable` enabled" "$api_readme"
+grep -Fq 'Enable `Upgradable` for all eight Config Options' "$cs2_readme"
+grep -Fq 'Enable `Upgradable` for all eight Config Options' "$api_readme"
 
 # Paymenter is Rial-only; do not reintroduce a browser-selected currency unit or
 # duplicated resource properties that could drift from native ServiceConfig rows.
