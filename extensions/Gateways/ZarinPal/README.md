@@ -1,10 +1,10 @@
 # FragCity ZarinPal Gateway
 
-Paymenter v1.5.9 Gateway extension for ZarinPal v4 (extension release 1.0.3). It settles native Paymenter invoices. It does not create orders, services, invoices, wallet balances or provisioning jobs itself.
+Paymenter v1.5.9 Gateway extension for ZarinPal v4 (extension release 1.0.4). It settles native Paymenter invoices. It does not create orders, services, invoices, wallet balances or provisioning jobs itself.
 
 ## Install
 
-1. Upload the ZarinPal-v1.0.3.zip package through Paymenter Admin → Extensions → Upload Extension.
+1. Upload the ZarinPal-v1.0.4.zip package through Paymenter Admin → Extensions → Upload Extension.
 2. Install ZarinPal from Admin → Extensions → Gateways.
 3. Configure the gateway and enable it.
 4. Enable Paymenter Credits under Admin → Settings → Credits to expose the native customer wallet.
@@ -52,6 +52,6 @@ If ZarinPal reports an already-verified payment but does not return enough recei
 
 - Serve Paymenter over HTTPS.
 - Keep the Paymenter database backed up.
-- Confirm the extension migration exists after installation. The extension runs its migration from its install/upgrade lifecycle hook and checks/repairs the required payment table before a payment request or callback. Migration and preflight failures are written to the Paymenter application log. The encrypted-merchant-ID migration avoids importing the global `Throwable` class, which PHP otherwise reports as a warning that Laravel may promote to an exception. Failed payment-request logs include a bounded provider diagnostic message and amount/environment metadata, but never merchant IDs, callback tokens or authorities.
+- Confirm the extension migration exists after installation. The extension runs its migration from its install/upgrade lifecycle hook and checks/repairs the required payment table before a payment request or callback. Migration and preflight failures are written to the Paymenter application log. The encrypted-merchant-ID migration avoids importing the global `Throwable` class, which PHP otherwise reports as a warning that Laravel may promote to an exception. Failed payment-request logs include the HTTP status, API host, callback host/path (without query string), response content type, provider error code/message, invoice/attempt IDs and amount/environment metadata. Provider messages are bounded and known merchant/callback secrets are redacted. The raw request body, full response body, merchant ID, callback token and authority are never logged.
 - Test sandbox top-up and a real service invoice separately before enabling production payments.
 - Do not edit Paymenter Core or trust browser query values as proof of payment.

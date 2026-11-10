@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'ZarinPal',
     description: 'Pay Paymenter invoices and wallet top-ups securely through ZarinPal v4.',
-    version: '1.0.3',
+    version: '1.0.4',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -247,7 +247,15 @@ class ZarinPal extends Gateway
         $description = trim(($descriptionPrefix !== '' ? $descriptionPrefix : 'FragCity')
             . ' invoice #' . $attempt['invoice_id']);
 
+        $callbackUrl = null;
+        $responseStatus = null;
+        $responseContentType = null;
+        $providerErrorCode = null;
+        $providerErrorMessage = null;
+
         try {
+            $callbackUrl = $this->buildCallbackUrl((string) $attempt['token']);
+
             $response = Http::acceptJson()
                 ->asJson()
                 ->connectTimeout(10)
@@ -256,32 +264,62 @@ class ZarinPal extends Gateway
                     'merchant_id' => $attempt['merchant_id'],
                     'amount' => $attempt['amount_rial'],
                     'currency' => 'IRR',
-                    'callback_url' => $this->buildCallbackUrl((string) $attempt['token']),
+                    'callback_url' => $callbackUrl,
                     'description' => mb_substr($description, 0, 255),
                     'metadata' => [
                         'invoice_id' => (string) $attempt['invoice_id'],
                     ],
                 ]);
 
+            $responseStatus = $response->status();
+            $responseContentType = $response->header('Content-Type');
+            $body = $response->json();
+
+            // Extract only the provider's error fields. Do not log the complete
+            // request/response payload: it may contain merchant or callback data.
+            $providerErrorCode = $this->safeDiagnosticText(
+                data_get($body, 'errors.code') ?? data_get($body, 'data.code'),
+                [],
+                80
+            );
+            $providerErrorMessage = $this->safeDiagnosticText(
+                data_get($body, 'errors.message')
+                    ?? data_get($body, 'message')
+                    ?? data_get($body, 'error'),
+                [
+                    (string) $attempt['merchant_id'],
+                    (string) $attempt['token'],
+                    (string) $callbackUrl,
+                ],
+                500
+            );
+
             if (!$response->successful()) {
-                throw new RuntimeException('ZarinPal request returned HTTP ' . $response->status() . '.');
+                $diagnostic = 'ZarinPal request returned HTTP ' . $responseStatus . '.';
+
+                if ($providerErrorCode !== null) {
+                    $diagnostic .= ' Provider error code: ' . $providerErrorCode . '.';
+                }
+
+                if ($providerErrorMessage !== null) {
+                    $diagnostic .= ' Provider message: ' . $providerErrorMessage;
+                }
+
+                throw new RuntimeException($diagnostic);
             }
 
-            $body = $response->json();
             $code = (int) data_get($body, 'data.code', 0);
             $authority = trim((string) data_get($body, 'data.authority', ''));
 
             if ($code !== 100 || !preg_match('/^[A-Za-z0-9_-]{1,128}$/D', $authority)) {
-                $errorCode = trim((string) data_get($body, 'errors.code', ''));
-                $message = trim((string) data_get($body, 'errors.message', ''));
                 $diagnostic = 'ZarinPal did not create a payment authority (data.code: ' . $code . ').';
 
-                if ($errorCode !== '') {
-                    $diagnostic .= ' errors.code: ' . $errorCode . '.';
+                if ($providerErrorCode !== null) {
+                    $diagnostic .= ' Provider error code: ' . $providerErrorCode . '.';
                 }
 
-                if ($message !== '') {
-                    $diagnostic .= ' ' . $message;
+                if ($providerErrorMessage !== null) {
+                    $diagnostic .= ' Provider message: ' . $providerErrorMessage;
                 }
 
                 throw new RuntimeException($diagnostic);
@@ -307,16 +345,34 @@ class ZarinPal extends Gateway
                 ]);
 
             Log::warning('FragCity ZarinPal payment request failed.', [
-                'invoice_id' => $attempt['invoice_id'],
-                'payment_attempt_id' => $attempt['id'],
+                'phase' => 'payment_request',
+                'invoice_id' => (int) $attempt['invoice_id'],
+                'payment_attempt_id' => (int) $attempt['id'],
                 'sandbox' => (bool) $attempt['sandbox'],
                 'currency_code' => (string) $attempt['currency_code'],
                 'currency_unit' => (string) $currencyUnit,
                 'amount_rial' => (int) $attempt['amount_rial'],
+                'api_host' => parse_url($apiBase, PHP_URL_HOST),
+                'callback_host' => is_string($callbackUrl)
+                    ? parse_url($callbackUrl, PHP_URL_HOST)
+                    : null,
+                'callback_path' => is_string($callbackUrl)
+                    ? parse_url($callbackUrl, PHP_URL_PATH)
+                    : null,
+                'http_status' => $responseStatus,
+                'response_content_type' => $this->safeDiagnosticText($responseContentType, [], 120),
+                'provider_error_code' => $providerErrorCode,
+                'provider_error_message' => $providerErrorMessage,
                 'exception' => get_class($e),
-                // Provider diagnostics are useful here; never log merchant IDs,
-                // callback tokens, authorities, or the full HTTP response.
-                'message' => mb_substr($e->getMessage(), 0, 500),
+                'message' => $this->safeDiagnosticText(
+                    $e->getMessage(),
+                    [
+                        (string) $attempt['merchant_id'],
+                        (string) $attempt['token'],
+                        is_string($callbackUrl) ? $callbackUrl : '',
+                    ],
+                    500
+                ),
             ]);
 
             throw new DisplayException('Could not start the ZarinPal payment. Please try again.');
@@ -601,6 +657,34 @@ class ZarinPal extends Gateway
         }
 
         return rtrim($baseUrl, '/') . $relativeCallback;
+    }
+
+    /**
+     * Convert provider diagnostics to bounded, single-line log-safe text.
+     * Known request secrets are removed before any provider message is logged.
+     */
+    private function safeDiagnosticText(mixed $value, array $secrets = [], int $limit = 500): ?string
+    {
+        if (!is_scalar($value)) {
+            return null;
+        }
+
+        $text = trim((string) $value);
+
+        foreach ($secrets as $secret) {
+            if (is_string($secret) && $secret !== '') {
+                $text = str_replace($secret, '[redacted]', $text);
+            }
+        }
+
+        $text = preg_replace('/[\\x00-\\x1F\\x7F]/', ' ', $text) ?? $text;
+        $text = preg_replace('/\\s+/', ' ', trim($text)) ?? trim($text);
+
+        if ($text === '') {
+            return null;
+        }
+
+        return mb_substr($text, 0, max(1, $limit));
     }
 
     private function markSucceeded(int $paymentId, string $referenceId): void

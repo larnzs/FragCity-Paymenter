@@ -34,11 +34,16 @@ while IFS= read -r -d '' file; do
 done < <(find "$zarinpal_migrations" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
 
 # Native ZarinPal gateway and Paymenter Credits wallet contract.
-grep -Fq "version: '1.0.3'" "$zarinpal"
+grep -Fq "version: '1.0.4'" "$zarinpal"
 test -f "$zarinpal_migrations/2026_11_10_000002_widen_encrypted_merchant_id.php"
 grep -Fq "Crypt::encryptString(\$stored)" "$zarinpal_migrations/2026_11_10_000002_widen_encrypted_merchant_id.php"
 ! grep -Fq "use Throwable;" "$zarinpal_migrations/2026_11_10_000002_widen_encrypted_merchant_id.php"
-grep -Fq "'message' => mb_substr(\$e->getMessage(), 0, 500)" "$zarinpal"
+grep -Fq "'phase' => 'payment_request'" "$zarinpal"
+grep -Fq "'http_status' => \$responseStatus" "$zarinpal"
+grep -Fq "'provider_error_code' => \$providerErrorCode" "$zarinpal"
+grep -Fq "'provider_error_message' => \$providerErrorMessage" "$zarinpal"
+grep -Fq "private function safeDiagnosticText" "$zarinpal"
+! grep -Fq "'response_body' =>" "$zarinpal"
 grep -Fq "function canUseGateway" "$zarinpal"
 grep -Fq "function installed" "$zarinpal"
 grep -Fq "function upgraded" "$zarinpal"
