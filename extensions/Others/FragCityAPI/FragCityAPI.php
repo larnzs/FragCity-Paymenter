@@ -965,6 +965,11 @@ class FragCityAPI extends Extension
      * the ZarinPal receipt server-to-server. Paymenter then applies the credit
      * through its native ProcessPaidInvoiceService after the DB commit.
      */
+    /**
+     * Settle a previously prepared wallet top-up after FragCity has verified
+     * the ZarinPal receipt. Paymenter credits the wallet through its native
+     * paid-Credit-invoice processor after this transaction commits.
+     */
     public function createWalletTopup(Request $request): JsonResponse
     {
         $authError = $this->authenticateBridgeRequest($request);
@@ -1017,56 +1022,16 @@ class FragCityAPI extends Extension
             ], 503);
         }
 
-        try {
-            $creditsEnabled = filter_var(
-                (string) (Settings::getSetting('credits_enabled')->value ?? false),
-                FILTER_VALIDATE_BOOLEAN
-            );
-            $minimumDeposit = (float) (Settings::getSetting('credits_minimum_deposit')->value ?? 0);
-            $maximumDeposit = (float) (Settings::getSetting('credits_maximum_deposit')->value ?? 0);
-            $maximumCredit = (float) (Settings::getSetting('credits_maximum_credit')->value ?? 0);
-        } catch (Throwable $e) {
-            Log::error('FragCity wallet top-up settings could not be loaded.', [
-                'exception' => get_class($e),
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'error' => 'wallet_topup_not_configured',
-            ], 503);
-        }
-
-        if (
-            !$creditsEnabled
-            || $minimumDeposit <= 0
-            || $maximumDeposit < $minimumDeposit
-            || $maximumCredit <= 0
-        ) {
-            return response()->json([
-                'success' => false,
-                'error' => 'wallet_topup_not_configured',
-            ], 503);
-        }
-
-        if ($amountRial < $minimumDeposit || $amountRial > $maximumDeposit) {
-            return response()->json([
-                'success' => false,
-                'error' => 'wallet_topup_amount_invalid',
-            ], 422);
-        }
-
+        // This hash must be byte-for-byte equivalent to the prepare endpoint's
+        // reservation hash. The ZarinPal receipt is separately guarded by the
+        // global authority/ref-id ledger and is deliberately not in this hash.
         $payloadHash = hash(
             'sha256',
             json_encode([
                 'topup_ref' => $topupRef,
                 'steamid64' => $steamId,
-                'payment' => [
-                    'provider' => 'zarinpal',
-                    'authority' => $authority,
-                    'ref_id' => $zarinpalRef,
-                    'amount_toman' => $amountToman,
-                    'amount_rial' => $amountRial,
-                ],
+                'amount_toman' => $amountToman,
+                'amount_rial' => $amountRial,
                 'currency_code' => $currencyCode,
             ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)
         );
@@ -1080,28 +1045,50 @@ class FragCityAPI extends Extension
                 $amountToman,
                 $amountRial,
                 $currencyCode,
-                $payloadHash,
-                $maximumCredit
+                $payloadHash
             ): array {
-                $existing = DB::table('fragcity_wallet_topups')
+                $reservation = DB::table('fragcity_wallet_topups')
                     ->where('topup_ref', $topupRef)
                     ->lockForUpdate()
                     ->first();
 
-                if ($existing) {
-                    if (!hash_equals((string) $existing->payload_hash, $payloadHash)) {
+                if (!$reservation) {
+                    throw new RuntimeException('wallet_topup_reservation_missing');
+                }
+
+                if (
+                    !hash_equals((string) $reservation->payload_hash, $payloadHash)
+                    || (string) $reservation->steamid64 !== $steamId
+                    || (int) $reservation->amount_toman !== $amountToman
+                    || (int) $reservation->amount_rial !== $amountRial
+                    || strtoupper((string) $reservation->currency_code) !== $currencyCode
+                ) {
+                    throw new RuntimeException('wallet_topup_reference_conflict');
+                }
+
+                if ((string) $reservation->status === 'accepted') {
+                    $acceptedReceipt = DB::table('fragcity_payment_receipts')
+                        ->where('reference', $topupRef)
+                        ->where('purpose', 'wallet_topup')
+                        ->first();
+
+                    if (
+                        !$acceptedReceipt
+                        || !hash_equals((string) $acceptedReceipt->authority, $authority)
+                        || !hash_equals((string) $acceptedReceipt->ref_id, $zarinpalRef)
+                    ) {
                         throw new RuntimeException('wallet_topup_reference_conflict');
                     }
 
-                    if ((string) $existing->status !== 'accepted') {
-                        throw new RuntimeException('wallet_topup_processing_incomplete');
-                    }
-
                     return [
-                        'invoice_id' => (int) $existing->paymenter_invoice_id,
-                        'user_id' => (int) $existing->paymenter_user_id,
+                        'invoice_id' => (int) $reservation->paymenter_invoice_id,
+                        'user_id' => (int) $reservation->paymenter_user_id,
                         'replayed' => true,
                     ];
+                }
+
+                if (!in_array((string) $reservation->status, ['pending_payment', 'expired'], true)) {
+                    throw new RuntimeException('wallet_topup_processing_incomplete');
                 }
 
                 $usedReceipt = DB::table('fragcity_payment_receipts')
@@ -1133,32 +1120,14 @@ class FragCityAPI extends Extension
                     throw new RuntimeException('linked_paymenter_user_missing');
                 }
 
-                // Match Paymenter's native deposit flow: serialize the user's
-                // invoices and credit row, reject a second outstanding deposit,
-                // and enforce its configured maximum wallet balance.
-                $user->invoices()->lockForUpdate()->get();
-
-                $pendingCreditInvoice = $user->invoices()
-                    ->where('status', Invoice::STATUS_PENDING)
-                    ->whereHas('items', function ($query): void {
-                        $query->where('reference_type', Credit::class);
-                    })
-                    ->exists();
-
-                if ($pendingCreditInvoice) {
-                    throw new RuntimeException('wallet_topup_pending_invoice_exists');
+                if ((int) $user->id !== (int) $reservation->paymenter_user_id) {
+                    throw new RuntimeException('wallet_topup_reference_conflict');
                 }
 
-                $credit = $user->credits()
-                    ->where('currency_code', $currencyCode)
-                    ->lockForUpdate()
-                    ->first();
-
-                $currentBalance = (float) ($credit?->amount ?? 0);
-                if (($currentBalance + $amountRial) > $maximumCredit) {
-                    throw new RuntimeException('wallet_maximum_credit_exceeded');
-                }
-
+                // The receipt has already been verified by ZarinPal on FragCity.
+                // Do not reject a paid deposit because a reservation expired or
+                // Credits settings changed while the customer was at the gateway:
+                // a verified payment must be credited, not stranded.
                 $now = now();
                 $invoice = new Invoice([
                     'user_id' => (int) $user->id,
@@ -1168,8 +1137,6 @@ class FragCityAPI extends Extension
                 $invoice->send_create_email = false;
                 $invoice->save();
 
-                // Paymenter's native paid-invoice processor recognizes Credit
-                // items by reference_type and increments/creates the Credit row.
                 $invoice->items()->create([
                     'description' => 'FragCity Wallet Deposit',
                     'quantity' => 1,
@@ -1186,20 +1153,6 @@ class FragCityAPI extends Extension
                     InvoiceTransactionStatus::Succeeded
                 );
 
-                DB::table('fragcity_wallet_topups')->insert([
-                    'topup_ref' => $topupRef,
-                    'steamid64' => $steamId,
-                    'amount_toman' => $amountToman,
-                    'amount_rial' => $amountRial,
-                    'currency_code' => $currencyCode,
-                    'payload_hash' => $payloadHash,
-                    'paymenter_user_id' => (int) $user->id,
-                    'paymenter_invoice_id' => (int) $invoice->id,
-                    'status' => 'accepted',
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
-
                 DB::table('fragcity_payment_receipts')->insert([
                     'provider' => 'zarinpal',
                     'authority' => $authority,
@@ -1215,8 +1168,17 @@ class FragCityAPI extends Extension
                     'updated_at' => $now,
                 ]);
 
-                // The observer processes the Credit invoice item after this
-                // transaction commits; it is Paymenter's native wallet credit.
+                DB::table('fragcity_wallet_topups')
+                    ->where('id', (int) $reservation->id)
+                    ->update([
+                        'paymenter_invoice_id' => (int) $invoice->id,
+                        'status' => 'accepted',
+                        'expires_at' => null,
+                        'updated_at' => $now,
+                    ]);
+
+                // The native Paymenter observer processes the Credit invoice
+                // item after commit and increments/creates the user's Credit row.
                 $invoice->status = Invoice::STATUS_PAID;
                 $invoice->save();
 
@@ -1246,6 +1208,8 @@ class FragCityAPI extends Extension
                 ],
             ], !empty($result['replayed']) ? 200 : 201);
         } catch (QueryException $e) {
+            // Recover only an exact already-accepted reservation/receipt pair.
+            // A unique receipt collision from another purpose remains a conflict.
             $existing = DB::table('fragcity_wallet_topups')
                 ->where('topup_ref', $topupRef)
                 ->first();
@@ -1255,24 +1219,35 @@ class FragCityAPI extends Extension
                 && hash_equals((string) $existing->payload_hash, $payloadHash)
                 && (string) $existing->status === 'accepted'
             ) {
-                $balance = (float) (User::query()
-                    ->find((int) $existing->paymenter_user_id)
-                    ?->credits()
-                    ->where('currency_code', $currencyCode)
-                    ->value('amount') ?? 0);
+                $receipt = DB::table('fragcity_payment_receipts')
+                    ->where('reference', $topupRef)
+                    ->where('purpose', 'wallet_topup')
+                    ->first();
 
-                return response()->json([
-                    'success' => true,
-                    'data' => [
-                        'topup_ref' => $topupRef,
-                        'invoice_id' => (int) $existing->paymenter_invoice_id,
-                        'status' => 'accepted',
-                        'replayed' => true,
-                        'currency_code' => $currencyCode,
-                        'currency_unit' => 'rial',
-                        'wallet_balance' => number_format($balance, 2, '.', ''),
-                    ],
-                ]);
+                if (
+                    $receipt
+                    && hash_equals((string) $receipt->authority, $authority)
+                    && hash_equals((string) $receipt->ref_id, $zarinpalRef)
+                ) {
+                    $balance = (float) (User::query()
+                        ->find((int) $existing->paymenter_user_id)
+                        ?->credits()
+                        ->where('currency_code', $currencyCode)
+                        ->value('amount') ?? 0);
+
+                    return response()->json([
+                        'success' => true,
+                        'data' => [
+                            'topup_ref' => $topupRef,
+                            'invoice_id' => (int) $existing->paymenter_invoice_id,
+                            'status' => 'accepted',
+                            'replayed' => true,
+                            'currency_code' => $currencyCode,
+                            'currency_unit' => 'rial',
+                            'wallet_balance' => number_format($balance, 2, '.', ''),
+                        ],
+                    ]);
+                }
             }
 
             $paymentUsed = DB::table('fragcity_payment_receipts')
@@ -1289,7 +1264,7 @@ class FragCityAPI extends Extension
                 ], 409);
             }
 
-            Log::error('FragCity wallet top-up persistence failed.', [
+            Log::error('FragCity wallet top-up settlement persistence failed.', [
                 'topup_ref' => $topupRef,
                 'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
                 'sqlstate' => (string) $e->getCode(),
@@ -1303,13 +1278,13 @@ class FragCityAPI extends Extension
             $status = match ($e->getMessage()) {
                 'fragcity_user_not_linked', 'linked_paymenter_user_missing' => 404,
                 'wallet_topup_reference_conflict', 'zarinpal_payment_already_used' => 409,
-                'wallet_topup_pending_invoice_exists', 'wallet_maximum_credit_exceeded', 'wallet_topup_amount_invalid' => 422,
+                'wallet_topup_reservation_missing' => 404,
                 'wallet_topup_processing_incomplete' => 503,
                 default => 500,
             };
 
             if ($status === 500) {
-                Log::error('FragCity wallet top-up failed.', [
+                Log::error('FragCity wallet top-up settlement failed.', [
                     'topup_ref' => $topupRef,
                     'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
                     'exception' => get_class($e),
@@ -1327,7 +1302,7 @@ class FragCityAPI extends Extension
                 'error' => $e->getMessage(),
             ], $status);
         } catch (Throwable $e) {
-            Log::error('FragCity wallet top-up failed.', [
+            Log::error('FragCity wallet top-up settlement failed.', [
                 'topup_ref' => $topupRef,
                 'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
                 'exception' => get_class($e),
