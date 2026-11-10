@@ -80,15 +80,18 @@ return new class extends Migration
 
     public function down(): void
     {
-        if (
-            Schema::hasTable('fragcity_server_orders')
+        $hasWalletOrders = Schema::hasTable('fragcity_server_orders')
             && DB::table('fragcity_server_orders')
                 ->whereNull('zarinpal_authority')
                 ->orWhereNull('zarinpal_ref_id')
-                ->exists()
-        ) {
+                ->exists();
+
+        $hasWalletTopups = Schema::hasTable('fragcity_wallet_topups')
+            && DB::table('fragcity_wallet_topups')->exists();
+
+        if ($hasWalletOrders || $hasWalletTopups) {
             throw new RuntimeException(
-                'Cannot roll back FragCityAPI wallet support while wallet-paid server orders exist.'
+                'Cannot roll back FragCityAPI wallet support while wallet orders or wallet top-ups exist.'
             );
         }
 
