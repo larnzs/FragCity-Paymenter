@@ -25,8 +25,8 @@ while IFS= read -r -d '' file; do
 done < <(find "$migration_dir" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.10.0'" "$api"
-grep -Fq "'version' => '1.10.0'" "$api"
+grep -Fq "version: '1.11.0'" "$api"
+grep -Fq "'version' => '1.11.0'" "$api"
 grep -Fq "version: '1.7.0'" "$cs2"
 
 # Signed bridge, authoritative billing, receipt idempotency and native provisioning.
@@ -35,6 +35,7 @@ for needle in \
   "hash_hmac('sha256'" \
   "Cache::add(" \
   "function cs2Catalog" \
+  "function quoteCs2Order" \
   "function createCs2Order" \
   "Settings::tax(\$user)" \
   "cs2_quote_amount_mismatch" \
@@ -70,11 +71,13 @@ grep -Fq "\$paymenterAmount = \$amountRial;" "$api"
 ! grep -Fq "'cpu' => (string) \$cpuPercent" "$api"
 
 grep -Fq "/api/v1/fragcity/bridge/orders/cs2" "$routes"
+grep -Fq "/api/v1/fragcity/bridge/quotes/cs2" "$routes"
+grep -Fq "Settings::tax(\$user)" "$api"
 grep -Fq "/api/v1/fragcity/bridge/wallet/topups/prepare" "$routes"
 grep -Fq "/api/v1/fragcity/bridge/wallet/topups/zarinpal" "$routes"
 route_count="$(grep -c "Route::post('/api/v1/fragcity/bridge/" "$routes")"
 readme_route_count="$(grep -c -- '- `POST /api/v1/fragcity/bridge/' "$api_readme")"
-test "$route_count" -ge 10
+test "$route_count" -ge 11
 test "$readme_route_count" -eq "$route_count"
 
 php -r '
