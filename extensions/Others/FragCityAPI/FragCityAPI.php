@@ -1669,6 +1669,72 @@ class FragCityAPI extends Extension
                 $eggRules[$name] = array_values(array_unique($rules));
             }
 
+            // The manifest also defines five native Paymenter Config Options:
+            // Max Players and Tickrate are Egg values; database/allocation/backup
+            // values are feature limits and must not be sent as arbitrary Egg keys.
+            $nativeConfigOptionFields = $manifest['paymenter']['config_options'] ?? [];
+            if (!is_array($nativeConfigOptionFields) || count($nativeConfigOptionFields) !== 5) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+
+            foreach ($nativeConfigOptionFields as $field) {
+                $fieldTarget = (string) ($field['target'] ?? 'egg');
+                $envVariable = trim((string) ($field['env_variable'] ?? ''));
+
+                if ($fieldTarget === 'feature_limit') {
+                    $optionValues = array_map(
+                        static fn ($option): string => (string) ($option['value'] ?? ''),
+                        is_array($field['options'] ?? null) ? $field['options'] : []
+                    );
+                    if (
+                        $envVariable === ''
+                        || !array_key_exists($envVariable, $featureLimits)
+                        || in_array($envVariable, $allowedEggKeys, true)
+                        || !in_array((string) $featureLimits[$envVariable], $optionValues, true)
+                    ) {
+                        throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                    }
+
+                    continue;
+                }
+
+                if ($fieldTarget !== 'egg') {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $name = strtoupper($envVariable);
+                if ($name === '' || in_array($name, $allowedEggKeys, true)) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $allowedEggKeys[] = $name;
+                $value = $eggValues[$name] ?? $field['default'] ?? null;
+                $normalizedEggValues[$name] = $value;
+
+                $rules = [!empty($field['required']) ? 'required' : 'nullable'];
+                $fieldRules = $field['validation'] ?? [];
+                if (is_string($fieldRules)) {
+                    $fieldRules = array_filter(explode('|', $fieldRules));
+                }
+                if (is_array($fieldRules)) {
+                    $rules = array_merge($rules, $fieldRules);
+                }
+
+                $optionValues = array_map(
+                    static fn ($option): string => (string) ($option['value'] ?? ''),
+                    is_array($field['options'] ?? null) ? $field['options'] : []
+                );
+                if ($optionValues === [] || in_array('', $optionValues, true)) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $rules[] = 'in:' . implode(',', array_map(
+                    static fn (string $value): string => str_replace(',', '\\,', $value),
+                    $optionValues
+                ));
+                $eggRules[$name] = array_values(array_unique($rules));
+            }
+
             if (array_diff(array_keys($eggValues), $allowedEggKeys) !== []) {
                 throw new RuntimeException('invalid_egg_variable');
             }
