@@ -1863,6 +1863,7 @@ class FragCityAPI extends Extension
         $validator = Validator::make(is_array($payload) ? $payload : [], [
             'order_ref' => ['required', 'string', 'regex:/^[a-f0-9]{32}$/i'],
             'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'expected_amount_rial' => ['sometimes', 'integer', 'min:10'],
             'payment' => ['required', 'array'],
             'payment.provider' => ['required', 'in:zarinpal,wallet'],
             'payment.authority' => [
@@ -1920,6 +1921,9 @@ class FragCityAPI extends Extension
         $zarinpalRef = $isZarinpal ? (string) $data['payment']['ref_id'] : '';
         $amountToman = $isZarinpal ? (int) $data['payment']['amount_toman'] : 0;
         $amountRial = $isZarinpal ? (int) $data['payment']['amount_rial'] : 0;
+        $expectedAmountRial = isset($data['expected_amount_rial'])
+            ? (int) $data['expected_amount_rial']
+            : null;
         $durationDays = (int) $data['duration_days'];
         $serverName = trim((string) $data['server_name']);
         $memoryMb = (int) $data['resources']['memory_mb'];
@@ -2037,7 +2041,8 @@ class FragCityAPI extends Extension
                 $currencyUnit,
                 $productId,
                 $planId,
-                $paymenterAmount
+                $paymenterAmount,
+                $expectedAmountRial
             ): array {
                 $existing = DB::table('fragcity_server_orders')
                     ->where('order_ref', $orderRef)
@@ -2524,6 +2529,10 @@ class FragCityAPI extends Extension
                 $computedInvoiceTotal = round((float) $invoicePrice->total, 2);
                 $computedServicePrice = round((float) $serviceRecurringPrice->price, 2);
                 $wholeRialTotal = (int) round($computedInvoiceTotal);
+
+                if ($expectedAmountRial !== null && $expectedAmountRial !== $wholeRialTotal) {
+                    throw new RuntimeException('cs2_quote_amount_mismatch');
+                }
 
                 // ZarinPal's Toman amount must map exactly to Paymenter's Rial
                 // total. We reject fractional Rial or a remainder that cannot be
