@@ -229,7 +229,7 @@ class ZarinPal extends Gateway
                 ->post($apiBase . '/request.json', [
                     'merchant_id' => $attempt['merchant_id'],
                     'amount' => $attempt['amount_rial'],
-                    'currency' => $attempt['currency_unit'] === 'toman' ? 'IRT' : 'IRR',
+                    'currency' => 'IRR',
                     'callback_url' => route('extensions.gateways.zarinpal.callback', [
                         'token' => $attempt['token'],
                     ]),
