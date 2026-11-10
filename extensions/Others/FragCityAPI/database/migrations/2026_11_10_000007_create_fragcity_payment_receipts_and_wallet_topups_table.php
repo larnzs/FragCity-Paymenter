@@ -45,12 +45,14 @@ return new class extends Migration
             $table->string('currency_code', 12)->charset('ascii')->collation('ascii_bin');
             $table->char('payload_hash', 64)->charset('ascii')->collation('ascii_bin');
             $table->unsignedBigInteger('paymenter_user_id');
-            $table->unsignedBigInteger('paymenter_invoice_id');
-            $table->string('status', 24)->default('accepted')->charset('ascii')->collation('ascii_bin');
+            $table->unsignedBigInteger('paymenter_invoice_id')->nullable();
+            $table->string('status', 24)->default('pending_payment')->charset('ascii')->collation('ascii_bin');
+            $table->timestamp('expires_at')->nullable();
             $table->timestamps();
 
             $table->index(['steamid64', 'created_at'], 'fragcity_wallet_topups_steam_created_idx');
             $table->index(['paymenter_invoice_id'], 'fragcity_wallet_topups_invoice_idx');
+            $table->index(['status', 'expires_at'], 'fragcity_wallet_topups_status_expiry_idx');
         });
 
         // Backfill every already-accepted server receipt so that a receipt
