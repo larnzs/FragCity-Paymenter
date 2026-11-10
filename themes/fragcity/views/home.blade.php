@@ -233,7 +233,7 @@
                             $productPrice = $product->price();
                         @endphp
                         <article class="fc-store-home__product-card" data-fc-reveal="up" data-fc-reveal-delay="{{ ($loop->index % 3) * 65 }}">
-                            <a href="{{ route('products.show', ['category' => $product->category, 'product' => $product->slug]) }}" wire:navigate class="fc-store-home__product-image-link">
+                            <a href="{{ route('products.show', ['category' => $product->category->slug, 'product' => $product->slug]) }}" wire:navigate class="fc-store-home__product-image-link">
                                 <div class="fc-store-home__product-image">
                                     @if ($product->image)
                                         <img src="{{ Storage::url($product->image) }}" alt="{{ $product->name }}" loading="lazy">
@@ -258,7 +258,7 @@
                                         <strong>در دسترس نیست</strong>
                                     @endif
                                 </div>
-                                <a href="{{ route('products.show', ['category' => $product->category, 'product' => $product->slug]) }}" wire:navigate class="fc-store-home__product-cta">
+                                <a href="{{ route('products.show', ['category' => $product->category->slug, 'product' => $product->slug]) }}" wire:navigate class="fc-store-home__product-cta">
                                     مشاهده جزئیات و پلن‌ها
                                     <span aria-hidden="true">←</span>
                                 </a>
