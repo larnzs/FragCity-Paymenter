@@ -4,11 +4,16 @@ on:
   push:
     branches: [main]
     paths:
+      - ".github/workflows/package-extensions.yml"
       - "extensions/**"
       - "themes/fragcity/**"
       - "tools/package-extensions.sh"
       - "tools/package-release.sh"
+      - "tools/package-theme-deploy.sh"
       - "tools/validate-fragcity-paymenter.sh"
+      - "tools/validate-fragcity-theme-views.php"
+      - "README.md"
+      - "docs/INSTALL-THEME.md"
   workflow_dispatch:
 
 permissions:
@@ -23,15 +28,68 @@ jobs:
     name: Build and publish one versioned Release
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout FragCity add-ons and theme
         uses: actions/checkout@v4
 
-      - name: Set up PHP for release validation
+      - name: Checkout upstream Paymenter v1.5.9 build environment
+        uses: actions/checkout@v4
+        with:
+          repository: Paymenter/Paymenter
+          ref: v1.5.9
+          path: paymenter-core
+
+      - name: Set up PHP for release validation and Blade compilation
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
-          extensions: mbstring, pdo_mysql
+          extensions: mbstring, pdo_mysql, pdo_sqlite, intl, zip
           coverage: none
+          tools: composer:v2
+
+      - name: Set up Node.js for Vite production build
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: paymenter-core/package-lock.json
+
+      - name: Install upstream build dependencies
+        working-directory: paymenter-core
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          composer install --no-dev --prefer-dist --no-interaction --no-progress --no-scripts
+          npm ci
+
+      - name: Overlay FragCity theme and build production Vite assets
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          rm -rf paymenter-core/themes/fragcity
+          cp -a "$GITHUB_WORKSPACE/themes/fragcity" paymenter-core/themes/fragcity
+          cd paymenter-core
+          npm run build -- fragcity
+          test -s public/fragcity/manifest.json
+
+      - name: Compile all FragCity Blade views with Laravel
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          cd paymenter-core
+          cat > .env <<'ENV'
+          APP_NAME=Paymenter
+          APP_ENV=testing
+          APP_KEY=base64:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=
+          APP_DEBUG=true
+          APP_URL=http://localhost
+          DB_CONNECTION=sqlite
+          DB_DATABASE=:memory:
+          CACHE_STORE=file
+          SESSION_DRIVER=array
+          QUEUE_CONNECTION=sync
+          LOG_CHANNEL=stderr
+          ENV
+          php "$GITHUB_WORKSPACE/tools/validate-fragcity-theme-views.php"
 
       - name: Validate PHP, billing and provisioning before publishing
         run: bash tools/validate-fragcity-paymenter.sh
@@ -45,10 +103,11 @@ jobs:
           echo "release_tag=$release_tag" >> "$GITHUB_OUTPUT"
           echo "Release tag: $release_tag"
 
-      - name: Build and validate Extension and Theme packages
+      - name: Build and validate Extension and deploy-ready Theme packages
         shell: bash
         env:
           RELEASE_TAG: ${{ steps.release-meta.outputs.release_tag }}
+          PAYMENTER_BUILD_ROOT: ${{ github.workspace }}/paymenter-core
         run: |
           set -Eeuo pipefail
           bash tools/package-release.sh "$RUNNER_TEMP/fragcity-release" "$RELEASE_TAG"
@@ -62,7 +121,7 @@ jobs:
           cat > "$RUNNER_TEMP/FRAGCITY-RELEASE-NOTES.md" <<'NOTES'
           # FragCity Release
 
-          This Release contains the current FragCity Paymenter add-ons and the FragCity Paymenter theme source bundle, built from the exact source commit shown on this Release.
+          This Release contains the current FragCity Paymenter add-ons and a deploy-ready FragCity Theme overlay, built against upstream Paymenter v1.5.9 from the exact source commit shown on this Release.
 
           ## Paymenter Extensions
 
@@ -75,23 +134,29 @@ jobs:
 
           Install/update order: FragCityAPI → FragCitySupportAPI → FragCityCS2 → ZarinPal.
 
-          ## FragCity Paymenter Theme
+          ## FragCity Paymenter Theme — deploy-ready
 
-          FragCityPaymenterTheme-*.zip is a source bundle, not a Paymenter Extension. Do not upload it through Extension Uploader.
+          FragCityPaymenterTheme-*.zip is a Laravel Theme overlay, not a Paymenter Extension. Never upload it through the Extension Uploader.
 
-          Extract its fragcity/ directory into the Paymenter installation's themes/ directory. From the Paymenter installation root, rebuild its Vite assets with:
+          The ZIP includes both:
+          - themes/fragcity/ — Blade views, theme.php, CSS and JS source.
+          - public/fragcity/ — Vite manifest and precompiled production assets.
 
-          npm run build -- fragcity
+          For a shared host without SSH:
+          1. Back up the existing themes/fragcity and public/fragcity folders.
+          2. Upload the ZIP through File Manager to the Paymenter application root.
+          3. Extract it at the application root and merge the themes/ and public/ directories.
+          4. Keep/select FragCity in Paymenter Settings → Theme after both paths exist.
 
-          This uses the Node dependencies already installed for the matching Paymenter version. The theme ZIP does not contain Paymenter Core, vendor, node_modules, runtime settings or secrets.
+          No Node.js, npm, Composer or SSH command is required on the hosting account. Do not overwrite .env, vendor, app, database, storage or bootstrap.
 
           ## Integrity
 
-          Verify downloaded ZIPs with SHA256SUMS. PACKAGES.txt lists the packaged components and source revision. THEME-PACKAGE.txt explains the theme bundle boundary.
+          Verify downloaded ZIPs with SHA256SUMS. PACKAGES.txt lists the packaged components and source revision. THEME-PACKAGE.txt describes the theme overlay and installation boundary.
 
           ## Compatibility and safety
 
-          Compatibility target: Paymenter v1.5.9, PHP 8.3/8.4. Back up the active extension/theme directories and database before updating. Never overwrite a newer installed FragCityAPI version with an older one without reviewing the code differences.
+          Compatibility target: Paymenter v1.5.9, PHP 8.3/8.4. Back up the database and active extension/theme directories before updating. Never overwrite a newer installed FragCityAPI version with an older one without reviewing the code differences.
           NOTES
 
       - name: Upload a secondary Actions artifact
