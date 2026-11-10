@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.6.0',
+    version: '1.7.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -150,7 +150,13 @@ class FragCityCS2 extends PterodactylExtension
             $service->id
         );
 
+        // Paymenter 1.5.9 replaces ServiceConfig rows with the selections
+        // carried by ServiceUpgrade. All eight CS2 options are configured as
+        // upgradable so the current selections survive the native upgrade flow.
+        // Reapply both resource limits and Egg/feature-limit values before the
+        // inherited Pterodactyl updater consumes them.
         $properties = $this->applyResourceLimitsFromConfigOptions($service, $properties);
+        $properties = $this->applyNativeConfigOptions($service, $properties);
 
         return parent::upgradeServer($service, $settings, $properties);
     }
@@ -787,6 +793,15 @@ class FragCityCS2 extends PterodactylExtension
                 continue;
             }
 
+            if (
+                (string) ($option->type ?? '') !== 'select'
+                || !(bool) ($option->upgradable ?? false)
+            ) {
+                throw new RuntimeException(
+                    'FragCity CS2 RAM, Storage and CPU Config Options must be upgradable Select options.'
+                );
+            }
+
             if (array_key_exists($target, $resolved)) {
                 throw new RuntimeException(
                     "FragCity CS2 has more than one Config Option mapped to {$target}."
@@ -909,10 +924,10 @@ class FragCityCS2 extends PterodactylExtension
             if (
                 !$configValue
                 || strtolower((string) ($configOption->type ?? '')) !== 'select'
-                || (bool) ($configOption->upgradable ?? false)
+                || !(bool) ($configOption->upgradable ?? false)
             ) {
                 throw new RuntimeException(
-                    "FragCity CS2 Config Option {$envVariable} must be a non-upgradable Select option with a selected child value."
+                    "FragCity CS2 Config Option {$envVariable} must be an upgradable Select option with a selected child value."
                 );
             }
 

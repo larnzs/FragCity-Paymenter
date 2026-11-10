@@ -5,11 +5,15 @@ on:
     branches: [main]
     paths:
       - "extensions/Others/FragCityAPI/**"
+      - "extensions/Servers/FragCityCS2/**"
+      - "tools/validate-fragcity-paymenter.sh"
       - ".github/workflows/fragcity-api-php.yml"
   pull_request:
     branches: [main]
     paths:
       - "extensions/Others/FragCityAPI/**"
+      - "extensions/Servers/FragCityCS2/**"
+      - "tools/validate-fragcity-paymenter.sh"
       - ".github/workflows/fragcity-api-php.yml"
   workflow_dispatch:
 
@@ -18,7 +22,7 @@ permissions:
 
 jobs:
   php-syntax-and-contract:
-    name: PHP 8.3 FragCityAPI checks
+    name: PHP 8.3 FragCityAPI and Paymenter contract checks
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -31,61 +35,5 @@ jobs:
           extensions: mbstring, pdo_mysql
           coverage: none
 
-      - name: Lint every FragCityAPI PHP file
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -f extensions/Others/FragCityAPI/FragCityAPI.php
-          while IFS= read -r -d '' file; do
-            php -l "$file"
-          done < <(find extensions/Others/FragCityAPI -type f -name '*.php' -print0 | sort -z)
-
-      - name: Validate CS2 bridge contract and idempotency guards
-        shell: bash
-        run: |
-          set -euo pipefail
-          api="extensions/Others/FragCityAPI/FragCityAPI.php"
-          routes="extensions/Others/FragCityAPI/routes.php"
-          migration="extensions/Others/FragCityAPI/database/migrations/2026_11_09_000006_create_fragcity_server_orders_table.php"
-          manifest="extensions/Servers/FragCityCS2/resources/cs2-egg-variables.json"
-
-          grep -Fq "version: '1.7.0'" "$api"
-          grep -Fq "function createCs2Order" "$api"
-          grep -Fq "ExtensionHelper::addPayment(" "$api"
-          grep -Fq "Invoice::STATUS_PAID" "$api"
-          grep -Fq "zarinpal_payment_already_used" "$api"
-          grep -Fq "order_reference_conflict" "$api"
-          grep -Fq "paid_option_pricing_not_configured" "$api"
-          grep -Fq "configOptions.children.plans.prices" "$api"
-          grep -Fq "cs2_config_option_mapping_invalid" "$api"
-          grep -Fq "cs2_config_option_price_missing" "$api"
-          grep -Fq '$service->configs()->create(' "$api"
-          grep -Fq '$normalizeConfigOptionName' "$api"
-          grep -Fq '$matchingOptions->count() !== 1' "$api"
-          grep -Fq '$configOption->children->filter(' "$api"
-          grep -Fq "'max_players' =>" "$api"
-          grep -Fq "'tickrate' =>" "$api"
-          grep -Fq "array_map('strval', range(5, 64))" "$api"
-          grep -Fq "'allowed_values' => ['64']" "$api"
-          grep -Fq "unset(\$normalizedEggValues['SRCDS_MAXPLAYERS'], \$normalizedEggValues['TICKRATE']);" "$api"
-          grep -Fq "\$currencyUnit = 'rial'" "$api"
-          grep -Fq '$paymenterAmount = $amountRial;' "$api"
-          ! grep -Fq "'name' => 'cs2_currency_unit'" "$api"
-          ! grep -Fq "'memory' => (string) \$memoryMb" "$api"
-          ! grep -Fq "'disk' => (string) \$diskMb" "$api"
-          ! grep -Fq "'cpu' => (string) \$cpuPercent" "$api"
-          grep -Fq "/api/v1/fragcity/bridge/orders/cs2" "$routes"
-          grep -Fq "fragcity_server_orders" "$migration"
-          grep -Fq "zarinpal_authority" "$migration"
-          grep -Fq "zarinpal_ref_id" "$migration"
-
-          php -r '
-            $manifest = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
-            $fields = array_column($manifest["paymenter"]["checkout_fields"] ?? [], "name");
-            $expected = ["SRCDS_MAP", "SRCDS_MAXPLAYERS", "TICKRATE", "EXEC", "MAPGROUP", "COOLDOWN", "ENABLE_GUARD", "GUARD_BAN_MINUTES"];
-            if (array_diff($expected, $fields) || array_diff($fields, $expected)) {
-              fwrite(STDERR, "CS2 Checkout manifest does not match the eight-field bridge contract.\\n");
-              exit(1);
-            }
-            echo "CS2 Egg Checkout manifest contract OK", PHP_EOL;
-          ' "$manifest"
+      - name: Lint and validate the complete FragCity Paymenter contract
+        run: bash tools/validate-fragcity-paymenter.sh

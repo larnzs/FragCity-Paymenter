@@ -30,7 +30,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server catalogue, wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.9.0',
+    version: '1.10.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -96,7 +96,7 @@ class FragCityAPI extends Extension
                 'name' => 'cs2_currency_code',
                 'label' => 'CS2 Paymenter Currency Code',
                 'type' => 'text',
-                'description' => 'Currency code used by the configured CS2 plans, for example the code already created in Paymenter for Toman or Rial.',
+                'description' => 'Existing Paymenter Rial currency code used by all configured CS2 Plans (for example IRR). All Paymenter monetary records are stored in Rial.',
                 'required' => true,
                 'validation' => 'required|string|max:12|regex:/^[A-Za-z0-9_-]+$/',
             ],
@@ -128,7 +128,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.9.0',
+            'version' => '1.10.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -1711,7 +1711,7 @@ class FragCityAPI extends Extension
                     // Paymenter checkout, not as ServiceConfig value relations.
                     if (
                         (string) $configOption->type !== 'select'
-                        || (bool) ($configOption->upgradable ?? false)
+                        || !(bool) ($configOption->upgradable ?? false)
                         || in_array($configOptionId, $usedConfigOptionIds, true)
                     ) {
                         throw new RuntimeException('cs2_config_option_mapping_invalid');

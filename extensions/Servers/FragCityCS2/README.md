@@ -18,7 +18,7 @@ If an existing client is found by email with an empty `external_id`, the extensi
 
 ## Customer server management
 
-Extension version: **1.5.1**.
+Extension version: **1.7.0**.
 
 The extension exposes two narrow methods for the signed FragCity API bridge:
 
@@ -86,11 +86,11 @@ Attach these native Paymenter Config Options to the CS2 Product:
 | Additional Allocations | `additional_allocations` | Select | `0`, `1`, `2`, `3`, `5` |
 | Backups | `backups` | Select | `0`, `1`, `2`, `3`, `5`, `10` |
 
-The signed FragCity API resolves and stores all eight selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges their selected child Environment Variables into the provisioning property map. The inherited Pterodactyl provisioner receives RAM/SSD/CPU as resource limits, Player Slots/Tickrate as Egg environment variables, and the three feature-limit selections as Pterodactyl `feature_limits` values.
+The signed FragCity API resolves and stores all eight selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges their selected child Environment Variables into the provisioning property map. The inherited Pterodactyl provisioner receives RAM/SSD/CPU as resource limits, Player Slots/Tickrate as Egg environment variables, and the three feature-limit selections as Pterodactyl `feature_limits` values. The same mapping is applied by `upgradeServer()` before Paymenter's inherited Pterodactyl updater changes build limits and Egg environment values.
 
 Use the exact numeric value as each child Environment Variable. For Player Slots, the 5-slot choice is the included base capacity and larger values represent the additional-slot surcharge. Both Tickrate children (`64` and `128`) are free. Databases, Additional Allocations and Backups are also free at this stage; create zero-price rows for all their values under every supported Plan/currency. The Egg Startup command passes the selected Tickrate through `-tickrate {{TICKRATE}}`.
 
-Keep all eight Config Options `Upgradable` disabled. The three feature-limit values are used for initial provisioning; customers can subsequently manage eligible settings from their Pterodactyl panel according to the permissions enabled for their account.
+**Enable `Upgradable` for all eight Config Options.** Paymenter 1.5.9 removes service Config rows that are not included in the native Service Upgrade selection. With `Upgradable` enabled, the current selections are carried into the upgrade record; FragCityCS2 then resolves all eight rows again and forwards the updated limits/environment to Pterodactyl. This also lets the customer change an option through Paymenter's native upgrade flow, where Paymenter calculates the price from the selected child and the configured recurring price table. Keep Tickrate, Databases, Additional Allocations and Backups at zero price until FragCity checkout begins charging for them; keep every child priced for each supported Plan/currency. Do not perform a product/plan upgrade until the Product has all eight options attached, all eight are marked upgradable, and every selected child has a valid price row.
 
 ## Pricing contract
 
