@@ -18,7 +18,7 @@ If an existing client is found by email with an empty `external_id`, the extensi
 
 ## Customer server management
 
-Extension version: **1.7.0**.
+Extension version: **1.7.1**.
 
 The extension exposes two narrow methods for the signed FragCity API bridge:
 
@@ -77,9 +77,9 @@ Attach these native Paymenter Config Options to the CS2 Product:
 
 | Config Option | Parent Environment Variable | Type | Child Environment Variables |
 | --- | --- | --- | --- |
-| RAM | `memory_mb` | Select | `1024`, `1280`, `1536` |
-| SSD Storage | `disk_mb` | Select | `5120`, `6144`, `7168`, `8192`, `9216`, `10240` |
-| CPU | `cpu_percent` | Select | `100`, `200`, `300`, `400` |
+| RAM | `memory_mb` | Select | Numeric MB values from `1` to `1048576` |
+| SSD Storage | `disk_mb` | Select | Numeric MB values from `1` to `1048576` |
+| CPU | `cpu_percent` | Select | Numeric percentage values from `1` to `6400` |
 | Player Slots | `SRCDS_MAXPLAYERS` | Select | Every integer from `5` through `64` |
 | Tickrate | `TICKRATE` | Select | `64`, `128` |
 | Databases | `databases` | Select | `0`, `1`, `2`, `3`, `5`, `10` |
@@ -88,7 +88,7 @@ Attach these native Paymenter Config Options to the CS2 Product:
 
 The signed FragCity API resolves and stores all eight selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges their selected child Environment Variables into the provisioning property map. The inherited Pterodactyl provisioner receives RAM/SSD/CPU as resource limits, Player Slots/Tickrate as Egg environment variables, and the three feature-limit selections as Pterodactyl `feature_limits` values. The same mapping is applied by `upgradeServer()` before Paymenter's inherited Pterodactyl updater changes build limits and Egg environment values.
 
-Use the exact numeric value as each child Environment Variable. For Player Slots, the 5-slot choice is the included base capacity and larger values represent the additional-slot surcharge. Both Tickrate children (`64` and `128`) are free. Databases, Additional Allocations and Backups are also free at this stage; create zero-price rows for all their values under every supported Plan/currency. The Egg Startup command passes the selected Tickrate through `-tickrate {{TICKRATE}}`.
+Use the exact numeric value as each child Environment Variable. The values shown in the Checkout slider come from the Product's live Config Option children; the example values above are not a hard-coded allow-list. FragCity's quote/order API validates that the selected child belongs to the correct Product option and has a valid Plan/currency price. Provisioning enforces the same safety ceilings: RAM and disk up to 1,048,576 MB, CPU up to 6,400. For Player Slots, the 5-slot choice is the included base capacity and larger values represent the additional-slot surcharge. Both Tickrate children (`64` and `128`) are free. Databases, Additional Allocations and Backups are also free at this stage; create zero-price rows for all their values under every supported Plan/currency. The Egg Startup command passes the selected Tickrate through `-tickrate {{TICKRATE}}`.
 
 **Enable `Upgradable` for all eight Config Options.** Paymenter 1.5.9 removes service Config rows that are not included in the native Service Upgrade selection. With `Upgradable` enabled, the current selections are carried into the upgrade record; FragCityCS2 then resolves all eight rows again and forwards the updated limits/environment to Pterodactyl. This also lets the customer change an option through Paymenter's native upgrade flow, where Paymenter calculates the price from the selected child and the configured recurring price table. Keep Tickrate, Databases, Additional Allocations and Backups at zero price until FragCity checkout begins charging for them; keep every child priced for each supported Plan/currency. Do not perform a product/plan upgrade until the Product has all eight options attached, all eight are marked upgradable, and every selected child has a valid price row.
 
