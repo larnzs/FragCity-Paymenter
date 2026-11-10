@@ -777,15 +777,6 @@ class FragCityCS2 extends PterodactylExtension
                 continue;
             }
 
-            if (
-                (string) ($option->type ?? '') !== 'select'
-                || !(bool) ($option->upgradable ?? false)
-            ) {
-                throw new RuntimeException(
-                    'FragCity CS2 RAM, Storage and CPU Config Options must be upgradable Select options.'
-                );
-            }
-
             $target = null;
             foreach ([$option->env_variable ?? '', $option->name ?? ''] as $identifier) {
                 $normalizedIdentifier = $normalize($identifier);
@@ -800,6 +791,15 @@ class FragCityCS2 extends PterodactylExtension
 
             if ($target === null) {
                 continue;
+            }
+
+            if (
+                (string) ($option->type ?? '') !== 'select'
+                || !(bool) ($option->upgradable ?? false)
+            ) {
+                throw new RuntimeException(
+                    'FragCity CS2 RAM, Storage and CPU Config Options must be upgradable Select options.'
+                );
             }
 
             if (array_key_exists($target, $resolved)) {
