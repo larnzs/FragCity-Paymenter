@@ -14,8 +14,8 @@ return new class extends Migration
         // protection across server purchases and wallet deposits.
         Schema::table('fragcity_server_orders', function (Blueprint $table): void {
             $table->string('payment_method', 16)->default('zarinpal')->after('zarinpal_ref_id');
-            $table->string('zarinpal_authority', 128)->nullable()->change();
-            $table->string('zarinpal_ref_id', 64)->nullable()->change();
+            $table->string('zarinpal_authority', 128)->charset('ascii')->collation('ascii_bin')->nullable()->change();
+            $table->string('zarinpal_ref_id', 64)->charset('ascii')->collation('ascii_bin')->nullable()->change();
         });
 
         Schema::create('fragcity_payment_receipts', function (Blueprint $table): void {
@@ -97,8 +97,8 @@ return new class extends Migration
 
         Schema::table('fragcity_server_orders', function (Blueprint $table): void {
             $table->dropColumn('payment_method');
-            $table->string('zarinpal_authority', 128)->nullable(false)->change();
-            $table->string('zarinpal_ref_id', 64)->nullable(false)->change();
+            $table->string('zarinpal_authority', 128)->charset('ascii')->collation('ascii_bin')->nullable(false)->change();
+            $table->string('zarinpal_ref_id', 64)->charset('ascii')->collation('ascii_bin')->nullable(false)->change();
         });
     }
 };
