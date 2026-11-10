@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'ZarinPal',
     description: 'Pay Paymenter invoices and wallet top-ups securely through ZarinPal v4.',
-    version: '1.0.2',
+    version: '1.0.3',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -272,8 +272,19 @@ class ZarinPal extends Gateway
             $authority = trim((string) data_get($body, 'data.authority', ''));
 
             if ($code !== 100 || !preg_match('/^[A-Za-z0-9_-]{1,128}$/D', $authority)) {
+                $errorCode = trim((string) data_get($body, 'errors.code', ''));
                 $message = trim((string) data_get($body, 'errors.message', ''));
-                throw new RuntimeException($message !== '' ? $message : 'ZarinPal did not create a payment authority.');
+                $diagnostic = 'ZarinPal did not create a payment authority (data.code: ' . $code . ').';
+
+                if ($errorCode !== '') {
+                    $diagnostic .= ' errors.code: ' . $errorCode . '.';
+                }
+
+                if ($message !== '') {
+                    $diagnostic .= ' ' . $message;
+                }
+
+                throw new RuntimeException($diagnostic);
             }
 
             DB::table(self::TABLE)
@@ -297,7 +308,15 @@ class ZarinPal extends Gateway
 
             Log::warning('FragCity ZarinPal payment request failed.', [
                 'invoice_id' => $attempt['invoice_id'],
+                'payment_attempt_id' => $attempt['id'],
+                'sandbox' => (bool) $attempt['sandbox'],
+                'currency_code' => (string) $attempt['currency_code'],
+                'currency_unit' => (string) $currencyUnit,
+                'amount_rial' => (int) $attempt['amount_rial'],
                 'exception' => get_class($e),
+                // Provider diagnostics are useful here; never log merchant IDs,
+                // callback tokens, authorities, or the full HTTP response.
+                'message' => mb_substr($e->getMessage(), 0, 500),
             ]);
 
             throw new DisplayException('Could not start the ZarinPal payment. Please try again.');
