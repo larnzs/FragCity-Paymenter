@@ -350,41 +350,54 @@ class ZarinPal extends Gateway
         $invoice = Invoice::query()->findOrFail((int) $payment->invoice_id);
         $transactionId = 'zarinpal:' . $authority;
 
-        $claim = DB::transaction(function () use ($payment): string {
-            $locked = DB::table(self::TABLE)->where('id', $payment->id)->lockForUpdate()->first();
+        try {
+            $claim = DB::transaction(function () use ($payment): string {
+                $locked = DB::table(self::TABLE)->where('id', $payment->id)->lockForUpdate()->first();
 
-            if (!$locked) {
-                return 'missing';
-            }
+                if (!$locked) {
+                    return 'missing';
+                }
 
-            if ($locked->status === 'succeeded') {
-                return 'succeeded';
-            }
+                if ($locked->status === 'succeeded') {
+                    return 'succeeded';
+                }
 
-            if (in_array($locked->status, ['cancelled', 'failed', 'manual_review'], true)) {
-                return $locked->status;
-            }
+                if (in_array($locked->status, ['cancelled', 'failed', 'manual_review'], true)) {
+                    return $locked->status;
+                }
 
-            if (
-                $locked->status === 'verifying'
-                && $locked->verify_started_at
-                && strtotime((string) $locked->verify_started_at) > (time() - self::VERIFY_LEASE_SECONDS)
-            ) {
-                return 'in_progress';
-            }
+                if (
+                    $locked->status === 'verifying'
+                    && $locked->verify_started_at
+                    && strtotime((string) $locked->verify_started_at) > (time() - self::VERIFY_LEASE_SECONDS)
+                ) {
+                    return 'in_progress';
+                }
 
-            if (!in_array($locked->status, ['pending', 'expired', 'verifying', 'verification_error'], true)) {
-                return 'invalid';
-            }
+                if (!in_array($locked->status, ['pending', 'expired', 'verifying', 'verification_error'], true)) {
+                    return 'invalid';
+                }
 
-            DB::table(self::TABLE)->where('id', $locked->id)->update([
-                'status' => 'verifying',
-                'verify_started_at' => now(),
-                'updated_at' => now(),
+                DB::table(self::TABLE)->where('id', $locked->id)->update([
+                    'status' => 'verifying',
+                    'verify_started_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                return 'claimed';
+            });
+        } catch (Throwable $e) {
+            Log::critical('FragCity ZarinPal callback could not claim payment state.', [
+                'invoice_id' => (int) $invoice->id,
+                'phase' => 'callback_claim_payment',
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
-            return 'claimed';
-        });
+            throw new DisplayException('ZarinPal could not load the payment state. The administrator can find the exact cause in the Paymenter application log.');
+        }
 
         if ($claim === 'succeeded') {
             return redirect()->route('invoices.show', $invoice);
@@ -446,17 +459,12 @@ class ZarinPal extends Gateway
             $code = (int) data_get($body, 'data.code', 0);
             $referenceId = trim((string) data_get($body, 'data.ref_id', ''));
 
-            // The v4 verify request itself is bound to the stored Rial amount.
-            // A successful first verification is code 100 with a receipt ID.
-            // Code 101 means the authority was verified earlier; recover it
-            // only when the matching successful Paymenter transaction exists
-            // (handled above), otherwise leave it for manual reconciliation.
-            if ($code === 101) {
-                $this->markManualReview($payment->id, $invoice->id, 'already_verified_without_paymenter_transaction');
-                return redirect()->route('invoices.show', $invoice);
-            }
-
-            if ($code !== 100 || $referenceId === '') {
+            // Match the stable legacy FragCity flow: ZarinPal returns 100
+            // for the first successful verify and 101 when this same authority
+            // has already been verified. Because the authority, invoice and
+            // exact request amount are already bound in our durable attempt
+            // row, both codes can safely settle this same Paymenter invoice.
+            if (!in_array($code, [100, 101], true) || $referenceId === '') {
                 DB::table(self::TABLE)->where('id', $payment->id)->update([
                     'status' => 'failed',
                     'updated_at' => now(),
