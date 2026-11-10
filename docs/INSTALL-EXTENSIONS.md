@@ -67,7 +67,7 @@ Paymenter v1.5.9 accepts one ZIP containing one extension folder. Each generated
 
 The same one-folder layout is used for the other extensions. This is intentional: Paymenter's uploader looks for the main PHP class at the top level or one directory below the ZIP extraction root.
 
-The upload action copies extension files and invokes the extension lifecycle hook. The extension must still be registered/enabled from its corresponding **Others** or **Servers** list after upload. Do not manually insert rows into the extensions table.
+The upload action copies extension files and invokes the extension lifecycle hook. The extension must still be registered/enabled from its corresponding **Others**, **Servers** or **Gateways** list after upload. Do not manually insert rows into the extensions table.
 
 ## Configure after installation
 
@@ -130,4 +130,4 @@ If an existing Paymenter instance reports FragCityAPI **1.6.0**, do not upload t
 - Never upload secrets, .env, vendor, Paymenter Core, customer data, database dumps or runtime storage.
 - Never upload an older package over a newer installed version without reviewing the source changes.
 - The packages contain no Paymenter Core modifications. ZarinPal is installed only as a Paymenter Gateway extension.
-- Keep customer checkout and payment on FragCity. Paymenter is the private commercial and provisioning backend.
+- Keep all payment decisions on the server. Paymenter owns invoices, wallet balances and invoice settlement; Pterodactyl is only the game-server runtime.
