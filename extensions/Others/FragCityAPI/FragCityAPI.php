@@ -30,7 +30,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server catalogue, wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.11.0',
+    version: '1.12.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -66,7 +66,7 @@ class FragCityAPI extends Extension
             ],
             [
                 'name' => 'cs2_plan_id_1_day',
-                'label' => 'CS2 1-day Plan ID',
+                'label' => 'CS2 3-day Plan ID',
                 'type' => 'number',
                 'required' => true,
                 'validation' => 'required|integer|min:1',
@@ -128,7 +128,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.11.0',
+            'version' => '1.12.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -369,7 +369,7 @@ class FragCityAPI extends Extension
         $productId = (int) $this->config('cs2_product_id');
 
         $planSettings = [
-            1 => 'cs2_plan_id_1_day',
+            3 => 'cs2_plan_id_1_day',
             7 => 'cs2_plan_id_7_days',
             15 => 'cs2_plan_id_15_days',
             30 => 'cs2_plan_id_30_days',
@@ -404,7 +404,7 @@ class FragCityAPI extends Extension
                 $planId = (int) $this->config($setting);
                 $plan = $product->plans->firstWhere('id', $planId);
                 $expected = match ($days) {
-                    1 => [1, 'day'],
+                    3 => [3, 'day'],
                     7 => [1, 'week'],
                     15 => [15, 'day'],
                     30 => [1, 'month'],
@@ -1342,7 +1342,7 @@ class FragCityAPI extends Extension
         $payload = $request->attributes->get('fragcity_bridge_payload');
         $validator = Validator::make(is_array($payload) ? $payload : [], [
             'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
-            'duration_days' => ['required', 'integer', 'in:1,7,15,30'],
+            'duration_days' => ['required', 'integer', 'in:3,7,15,30'],
             'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9 ]+$/'],
             'resources.memory_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
             'resources.disk_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
@@ -1389,7 +1389,7 @@ class FragCityAPI extends Extension
         $currencyCode = strtoupper(trim((string) $this->config('cs2_currency_code')));
         $productId = (int) $this->config('cs2_product_id');
         $planSettings = [
-            1 => 'cs2_plan_id_1_day',
+            3 => 'cs2_plan_id_1_day',
             7 => 'cs2_plan_id_7_days',
             15 => 'cs2_plan_id_15_days',
             30 => 'cs2_plan_id_30_days',
@@ -1451,7 +1451,7 @@ class FragCityAPI extends Extension
 
             $plan = $product->plans->firstWhere('id', $planId);
             $expectedPlan = match ($durationDays) {
-                1 => [1, 'day'],
+                3 => [3, 'day'],
                 7 => [1, 'week'],
                 15 => [15, 'day'],
                 30 => [1, 'month'],
@@ -1892,7 +1892,7 @@ class FragCityAPI extends Extension
                 'integer',
                 'min:10',
             ],
-            'duration_days' => ['required', 'integer', 'in:1,7,15,30'],
+            'duration_days' => ['required', 'integer', 'in:3,7,15,30'],
             'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9 ]+$/'],
             'resources.memory_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
             'resources.disk_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
@@ -1969,7 +1969,7 @@ class FragCityAPI extends Extension
         $currencyUnit = 'rial';
         $productId = (int) $this->config('cs2_product_id');
         $planSetting = [
-            1 => 'cs2_plan_id_1_day',
+            3 => 'cs2_plan_id_1_day',
             7 => 'cs2_plan_id_7_days',
             15 => 'cs2_plan_id_15_days',
             30 => 'cs2_plan_id_30_days',
@@ -2130,7 +2130,7 @@ class FragCityAPI extends Extension
 
                 $plan = $product->plans->firstWhere('id', $planId);
                 $expectedPlan = match ($durationDays) {
-                    1 => [1, 'day'],
+                    3 => [3, 'day'],
                     7 => [1, 'week'],
                     15 => [15, 'day'],
                     30 => [1, 'month'],

@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.11.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.12.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -160,13 +160,13 @@ Configure these under **Paymenter Admin → Extensions → Others → FragCity A
 | Setting | Meaning |
 | --- | --- |
 | `cs2_product_id` | Product ID whose Server Extension is `FragCityCS2` |
-| `cs2_plan_id_1_day` | Product Plan for exactly 1 day |
+| `cs2_plan_id_1_day` | Product Plan for exactly 3 days (legacy setting key retained for compatibility) |
 | `cs2_plan_id_7_days` | Product Plan for exactly 1 week |
 | `cs2_plan_id_15_days` | Product Plan for exactly 15 days |
 | `cs2_plan_id_30_days` | Product Plan for exactly 1 month |
 | `cs2_currency_code` | Existing Paymenter Rial currency code used by all four Plans (for example `IRR`) |
 
-Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 1 day = `1 day`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. Every selected RAM, disk, CPU, Player Slots, Tickrate, Databases, Additional Allocations and Backups child must also have a price row for the selected Plan and Rial currency. The Player Slots 5-child and every Tickrate/feature-limit child must have zero-price rows; Player Slots above the included capacity use the configured capacity surcharge. The API fails closed when the Product, Plan, currency, option mapping, supported value or child price is missing or inconsistent.
+Each Plan ID must belong to the configured Product, be recurring, and have a price row for the configured Rial currency. Billing periods are checked: 3 days = `3 days`, 7 days = `1 week`, 15 days = `15 days`, and 30 days = `1 month`. Every selected RAM, disk, CPU, Player Slots, Tickrate, Databases, Additional Allocations and Backups child must also have a price row for the selected Plan and Rial currency. The Player Slots 5-child and every Tickrate/feature-limit child must have zero-price rows; Player Slots above the included capacity use the configured capacity surcharge. The API fails closed when the Product, Plan, currency, option mapping, supported value or child price is missing or inconsistent.
 
 ### Required Product Config Options
 
