@@ -81,7 +81,7 @@ the HMAC secret or let browser JavaScript call Paymenter directly.
 The website backend reads a linked customer's Rial wallet through
 `POST /api/v1/fragcity/bridge/wallet/balance` with only the SteamID64 from the
 authenticated FragCity server-side session. Paymenter resolves the linked User
-from `fragcity_user_links` and returns only the configured currency balance.
+from `fragcity_user_links` and returns only the configured currency balance plus whether Credits are enabled and the configured minimum deposit, maximum deposit and maximum balance.
 An unknown or unlinked SteamID fails closed.
 
 A verified ZarinPal wallet deposit is applied through
