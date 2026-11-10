@@ -63,7 +63,7 @@ const requiredEntrypoints = [
 ];
 
 for (const wanted of requiredEntrypoints) {
-  const key = keys.find((candidate) => candidate.replaceAll('\\\\', '/').endsWith(wanted));
+  const key = keys.find((candidate) => candidate.endsWith(wanted));
   if (!key) {
     throw new Error(`Vite manifest is missing the required entrypoint: ${wanted}`);
   }
