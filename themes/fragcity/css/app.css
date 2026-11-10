@@ -4,6 +4,7 @@
 @import "./fragcity/components.css";
 @import "./fragcity/motion.css";
 @import "./fragcity/paymenter-shell.css";
+@import "./fragcity/storefront-home.css";
 
 @plugin '@tailwindcss/forms' {
     strategy: class;
