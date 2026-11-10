@@ -9,6 +9,7 @@ Provides a narrow private server-to-server bridge for FragCity identity, paid CS
 - `POST /api/v1/fragcity/bridge/ping`
 - `POST /api/v1/fragcity/bridge/catalog/cs2`
 - `POST /api/v1/fragcity/bridge/wallet/balance`
+- `POST /api/v1/fragcity/bridge/wallet/topups/zarinpal`
 - `POST /api/v1/fragcity/bridge/users/sync`
 - `POST /api/v1/fragcity/bridge/orders/cs2`
 - `POST /api/v1/fragcity/bridge/servers/list`
@@ -83,9 +84,26 @@ authenticated FragCity server-side session. Paymenter resolves the linked User
 from `fragcity_user_links` and returns only the configured currency balance.
 An unknown or unlinked SteamID fails closed.
 
+A verified ZarinPal wallet deposit is applied through
+`POST /api/v1/fragcity/bridge/wallet/topups/zarinpal`. Paymenter validates the
+same Rial/Toman conversion, checks the native Credits settings (enabled,
+minimum deposit, maximum deposit and maximum balance), rejects an existing
+pending Credit invoice, and enforces unique `topup_ref`, Authority and RefID.
+It creates a native Invoice with a Credit InvoiceItem, records a successful
+external Paymenter InvoiceTransaction, and marks the invoice paid. Paymenter's
+native `ProcessPaidInvoiceService` then increments the customer's Credit row
+after the database commit. The same verified receipt cannot be reused for a
+CS2 purchase or another top-up because both flows share
+`fragcity_payment_receipts`.
+
+For this flow, configure **Settings → Credits** in Paymenter: enable Credits
+and set the minimum deposit, maximum deposit and maximum credit in the configured
+Rial currency's units. The extension fails closed when Credits are disabled or
+those limits are not configured.
+
 ## Paid CS2 server orders
 
-`POST /api/v1/fragcity/bridge/orders/cs2` accepts a server-to-server order only after the FragCity website has verified the ZarinPal payment with ZarinPal's Verify API. Paymenter does **not** trust a browser redirect, a browser-supplied `Status=OK`, or a client-provided claim that a payment succeeded. The HMAC-authenticated website backend is the only caller.
+`POST /api/v1/fragcity/bridge/orders/cs2` accepts a server-to-server order using either a verified ZarinPal receipt or the linked customer's Paymenter Wallet. For ZarinPal, FragCity must first verify the payment with ZarinPal's Verify API; Paymenter does **not** trust a browser redirect, a browser-supplied `Status=OK`, or a client-provided payment claim. For Wallet, the request contains only `payment.provider=wallet`; Paymenter computes the amount and locks/debits its own Credit row. The HMAC-authenticated website backend is the only caller.
 
 After validation, the endpoint creates native Paymenter records:
 - an `Order`;
@@ -93,7 +111,8 @@ After validation, the endpoint creates native Paymenter records:
 - service properties for `servername` and the six remaining Egg variables. `SRCDS_MAXPLAYERS` and `TICKRATE` are not duplicated as service properties;
 - native Paymenter `ServiceConfig` rows for eight Product Config Options: RAM, SSD, CPU, Player Slots, Tickrate, Databases, Additional Allocations and Backups. The bridge resolves each submitted value to exactly one child under the matching parent option, then requires a price row for the selected Plan and Rial currency. These `ServiceConfig` rows are the persisted source of truth. Paymenter's `ExtensionHelper::getServiceProperties()` adds the selected child Environment Variables to the provisioning property map; `FragCityCS2` adapts RAM/SSD/CPU to Pterodactyl resource limits, passes Player Slots/Tickrate to Egg environment values, and maps the three feature-limit selections to Pterodactyl's `feature_limits.databases`, `feature_limits.allocations` and `feature_limits.backups`. Missing/ambiguous mappings, unsupported values or missing recurring option prices fail closed before an order is accepted;
 - an invoice item linked to that service;
-- a successful Paymenter invoice transaction containing the ZarinPal reference.
+- for ZarinPal, a successful external Paymenter invoice transaction containing the ZarinPal reference plus a global receipt-ledger entry;
+- for Wallet, an atomic Paymenter Credit debit and a successful invoice transaction marked as a credit transaction (no external payment reference).
 
 The endpoint then marks the invoice paid. Paymenter's native `InvoiceObserver` and `ProcessPaidInvoiceService` run after the database commit; Paymenter dispatches its normal `CreateJob`, and `FragCityCS2` delegates provisioning to Paymenter's inherited Pterodactyl extension. This endpoint does not call Pterodactyl directly.
 
@@ -179,9 +198,9 @@ The signed `resources` object is a selection snapshot, not an allowlist or price
 
 - Databases, Additional Allocations and Backups are included/free for now. Every selected child must have a zero-price and zero-setup-fee row for the chosen Plan and Rial currency.
 
-- `order_ref`, ZarinPal Authority and verified ZarinPal Ref ID have unique database constraints.
-- An exact retry with the same order reference and payload hash returns the existing Paymenter Order, Invoice and Service IDs; it never creates a second service.
-- Reusing an order reference with a different payload, or attempting to spend an already-used ZarinPal receipt, returns a conflict.
+- `order_ref` is unique. ZarinPal Authority and verified RefID are stored in the shared `fragcity_payment_receipts` ledger, which is also used by wallet top-ups; the unique constraints prevent cross-purpose receipt reuse.
+- An exact retry with the same order reference and payload hash returns the existing Paymenter Order, Invoice and Service IDs; it never creates a second service or debits Wallet twice.
+- Reusing an order reference with a different payload, or attempting to spend an already-used ZarinPal receipt, returns a conflict. Wallet checkout locks the linked Paymenter Credit row and fails without creating records when the available balance is insufficient.
 - The accepted response means the Paymenter Order/Invoice/Service records were committed and the native provisioning flow was queued. It does not claim that Pterodactyl has already finished creating the server.
 - `TICKRATE=64` and `TICKRATE=128` are both accepted as free native Config Option values. `ENABLE_GUARD=1` remains blocked until its paid surcharge is included in the authoritative storefront quote.
 
