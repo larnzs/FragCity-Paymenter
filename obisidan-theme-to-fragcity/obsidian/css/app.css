@@ -1,0 +1,120 @@
+@import 'tailwindcss';
+
+@plugin '@tailwindcss/forms' {
+    strategy: class;
+}
+
+@plugin '@tailwindcss/typography';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@source "../views";
+@source "../../../extensions/**/*.blade.php";
+@source "../../../extensions/Servers/Proxmox";
+@source "../../../extensions/Others/Pages";
+
+@theme {
+    --font-sans: "Nunito", ui-sans-serif, system-ui, sans-serif;
+}
+
+@theme inline {
+    --color-primary: hsl(var(--color-primary));
+    --color-secondary: hsl(var(--color-secondary));
+    --color-neutral: hsl(var(--color-neutral));
+    --color-base: hsl(var(--color-base));
+    --color-muted: hsl(var(--color-muted));
+    --color-inverted: hsl(var(--color-inverted));
+    --color-success: hsl(var(--color-success));
+    --color-error: hsl(var(--color-error));
+    --color-warning: hsl(var(--color-warning));
+    --color-inactive: hsl(var(--color-inactive));
+    --color-info: hsl(var(--color-info));
+    --color-background: hsl(var(--color-background));
+    --color-background-secondary: hsl(var(--color-background-secondary));
+}
+
+@layer base {
+    *,
+    ::after,
+    ::before,
+    ::backdrop,
+    ::file-selector-button {
+        border-color: var(--color-gray-200, currentColor);
+    }
+
+    html,
+    body {
+        min-height: 100%;
+    }
+
+    body {
+        background-color: hsl(var(--color-background));
+        background-image: linear-gradient( 180deg, hsl(var(--obs-bg-tint-1) / var(--obs-bg-tint-strength)) 0%, rgba(0, 0, 0, 0) 58% ), linear-gradient( 135deg, hsl(var(--obs-bg-tint-2) / calc(var(--obs-bg-tint-strength) * 0.80)) 0%, rgba(0, 0, 0, 0) 46%, rgba(0, 0, 0, 0.06) 100% );
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+    }
+}
+
+@utility container {
+    @apply max-w-[1380px] mx-auto px-4 sm:px-6 lg:px-8;
+}
+
+@utility text-nowrap {
+    text-wrap: nowrap;
+}
+
+@utility text-wrap {
+    text-wrap: wrap;
+}
+
+@import './easymde.css';
+
+/* Scrollbars */
+::-webkit-scrollbar {
+    background: transparent;
+    width: 12px;
+    height: 12px;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 999px;
+    background-color: hsl(var(--color-primary));
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-track-piece {
+    background: transparent;
+}
+
+/* ======================================================
+   OBSIDIAN DASHBOARD HELPERS (append-only, non-breaking)
+   ====================================================== */
+
+@layer utilities {
+    /* Soft glass surface used on dashboard cards */
+    .obs-surface {
+        @apply bg-background-secondary/25 border border-neutral;
+    }
+
+    .obs-surface-hover {
+        @apply hover:bg-background-secondary/35 transition;
+    }
+
+    /* Premium rounded corners */
+    .obs-round {
+        @apply rounded-3xl;
+    }
+
+    /* Accent bar under stat cards */
+    .obs-accent-bar {
+        @apply h-16 w-full;
+    }
+
+    /* Tighter spacing when widgets live inside dashboard panels */
+    .obs-widget-compact > * + * {
+        margin-top: 0.75rem;
+    }
+}
