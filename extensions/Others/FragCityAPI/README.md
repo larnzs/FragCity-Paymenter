@@ -1,12 +1,14 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.7.1**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.9.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
 Provides a narrow private server-to-server bridge for FragCity identity, paid CS2 orders and customer server access:
 
 - `POST /api/v1/fragcity/bridge/ping`
+- `POST /api/v1/fragcity/bridge/catalog/cs2`
+- `POST /api/v1/fragcity/bridge/wallet/balance`
 - `POST /api/v1/fragcity/bridge/users/sync`
 - `POST /api/v1/fragcity/bridge/orders/cs2`
 - `POST /api/v1/fragcity/bridge/servers/list`
@@ -62,6 +64,25 @@ FragCity's website endpoint additionally requires an authenticated website sessi
 
 The panel password is intentionally independent from FragCity and Paymenter passwords. It cannot be read back after setting; customers can set a new one through FragCity at any time.
 
+## CS2 catalogue and wallet balance
+
+The website backend reads the configured CS2 catalogue through
+`POST /api/v1/fragcity/bridge/catalog/cs2`. The response includes the configured
+Product, the four configured duration Plans, their Rial prices, every visible
+Product Config Option, all child values and each child price by supported
+billing duration, plus the Egg Checkout fields and GameModeManager compatibility
+manifest. Config Option child prices are resolved exactly like Paymenter's
+native CartItem calculation: by billing period/unit and currency, not by
+reusing the Product Plan ID. Missing child prices are explicitly marked
+unavailable. The response is intended for the private PHP backend; never expose
+the HMAC secret or let browser JavaScript call Paymenter directly.
+
+The website backend reads a linked customer's Rial wallet through
+`POST /api/v1/fragcity/bridge/wallet/balance` with only the SteamID64 from the
+authenticated FragCity server-side session. Paymenter resolves the linked User
+from `fragcity_user_links` and returns only the configured currency balance.
+An unknown or unlinked SteamID fails closed.
+
 ## Paid CS2 server orders
 
 `POST /api/v1/fragcity/bridge/orders/cs2` accepts a server-to-server order only after the FragCity website has verified the ZarinPal payment with ZarinPal's Verify API. Paymenter does **not** trust a browser redirect, a browser-supplied `Status=OK`, or a client-provided claim that a payment succeeded. The HMAC-authenticated website backend is the only caller.
@@ -108,7 +129,7 @@ Attach all eight Config Options to the configured CS2 Product. The parent Enviro
 
 Use exact numeric child Environment Variables, not display labels. Keep `Upgradable` disabled for all eight Config Options. For Player Slots, the 5-slot child is the included/base capacity and larger values represent the additional-slot surcharge. Both Tickrate children and every Databases/Additional Allocations/Backups child must have zero-price and zero-setup-fee rows for every supported Plan/currency until the storefront quote supports those surcharges. The Egg Startup command passes the selected Tickrate through `-tickrate {{TICKRATE}}`. The three feature-limit options are not Egg variables: `FragCityCS2` maps them directly to Pterodactyl's server feature limits.
 
-**Currency is Rial-only inside Paymenter.** The bridge always creates the Paymenter Service, Invoice item and successful Invoice Transaction using `payment.amount_rial`. `payment.amount_toman` remains the source amount used for the conversion-integrity check and order audit. The bridge verifies `amount_rial === amount_toman * 10`; it never uses the Toman amount for Paymenter monetary records.
+**Currency is Rial-only inside Paymenter.** The bridge recalculates the invoice amount inside Paymenter from the configured Product Plan plus every selected Config Option Child price for the chosen billing period/unit and Rial currency. It includes setup fees and the applicable Paymenter customer tax policy using the same pricing model as the native Paymenter cart. The amount sent by FragCity is only accepted when it exactly matches this independently calculated total and is representable in whole Toman (10 Rial per Toman). The bridge then creates the Paymenter Service, Invoice Item and successful Invoice Transaction using the recalculated Rial total; it never trusts a browser-supplied price or uses Toman as a Paymenter monetary amount.
 
 ### Signed request body
 
@@ -152,7 +173,7 @@ The HMAC signature covers the exact raw JSON request body. The website sends the
 
 The example is illustrative; the amount, reference and identity must come from the website's server-side order record and verified ZarinPal response. The two amounts must match exactly at the 10 Rial per Toman conversion. `order_ref` must be generated once by FragCity and reused unchanged for retries.
 
-Resource constraints currently mirror the FragCity storefront: RAM 1024/1280/1536 MB, disk 5120–10240 MB in 1024 MB increments, and CPU 100/200/300/400 percent. The signed `resources` object is still sent by the website as the customer's selection snapshot so the bridge can resolve the exact matching Config Option children; it is not used to create `memory`, `disk` or `cpu` service properties. The selected Config Option children must have numeric `env_variable` values matching those amounts and a price for the selected Plan/currency. The Egg values are validated against the live `FragCityCS2` Checkout manifest, including the allowed select values. UI labels are never stored as Egg values.
+The signed `resources` object is a selection snapshot, not an allowlist or price source. The bridge validates safe numeric bounds, then requires each submitted RAM, SSD and CPU amount to match exactly one Child Environment Variable under the corresponding Config Option attached to the configured Product. Therefore the actual options and their allowed values come from Paymenter's current Product configuration, not a hard-coded list in the website or bridge. The Egg values are separately validated against the live `FragCityCS2` Checkout manifest, including allowed select values. UI labels are never stored as Egg values.
 
 ### Idempotency and paid add-ons
 
