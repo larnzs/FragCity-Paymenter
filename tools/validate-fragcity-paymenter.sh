@@ -77,7 +77,7 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 # Extension versions and runtime bridge version must be released together.
 grep -Fq "version: '1.13.0'" "$api"
 grep -Fq "'version' => '1.13.0'" "$api"
-grep -Fq "version: '1.7.0'" "$cs2"
+grep -Fq "version: '1.7.1'" "$cs2"
 
 # The first supported CS2 subscription is now three days. Keep the historical
 # setting key so an existing Product ID value is not lost during extension update.
@@ -115,6 +115,12 @@ done
 grep -Fq "function createServer" "$cs2"
 grep -Fq "function upgradeServer" "$cs2"
 grep -Fq "applyResourceLimitsFromConfigOptions(\$service, \$properties)" "$cs2"
+grep -Fq "'memory' => 1048576" "$cs2"
+grep -Fq "'disk' => 1048576" "$cs2"
+grep -Fq "'cpu' => 6400" "$cs2"
+! grep -Fq "in_array(\$resolved['disk']" "$cs2"
+! grep -Fq "in_array(\$resolved['memory']" "$cs2"
+! grep -Fq "in_array(\$resolved['cpu']" "$cs2"
 test "$(grep -Fc 'applyNativeConfigOptions($service, $properties)' "$cs2")" -ge 2
 
 # All eight service-level Config Options must survive Paymenter's native upgrade flow.
