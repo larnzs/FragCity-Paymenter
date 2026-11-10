@@ -9,6 +9,7 @@ Provides a narrow private server-to-server bridge for FragCity identity, paid CS
 - `POST /api/v1/fragcity/bridge/ping`
 - `POST /api/v1/fragcity/bridge/catalog/cs2`
 - `POST /api/v1/fragcity/bridge/wallet/balance`
+- `POST /api/v1/fragcity/bridge/wallet/topups/prepare`
 - `POST /api/v1/fragcity/bridge/wallet/topups/zarinpal`
 - `POST /api/v1/fragcity/bridge/users/sync`
 - `POST /api/v1/fragcity/bridge/orders/cs2`
@@ -84,17 +85,30 @@ authenticated FragCity server-side session. Paymenter resolves the linked User
 from `fragcity_user_links` and returns only the configured currency balance plus whether Credits are enabled and the configured minimum deposit, maximum deposit and maximum balance.
 An unknown or unlinked SteamID fails closed.
 
-A verified ZarinPal wallet deposit is applied through
-`POST /api/v1/fragcity/bridge/wallet/topups/zarinpal`. Paymenter validates the
-same Rial/Toman conversion, checks the native Credits settings (enabled,
-minimum deposit, maximum deposit and maximum balance), rejects an existing
-pending Credit invoice, and enforces unique `topup_ref`, Authority and RefID.
-It creates a native Invoice with a Credit InvoiceItem, records a successful
-external Paymenter InvoiceTransaction, and marks the invoice paid. Paymenter's
-native `ProcessPaidInvoiceService` then increments the customer's Credit row
-after the database commit. The same verified receipt cannot be reused for a
-CS2 purchase or another top-up because both flows share
+Before FragCity creates an external ZarinPal wallet-deposit request, it must call
+`POST /api/v1/fragcity/bridge/wallet/topups/prepare`. Paymenter validates the
+native Credits settings (enabled, minimum deposit, maximum deposit and maximum
+balance), rejects an existing pending Credit invoice and reserves the user's
+remaining maximum-credit capacity for 20 minutes. The reservation is keyed by
+a stable `topup_ref`; exact retries return the same reservation and conflicting
+payloads are rejected.
+
+Only after receiving a `prepared` response should FragCity create the
+ZarinPal payment request. After the website verifies the callback with
+ZarinPal's server-side Verify API, it settles the same reservation through
+`POST /api/v1/fragcity/bridge/wallet/topups/zarinpal`. Paymenter enforces the
+Rial/Toman conversion and unique `topup_ref`, Authority and RefID. It creates
+a native Invoice with a Credit InvoiceItem, records a successful external
+Paymenter InvoiceTransaction, and marks the invoice paid. Paymenter's native
+`ProcessPaidInvoiceService` then increments the customer's Credit row after
+the database commit. The same verified receipt cannot be reused for a CS2
+purchase or another top-up because both flows share
 `fragcity_payment_receipts`.
+
+Reservations normally expire after 20 minutes. If a customer has already
+completed a real payment but the callback arrives after expiry, the verified
+payment is still reconciled rather than discarded; this exceptional late
+settlement can outlive the reservation's maximum-credit estimate.
 
 For this flow, configure **Settings → Credits** in Paymenter: enable Credits
 and set the minimum deposit, maximum deposit and maximum credit in the configured
