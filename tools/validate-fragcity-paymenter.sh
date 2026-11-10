@@ -37,6 +37,7 @@ for needle in \
   "function cs2Catalog" \
   "function quoteCs2Order" \
   "expected_amount_rial" \
+  "if (\$expectedAmountRial !== null && \$expectedAmountRial !== \$wholeRialTotal)" \
   "function createCs2Order" \
   "Settings::tax(\$user)" \
   "cs2_quote_amount_mismatch" \
