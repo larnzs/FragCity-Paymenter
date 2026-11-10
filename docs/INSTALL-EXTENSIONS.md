@@ -97,11 +97,11 @@ See each extension's README for exact settings, routes, permissions and integrat
 
 ## ZarinPal Gateway and native wallet
 
-After uploading and enabling the ZarinPal Gateway, configure its Merchant ID, currency code and unit, and Sandbox mode. FragCity's existing Paymenter currency is IRR displayed in Rial, so use currency code IRR and unit **Rial** (no multiplication by 10).
+After uploading and enabling the ZarinPal Gateway, configure its Merchant ID, currency code and unit, public Paymenter URL, and Sandbox mode. Set **Public Paymenter URL** to `https://checkout.fragcity.ir`; the callback will be `https://checkout.fragcity.ir/extensions/zarinpal/callback`. FragCity's existing Paymenter currency is IRR displayed in Rial, so use currency code IRR and unit **Rial** (no multiplication by 10).
 
 To enable the built-in wallet, open **Admin → Settings → Credits** and enable Credits. Set the minimum deposit, maximum single deposit and maximum wallet balance in the Paymenter currency's stored unit. Keep automatic credit use enabled when you want recurring service invoices to be paid from available balance. Customers can then open **Account → Credits** to create a top-up invoice. A wallet balance is credited only after the invoice has a successful Paymenter transaction.
 
-See extensions/Gateways/ZarinPal/README.md for the callback, idempotency and reconciliation design. Test both a wallet top-up and a normal service invoice with a ZarinPal sandbox merchant before production.
+See extensions/Gateways/ZarinPal/README.md for the callback, idempotency and reconciliation design. The gateway checks the payment-attempt table before checkout and logs missing/outdated migrations or SQL failures to `storage/logs/laravel.log` instead of exposing an unhandled 500. Test both a wallet top-up and a normal service invoice with a ZarinPal sandbox merchant before production. The callback must return to `https://checkout.fragcity.ir/extensions/zarinpal/callback`; the ZarinPal extension verifies the payment server-to-server and then returns the customer to the Paymenter invoice.
 
 ## Updating an existing extension
 

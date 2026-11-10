@@ -14,13 +14,14 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use RuntimeException;
 use Throwable;
 
 #[ExtensionMeta(
     name: 'ZarinPal',
     description: 'Pay Paymenter invoices and wallet top-ups securely through ZarinPal v4.',
-    version: '1.0.1',
+    version: '1.0.2',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -51,9 +52,8 @@ class ZarinPal extends Gateway
             [
                 'name' => 'merchant_id',
                 'label' => 'ZarinPal Merchant ID',
-                'type' => 'text',
+                'type' => 'password',
                 'required' => true,
-                'encrypted' => true,
                 'validation' => 'required|string|max:64',
             ],
             [
@@ -83,6 +83,15 @@ class ZarinPal extends Gateway
                 'type' => 'checkbox',
                 'required' => false,
                 'default' => false,
+            ],
+            [
+                'name' => 'callback_base_url',
+                'label' => 'Public Paymenter URL',
+                'type' => 'text',
+                'required' => false,
+                'default' => 'https://checkout.fragcity.ir',
+                'validation' => 'nullable|url',
+                'description' => 'Public HTTPS base URL used for ZarinPal callbacks. FragCity uses https://checkout.fragcity.ir.',
             ],
             [
                 'name' => 'description_prefix',
@@ -125,7 +134,10 @@ class ZarinPal extends Gateway
             throw new DisplayException('ZarinPal gateway is not configured correctly.');
         }
 
-        $attempt = DB::transaction(function () use (
+        $this->ensurePaymentTable();
+
+        try {
+            $attempt = DB::transaction(function () use (
             $invoice,
             $merchantId,
             $configuredCurrency,
@@ -210,7 +222,21 @@ class ZarinPal extends Gateway
                 'sandbox' => $sandbox,
                 'merchant_id' => $merchantId,
             ];
-        });
+            });
+        } catch (DisplayException $e) {
+            throw $e;
+        } catch (Throwable $e) {
+            Log::critical('FragCity ZarinPal payment attempt could not be prepared.', [
+                'invoice_id' => (int) $invoice->id,
+                'phase' => 'payment_attempt_prepare',
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            throw new DisplayException('ZarinPal could not prepare this payment. The administrator can find the exact cause in the Paymenter application log.');
+        }
 
         if (isset($attempt['reuse_url'])) {
             return $attempt['reuse_url'];
@@ -230,9 +256,7 @@ class ZarinPal extends Gateway
                     'merchant_id' => $attempt['merchant_id'],
                     'amount' => $attempt['amount_rial'],
                     'currency' => 'IRR',
-                    'callback_url' => route('extensions.gateways.zarinpal.callback', [
-                        'token' => $attempt['token'],
-                    ]),
+                    'callback_url' => $this->buildCallbackUrl((string) $attempt['token']),
                     'description' => mb_substr($description, 0, 255),
                     'metadata' => [
                         'invoice_id' => (string) $attempt['invoice_id'],
@@ -297,9 +321,23 @@ class ZarinPal extends Gateway
             abort(400, 'Invalid ZarinPal callback.');
         }
 
-        $payment = DB::table(self::TABLE)
-            ->where('token_hash', hash('sha256', $token))
-            ->first();
+        try {
+            $this->ensurePaymentTable();
+
+            $payment = DB::table(self::TABLE)
+                ->where('token_hash', hash('sha256', $token))
+                ->first();
+        } catch (Throwable $e) {
+            Log::critical('FragCity ZarinPal callback could not load payment state.', [
+                'phase' => 'callback_load_payment',
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            throw new DisplayException('ZarinPal callback storage is not ready. The administrator has been notified in the application log.');
+        }
 
         if (
             !$payment
@@ -312,41 +350,54 @@ class ZarinPal extends Gateway
         $invoice = Invoice::query()->findOrFail((int) $payment->invoice_id);
         $transactionId = 'zarinpal:' . $authority;
 
-        $claim = DB::transaction(function () use ($payment): string {
-            $locked = DB::table(self::TABLE)->where('id', $payment->id)->lockForUpdate()->first();
+        try {
+            $claim = DB::transaction(function () use ($payment): string {
+                $locked = DB::table(self::TABLE)->where('id', $payment->id)->lockForUpdate()->first();
 
-            if (!$locked) {
-                return 'missing';
-            }
+                if (!$locked) {
+                    return 'missing';
+                }
 
-            if ($locked->status === 'succeeded') {
-                return 'succeeded';
-            }
+                if ($locked->status === 'succeeded') {
+                    return 'succeeded';
+                }
 
-            if (in_array($locked->status, ['cancelled', 'failed', 'manual_review'], true)) {
-                return $locked->status;
-            }
+                if (in_array($locked->status, ['cancelled', 'failed', 'manual_review'], true)) {
+                    return $locked->status;
+                }
 
-            if (
-                $locked->status === 'verifying'
-                && $locked->verify_started_at
-                && strtotime((string) $locked->verify_started_at) > (time() - self::VERIFY_LEASE_SECONDS)
-            ) {
-                return 'in_progress';
-            }
+                if (
+                    $locked->status === 'verifying'
+                    && $locked->verify_started_at
+                    && strtotime((string) $locked->verify_started_at) > (time() - self::VERIFY_LEASE_SECONDS)
+                ) {
+                    return 'in_progress';
+                }
 
-            if (!in_array($locked->status, ['pending', 'expired', 'verifying', 'verification_error'], true)) {
-                return 'invalid';
-            }
+                if (!in_array($locked->status, ['pending', 'expired', 'verifying', 'verification_error'], true)) {
+                    return 'invalid';
+                }
 
-            DB::table(self::TABLE)->where('id', $locked->id)->update([
-                'status' => 'verifying',
-                'verify_started_at' => now(),
-                'updated_at' => now(),
+                DB::table(self::TABLE)->where('id', $locked->id)->update([
+                    'status' => 'verifying',
+                    'verify_started_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                return 'claimed';
+            });
+        } catch (Throwable $e) {
+            Log::critical('FragCity ZarinPal callback could not claim payment state.', [
+                'invoice_id' => (int) $invoice->id,
+                'phase' => 'callback_claim_payment',
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ]);
 
-            return 'claimed';
-        });
+            throw new DisplayException('ZarinPal could not load the payment state. The administrator can find the exact cause in the Paymenter application log.');
+        }
 
         if ($claim === 'succeeded') {
             return redirect()->route('invoices.show', $invoice);
@@ -408,17 +459,12 @@ class ZarinPal extends Gateway
             $code = (int) data_get($body, 'data.code', 0);
             $referenceId = trim((string) data_get($body, 'data.ref_id', ''));
 
-            // The v4 verify request itself is bound to the stored Rial amount.
-            // A successful first verification is code 100 with a receipt ID.
-            // Code 101 means the authority was verified earlier; recover it
-            // only when the matching successful Paymenter transaction exists
-            // (handled above), otherwise leave it for manual reconciliation.
-            if ($code === 101) {
-                $this->markManualReview($payment->id, $invoice->id, 'already_verified_without_paymenter_transaction');
-                return redirect()->route('invoices.show', $invoice);
-            }
-
-            if ($code !== 100 || $referenceId === '') {
+            // Match the stable legacy FragCity flow: ZarinPal returns 100
+            // for the first successful verify and 101 when this same authority
+            // has already been verified. Because the authority, invoice and
+            // exact request amount are already bound in our durable attempt
+            // row, both codes can safely settle this same Paymenter invoice.
+            if (!in_array($code, [100, 101], true) || $referenceId === '') {
                 DB::table(self::TABLE)->where('id', $payment->id)->update([
                     'status' => 'failed',
                     'updated_at' => now(),
@@ -476,6 +522,66 @@ class ZarinPal extends Gateway
 
             return redirect()->route('invoices.show', $invoice);
         }
+    }
+
+    private function ensurePaymentTable(): void
+    {
+        try {
+            $tableExists = Schema::hasTable(self::TABLE);
+            $merchantColumnType = $tableExists
+                ? strtolower((string) Schema::getColumnType(self::TABLE, 'merchant_id'))
+                : '';
+
+            // Paymenter catches migration exceptions inside runMigrations().
+            // Verify the resulting schema rather than assuming installation
+            // succeeded, and repair an older v1.0.0 varchar column if needed.
+            if (!$tableExists || $merchantColumnType !== 'text') {
+                ExtensionHelper::runMigrations('extensions/Gateways/ZarinPal/database/migrations');
+            }
+
+            if (
+                !Schema::hasTable(self::TABLE)
+                || strtolower((string) Schema::getColumnType(self::TABLE, 'merchant_id')) !== 'text'
+            ) {
+                throw new RuntimeException('zarinpal_gateway_payments_schema_missing_or_outdated');
+            }
+        } catch (Throwable $e) {
+            Log::critical('FragCity ZarinPal payment table is missing or could not be migrated.', [
+                'table' => self::TABLE,
+                'exception' => get_class($e),
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            throw new DisplayException('ZarinPal payment storage is not ready. Check the Paymenter application log and extension migrations.');
+        }
+    }
+
+    private function buildCallbackUrl(string $token): string
+    {
+        $baseUrl = trim((string) ($this->config('callback_base_url') ?: 'https://checkout.fragcity.ir'));
+        $parts = parse_url($baseUrl);
+
+        if (
+            !is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || empty($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || !in_array((string) ($parts['path'] ?? ''), ['', '/'], true)
+        ) {
+            throw new RuntimeException('zarinpal_callback_base_url_must_be_a_public_https_origin');
+        }
+
+        $relativeCallback = route('extensions.gateways.zarinpal.callback', ['token' => $token], false);
+        if (!is_string($relativeCallback) || !str_starts_with($relativeCallback, '/')) {
+            throw new RuntimeException('zarinpal_callback_route_is_not_registered');
+        }
+
+        return rtrim($baseUrl, '/') . $relativeCallback;
     }
 
     private function markSucceeded(int $paymentId, string $referenceId): void
