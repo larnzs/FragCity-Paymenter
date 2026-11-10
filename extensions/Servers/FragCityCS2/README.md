@@ -122,11 +122,11 @@ Create and attach three native Paymenter Config Options to the CS2 Product:
 
 | Resource | Recommended parent `env_variable` | Allowed child `env_variable` values |
 | --- | --- | --- |
-| RAM | `memory_mb` | `1024`, `1280`, `1536` |
-| Storage / SSD | `disk_mb` | `5120`, `6144`, `7168`, `8192`, `9216`, `10240` |
-| CPU | `cpu_percent` | `100`, `200`, `300`, `400` |
+| RAM | `memory_mb` | Numeric child values in MB, from `1` through `1048576` |
+| Storage / SSD | `disk_mb` | Numeric child values in MB, from `1` through `1048576` |
+| CPU | `cpu_percent` | Numeric child values in percent, from `1` through `6400` |
 
-Use a selectable Config Option type (not free-form `text` or `number`), attach each parent option to the Product, and set a price for every child under each supported billing Plan and currency. Child `env_variable` values must be numeric and exact; labels are display-only. The FragCity API creates the native ServiceConfig rows from these values. At provisioning and upgrade time, this extension translates those rows into the `memory`, `disk` and `cpu` keys expected by Paymenter's inherited Pterodactyl implementation. If a required option is missing, duplicated or has an unsupported value, provisioning stops rather than creating an incorrectly limited server.
+Use a selectable Config Option type (not free-form `text` or `number`), attach each parent option to the Product, and set a price for every child under each supported billing Plan and currency. Child `env_variable` values must be numeric and exact; labels are display-only. The checkout slider is populated from the Product's live Config Option children, so supported tiers are managed in Paymenter rather than duplicated as a hard-coded list in FragCityCS2. Provisioning applies the same upper bounds enforced by the quote and paid-order API: RAM/disk up to 1,048,576 MB and CPU up to 6,400. The FragCity API creates the native ServiceConfig rows from these values. At provisioning and upgrade time, this extension translates those rows into the `memory`, `disk` and `cpu` keys expected by Paymenter's inherited Pterodactyl implementation. If a required option is missing, duplicated or has an unsupported value, provisioning stops rather than creating an incorrectly limited server.
 
 ## Egg value safety
 
