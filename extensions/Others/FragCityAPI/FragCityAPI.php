@@ -605,12 +605,26 @@ class FragCityAPI extends Extension
                 ->where('currency_code', $currencyCode)
                 ->first();
 
+            $creditsEnabled = filter_var(
+                (string) (Settings::getSetting('credits_enabled')->value ?? false),
+                FILTER_VALIDATE_BOOLEAN
+            );
+            $minimumDeposit = (float) (Settings::getSetting('credits_minimum_deposit')->value ?? 0);
+            $maximumDeposit = (float) (Settings::getSetting('credits_maximum_deposit')->value ?? 0);
+            $maximumCredit = (float) (Settings::getSetting('credits_maximum_credit')->value ?? 0);
+
             return response()->json([
                 'success' => true,
                 'data' => [
                     'currency_code' => $currencyCode,
                     'currency_unit' => 'rial',
                     'balance' => number_format((float) ($credit?->amount ?? 0), 2, '.', ''),
+                    'wallet_enabled' => $creditsEnabled,
+                    'limits' => [
+                        'minimum_deposit' => number_format($minimumDeposit, 2, '.', ''),
+                        'maximum_deposit' => number_format($maximumDeposit, 2, '.', ''),
+                        'maximum_credit' => number_format($maximumCredit, 2, '.', ''),
+                    ],
                 ],
             ]);
         } catch (Throwable $e) {
