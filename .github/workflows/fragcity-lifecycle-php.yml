@@ -6,12 +6,14 @@ on:
     paths:
       - "extensions/Others/FragCityAPI/**"
       - "extensions/Servers/FragCityCS2/**"
+      - "tools/validate-fragcity-paymenter.sh"
       - ".github/workflows/fragcity-lifecycle-php.yml"
   pull_request:
     branches: [main]
     paths:
       - "extensions/Others/FragCityAPI/**"
       - "extensions/Servers/FragCityCS2/**"
+      - "tools/validate-fragcity-paymenter.sh"
       - ".github/workflows/fragcity-lifecycle-php.yml"
   workflow_dispatch:
 
@@ -20,7 +22,7 @@ permissions:
 
 jobs:
   php-syntax:
-    name: PHP 8.3 syntax and provisioning contract
+    name: PHP 8.3 syntax, billing and provisioning contract
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -30,57 +32,8 @@ jobs:
         uses: shivammathur/setup-php@v2
         with:
           php-version: "8.3"
+          extensions: mbstring, pdo_mysql
           coverage: none
 
-      - name: Lint FragCity PHP files and retained migrations
-        shell: bash
-        run: |
-          set -euo pipefail
-          files=(
-            "extensions/Others/FragCityAPI/FragCityAPI.php"
-            "extensions/Others/FragCityAPI/routes.php"
-            "extensions/Servers/FragCityCS2/FragCityCS2.php"
-          )
-          for file in "${files[@]}"; do
-            test -f "$file"
-            php -l "$file"
-          done
-
-          migration_dir="extensions/Others/FragCityAPI/database/migrations"
-          test -d "$migration_dir"
-          while IFS= read -r -d '' file; do
-            php -l "$file"
-          done < <(find "$migration_dir" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
-
-      - name: Verify restored provisioning and bridge routes
-        shell: bash
-        run: |
-          set -euo pipefail
-          grep -q "version: '1.7.0'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "'version' => '1.7.0'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "\$currencyUnit = 'rial'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq '$paymenterAmount = $amountRial;' extensions/Others/FragCityAPI/FragCityAPI.php
-          ! grep -Fq "'name' => 'cs2_currency_unit'" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -q "version: '1.5.0'" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq '$this->ensurePterodactylClientUser($service, true);' extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq 'return parent::createServer($service, $settings, $properties);' extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq "['memory', 'disk', 'cpu']" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq 'private function applyResourceLimitsFromConfigOptions' extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq 'public function upgradeServer(Service $service, $settings, $properties)' extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq "\$properties['memory'] = (string) \$resolved['memory'];" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq "\$properties['disk'] = (string) \$resolved['disk'];" extensions/Servers/FragCityCS2/FragCityCS2.php
-          grep -Fq "\$properties['cpu'] = (string) \$resolved['cpu'];" extensions/Servers/FragCityCS2/FragCityCS2.php
-          ! grep -Fq "'memory' => (string) \$memoryMb" extensions/Others/FragCityAPI/FragCityAPI.php
-          ! grep -q "function reconcileCustomerLifecycle" extensions/Servers/FragCityCS2/FragCityCS2.php
-          ! grep -q "function connectClientApi" extensions/Others/FragCityAPI/FragCityAPI.php
-
-          routes_count="$(grep -c "Route::post('/api/v1/fragcity/bridge/" extensions/Others/FragCityAPI/routes.php)"
-          readme_count="$(grep -c -- '- `POST /api/v1/fragcity/bridge/' extensions/Others/FragCityAPI/README.md)"
-          test "$routes_count" -eq 6
-          test "$readme_count" -eq "$routes_count"
-          grep -Fq 'POST /api/v1/fragcity/bridge/servers/username' extensions/Others/FragCityAPI/README.md
-          grep -Fq 'POST /api/v1/fragcity/bridge/orders/cs2' extensions/Others/FragCityAPI/README.md
-          grep -Fq 'function createCs2Order' extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq 'order_reference_conflict' extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "'service_upgrade_ids' =>" extensions/Others/FragCityAPI/FragCityAPI.php
-          grep -Fq "'upgrade'" extensions/Others/FragCityAPI/FragCityAPI.php
+      - name: Validate PHP syntax, native billing and provisioning contracts
+        run: bash tools/validate-fragcity-paymenter.sh
