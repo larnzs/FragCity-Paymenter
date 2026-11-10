@@ -30,7 +30,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server catalogue, wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.12.0',
+    version: '1.13.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -128,7 +128,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.12.0',
+            'version' => '1.13.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -405,7 +405,7 @@ class FragCityAPI extends Extension
                 $plan = $product->plans->firstWhere('id', $planId);
                 $expected = match ($days) {
                     3 => [3, 'day'],
-                    7 => [1, 'week'],
+                    7 => [7, 'day'],
                     15 => [15, 'day'],
                     30 => [1, 'month'],
                 };
@@ -1452,7 +1452,7 @@ class FragCityAPI extends Extension
             $plan = $product->plans->firstWhere('id', $planId);
             $expectedPlan = match ($durationDays) {
                 3 => [3, 'day'],
-                7 => [1, 'week'],
+                7 => [7, 'day'],
                 15 => [15, 'day'],
                 30 => [1, 'month'],
             };
@@ -2131,7 +2131,7 @@ class FragCityAPI extends Extension
                 $plan = $product->plans->firstWhere('id', $planId);
                 $expectedPlan = match ($durationDays) {
                     3 => [3, 'day'],
-                    7 => [1, 'week'],
+                    7 => [7, 'day'],
                     15 => [15, 'day'],
                     30 => [1, 'month'],
                 };
