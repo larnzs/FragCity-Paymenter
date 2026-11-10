@@ -29,6 +29,14 @@ grep -Fq "version: '1.12.0'" "$api"
 grep -Fq "'version' => '1.12.0'" "$api"
 grep -Fq "version: '1.7.0'" "$cs2"
 
+# The first supported CS2 subscription is now three days. Keep the historical
+# setting key so an existing Product ID value is not lost during extension update.
+grep -Fq "'label' => 'CS2 3-day Plan ID'" "$api"
+test "$(grep -Fc "3 => 'cs2_plan_id_1_day'" "$api")" -eq 3
+test "$(grep -Fc "3 => [3, 'day']" "$api")" -eq 3
+test "$(grep -Fc "'in:3,7,15,30'" "$api")" -eq 2
+grep -Fq '3 days = `3 days`' "$api_readme"
+
 # Signed bridge, authoritative billing, receipt idempotency and native provisioning.
 for needle in \
   "function authenticateBridgeRequest" \
