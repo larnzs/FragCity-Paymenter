@@ -21,7 +21,7 @@ FragCity's current Paymenter currency is configured as IRR with Rial as its disp
 
 ## Native wallet / Credits
 
-Paymenter 1.5.9 already provides the wallet ledger and customer pages through Credits:
+Paymenter 1.5.9 already provides the wallet ledger and customer pages through Credits. Enable it in the global Credits settings; the Gateway itself does not implement or duplicate the wallet balance:
 
 - credits_enabled: enable the wallet.
 - credits_minimum_deposit: minimum top-up amount, in the selected Paymenter currency.
