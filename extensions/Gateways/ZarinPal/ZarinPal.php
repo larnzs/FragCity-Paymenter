@@ -10,6 +10,7 @@ use App\Helpers\ExtensionHelper;
 use App\Models\Invoice;
 use App\Models\InvoiceTransaction;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -19,7 +20,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'ZarinPal',
     description: 'Pay Paymenter invoices and wallet top-ups securely through ZarinPal v4.',
-    version: '1.0.0',
+    version: '1.0.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -185,7 +186,7 @@ class ZarinPal extends Gateway
                 'token_hash' => hash('sha256', $token),
                 'authority' => null,
                 'ref_id' => null,
-                'merchant_id' => $merchantId,
+                'merchant_id' => Crypt::encryptString($merchantId),
                 'sandbox' => $sandbox,
                 'currency_code' => (string) $lockedInvoice->currency_code,
                 'currency_unit' => $currencyUnit,
@@ -394,7 +395,7 @@ class ZarinPal extends Gateway
                 ->connectTimeout(10)
                 ->timeout(20)
                 ->post($this->apiBase((bool) $payment->sandbox) . '/verify.json', [
-                    'merchant_id' => (string) $payment->merchant_id,
+                    'merchant_id' => Crypt::decryptString((string) $payment->merchant_id),
                     'amount' => (int) $payment->amount_rial,
                     'authority' => $authority,
                 ]);
