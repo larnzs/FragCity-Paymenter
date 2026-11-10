@@ -4,7 +4,7 @@ Paymenter v1.5.9 Gateway extension for ZarinPal v4. It settles native Paymenter 
 
 ## Install
 
-1. Upload the ZarinPal-v1.0.0.zip package through Paymenter Admin → Extensions → Upload Extension.
+1. Upload the ZarinPal-v1.0.1.zip package through Paymenter Admin → Extensions → Upload Extension.
 2. Install ZarinPal from Admin → Extensions → Gateways.
 3. Configure the gateway and enable it.
 4. Enable Paymenter Credits under Admin → Settings → Credits to expose the native customer wallet.
@@ -37,7 +37,7 @@ Set all wallet limits in the configured currency's stored unit. With IRR + Rial,
 
 1. Paymenter creates the invoice; the gateway receives the server-calculated outstanding amount.
 2. The gateway locks the invoice row and creates one durable payment-attempt record. A concurrent request reuses the active authority instead of creating another one.
-3. The request record stores a hash of a random callback token, invoice ID, exact currency and amount, merchant ID, currency unit and sandbox/live environment. No secret token is stored in plaintext.
+3. The request record stores a hash of a random callback token, invoice ID, exact currency and amount, an encrypted merchant ID, currency unit and sandbox/live environment. Neither the callback token nor merchant ID is stored in plaintext.
 4. The callback must match both the token and the stored authority. The gateway then claims the attempt with a short database-backed verification lease to prevent concurrent callback processing.
 5. The gateway verifies the authority server-to-server with the merchant and environment saved for that attempt.
 6. The verify request is sent with the exact stored Rial amount; ZarinPal must return success code 100 and a reference ID. The invoice must still be pending with the same outstanding amount and currency.
