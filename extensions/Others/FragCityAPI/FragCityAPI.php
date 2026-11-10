@@ -4,6 +4,8 @@ namespace Paymenter\Extensions\Others\FragCityAPI;
 
 use App\Attributes\ExtensionMeta;
 use App\Classes\Extension\Extension;
+use App\Classes\Price;
+use App\Classes\Settings;
 use App\Enums\InvoiceTransactionStatus;
 use App\Helpers\ExtensionHelper;
 use App\Models\Invoice;
@@ -26,8 +28,8 @@ use Throwable;
 
 #[ExtensionMeta(
     name: 'FragCity API',
-    description: 'Private signed server-to-server account, CS2 order and service bridge for FragCity.',
-    version: '1.8.0',
+    description: 'Private signed server-to-server catalogue, wallet, CS2 checkout and service bridge for FragCity.',
+    version: '1.9.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -345,6 +347,280 @@ class FragCityAPI extends Extension
             return response()->json([
                 'success' => false,
                 'error' => 'account_sync_failed',
+            ], 500);
+        }
+    }
+
+
+    /**
+     * Return the configured FragCity CS2 catalogue, including native Paymenter
+     * plans, prices and product Config Options. This endpoint is server-to-server
+     * only; the website must never expose the HMAC secret to browser JavaScript.
+     */
+    public function cs2Catalog(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $currencyCode = strtoupper(trim((string) $this->config('cs2_currency_code')));
+        $productId = (int) $this->config('cs2_product_id');
+
+        $planSettings = [
+            1 => 'cs2_plan_id_1_day',
+            7 => 'cs2_plan_id_7_days',
+            15 => 'cs2_plan_id_15_days',
+            30 => 'cs2_plan_id_30_days',
+        ];
+
+        if ($productId < 1 || $currencyCode === '') {
+            return response()->json([
+                'success' => false,
+                'error' => 'cs2_checkout_not_configured',
+            ], 503);
+        }
+
+        try {
+            $product = Product::query()
+                ->with([
+                    'server',
+                    'plans.prices.currency',
+                    'configOptions.children.plans.prices.currency',
+                ])
+                ->find($productId);
+
+            if (
+                !$product
+                || !(bool) $product->enabled
+                || $product->server?->extension !== 'FragCityCS2'
+            ) {
+                throw new RuntimeException('cs2_product_invalid');
+            }
+
+            $plans = [];
+            foreach ($planSettings as $days => $setting) {
+                $planId = (int) $this->config($setting);
+                $plan = $product->plans->firstWhere('id', $planId);
+                $expected = match ($days) {
+                    1 => [1, 'day'],
+                    7 => [1, 'week'],
+                    15 => [15, 'day'],
+                    30 => [1, 'month'],
+                };
+
+                if (
+                    !$plan
+                    || in_array((string) $plan->type, ['free', 'one-time'], true)
+                    || (int) $plan->billing_period !== $expected[0]
+                    || (string) $plan->billing_unit !== $expected[1]
+                ) {
+                    throw new RuntimeException('cs2_plan_invalid');
+                }
+
+                $price = $plan->price($currencyCode);
+                $plans[] = [
+                    'id' => (int) $plan->id,
+                    'duration_days' => (int) $days,
+                    'name' => (string) $plan->name,
+                    'billing_period' => (int) $plan->billing_period,
+                    'billing_unit' => (string) $plan->billing_unit,
+                    'available' => (bool) $price->available,
+                    'price' => $price->available ? number_format((float) $price->price, 2, '.', '') : null,
+                    'setup_fee' => $price->available ? number_format((float) ($price->setup_fee ?? 0), 2, '.', '') : null,
+                    'currency_code' => $currencyCode,
+                ];
+            }
+
+            $configOptions = [];
+            foreach ($product->configOptions as $option) {
+                $children = [];
+                foreach ($option->children as $child) {
+                    $childPrices = [];
+
+                    foreach ($plans as $planData) {
+                        $plan = $product->plans->firstWhere('id', $planData['id']);
+                        if (!$plan) {
+                            continue;
+                        }
+
+                        // Match Paymenter's native CartItem calculation: Config
+                        // Option child plans are resolved by billing period/unit,
+                        // not by reusing the parent Product Plan ID.
+                        $childPrice = $child->price(
+                            null,
+                            (int) $plan->billing_period,
+                            (string) $plan->billing_unit,
+                            $currencyCode
+                        );
+
+                        $childPrices[(string) $planData['duration_days']] = [
+                            'available' => (bool) $childPrice->available,
+                            'price' => $childPrice->available
+                                ? number_format((float) $childPrice->price, 2, '.', '')
+                                : null,
+                            'setup_fee' => $childPrice->available
+                                ? number_format((float) ($childPrice->setup_fee ?? 0), 2, '.', '')
+                                : null,
+                        ];
+                    }
+
+                    $children[] = [
+                        'id' => (int) $child->id,
+                        'name' => (string) $child->name,
+                        'env_variable' => (string) ($child->env_variable ?? ''),
+                        'prices' => $childPrices,
+                    ];
+                }
+
+                $configOptions[] = [
+                    'id' => (int) $option->id,
+                    'name' => (string) $option->name,
+                    'description' => (string) ($option->description ?? ''),
+                    'env_variable' => (string) ($option->env_variable ?? ''),
+                    'type' => (string) $option->type,
+                    'upgradable' => (bool) ($option->upgradable ?? false),
+                    'children' => $children,
+                ];
+            }
+
+            $checkoutFields = ExtensionHelper::getCheckoutConfig($product);
+            if (!is_array($checkoutFields)) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+
+            $manifestPath = dirname(__DIR__, 2) . '/Servers/FragCityCS2/resources/cs2-egg-variables.json';
+            if (!is_file($manifestPath)) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+
+            $manifest = json_decode((string) file_get_contents($manifestPath), true, 512, JSON_THROW_ON_ERROR);
+            if (!is_array($manifest)) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'product' => [
+                        'id' => (int) $product->id,
+                        'name' => (string) $product->name,
+                        'description' => (string) ($product->description ?? ''),
+                        'stock' => $product->stock === null ? null : (int) $product->stock,
+                        'per_user_limit' => (int) ($product->per_user_limit ?? 0),
+                    ],
+                    'currency_code' => $currencyCode,
+                    'currency_unit' => 'rial',
+                    'plans' => $plans,
+                    'config_options' => $configOptions,
+                    'checkout_fields' => $checkoutFields,
+                    'game_mode_manager' => $manifest['game_mode_manager'] ?? [],
+                    'catalog_version' => '1.9.0',
+                ],
+            ]);
+        } catch (RuntimeException $e) {
+            $status = match ($e->getMessage()) {
+                'cs2_product_invalid', 'cs2_plan_invalid' => 422,
+                'cs2_checkout_not_configured', 'cs2_checkout_manifest_unavailable' => 503,
+                default => 500,
+            };
+
+            if ($status === 500) {
+                Log::error('FragCity CS2 catalogue could not be built.', [
+                    'product_id' => $productId,
+                    'exception' => get_class($e),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'cs2_catalog_unavailable',
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], $status);
+        } catch (Throwable $e) {
+            Log::error('FragCity CS2 catalogue could not be built.', [
+                'product_id' => $productId,
+                'exception' => get_class($e),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'cs2_catalog_unavailable',
+            ], 500);
+        }
+    }
+
+    /**
+     * Resolve a FragCity Steam identity and return only its Rial wallet balance.
+     * The SteamID is accepted only on this authenticated private bridge; it is
+     * never accepted as proof of identity by the browser-facing website API.
+     */
+    public function walletBalance(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'validation_failed',
+            ], 422);
+        }
+
+        $steamId = (string) $validator->validated()['steamid64'];
+        $currencyCode = strtoupper(trim((string) $this->config('cs2_currency_code')));
+
+        try {
+            $link = DB::table('fragcity_user_links')
+                ->where('steamid64', $steamId)
+                ->first();
+
+            if (!$link) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'fragcity_user_not_linked',
+                ], 404);
+            }
+
+            $user = User::query()->find((int) $link->user_id);
+            if (!$user) {
+                return response()->json([
+                    'success' => false,
+                    'error' => 'linked_paymenter_user_missing',
+                ], 404);
+            }
+
+            $credit = $user->credits()
+                ->where('currency_code', $currencyCode)
+                ->first();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'currency_code' => $currencyCode,
+                    'currency_unit' => 'rial',
+                    'balance' => number_format((float) ($credit?->amount ?? 0), 2, '.', ''),
+                ],
+            ]);
+        } catch (Throwable $e) {
+            Log::error('FragCity wallet balance lookup failed.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'exception' => get_class($e),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'error' => 'wallet_balance_unavailable',
             ], 500);
         }
     }
@@ -719,7 +995,7 @@ class FragCityAPI extends Extension
                     }
 
                     $configPrice = $configValue->price(
-                        (int) $plan->id,
+                        null,
                         (int) $plan->billing_period,
                         (string) $plan->billing_unit,
                         $currencyCode
@@ -935,6 +1211,85 @@ class FragCityAPI extends Extension
                     $normalizedEggValues['GUARD_BAN_MINUTES'] ?? 60
                 );
 
+                // Recalculate the first invoice total from Paymenter's authoritative Plan
+                // and Config Option prices. Never accept the browser/website quote as
+                // the source of truth. This mirrors Paymenter CartItem: recurring
+                // prices + setup fees, with the customer's applicable tax policy.
+                $planPrice = $plan->price($currencyCode);
+                if (!$planPrice->available) {
+                    throw new RuntimeException('cs2_plan_price_missing');
+                }
+
+                $recurringSubtotal = (float) $planPrice->price;
+                $setupFeeTotal = (float) ($planPrice->setup_fee ?? 0);
+
+                foreach ($configOptionSelections as $selection) {
+                    $selectedParent = $product->configOptions->firstWhere(
+                        'id',
+                        (int) $selection['config_option_id']
+                    );
+                    $selectedValue = $selectedParent?->children->firstWhere(
+                        'id',
+                        (int) $selection['config_value_id']
+                    );
+
+                    if (!$selectedParent || !$selectedValue) {
+                        throw new RuntimeException('cs2_config_option_mapping_invalid');
+                    }
+
+                    $selectedPrice = $selectedValue->price(
+                        null,
+                        (int) $plan->billing_period,
+                        (string) $plan->billing_unit,
+                        $currencyCode
+                    );
+
+                    if (!$selectedPrice->available) {
+                        throw new RuntimeException('cs2_config_option_price_missing');
+                    }
+
+                    $recurringSubtotal += (float) $selectedPrice->price;
+                    $setupFeeTotal += (float) ($selectedPrice->setup_fee ?? 0);
+                }
+
+                $customerTax = Settings::tax($user);
+                $invoicePrice = new Price(
+                    [
+                        'price' => $recurringSubtotal,
+                        'setup_fee' => $setupFeeTotal,
+                        'currency' => $planPrice->currency,
+                    ],
+                    apply_exclusive_tax: true,
+                    tax: $customerTax
+                );
+                $serviceRecurringPrice = new Price(
+                    [
+                        'price' => $recurringSubtotal,
+                        'currency' => $planPrice->currency,
+                    ],
+                    apply_exclusive_tax: true,
+                    tax: $customerTax
+                );
+
+                $computedInvoiceTotal = round((float) $invoicePrice->total, 2);
+                $computedServicePrice = round((float) $serviceRecurringPrice->price, 2);
+                $wholeRialTotal = (int) round($computedInvoiceTotal);
+
+                // ZarinPal's Toman amount must map exactly to Paymenter's Rial
+                // total. We reject fractional Rial or a remainder that cannot be
+                // represented as whole Toman rather than silently rounding a charge.
+                if (
+                    abs($computedInvoiceTotal - $wholeRialTotal) > 0.00001
+                    || ($wholeRialTotal % 10) !== 0
+                    || $amountRial !== $wholeRialTotal
+                    || $amountToman !== intdiv($wholeRialTotal, 10)
+                ) {
+                    throw new RuntimeException('cs2_quote_amount_mismatch');
+                }
+
+                $paymenterAmount = $computedInvoiceTotal;
+                $serviceRecurringAmount = $computedServicePrice;
+
                 $now = now();
                 $order = new Order([
                     'user_id' => (int) $user->id,
@@ -956,7 +1311,7 @@ class FragCityAPI extends Extension
                     'currency_code' => $currencyCode,
                     'product_id' => (int) $product->id,
                     'plan_id' => (int) $plan->id,
-                    'price' => number_format($paymenterAmount, 2, '.', ''),
+                    'price' => number_format($serviceRecurringAmount, 2, '.', ''),
                     'quantity' => 1,
                     'status' => Service::STATUS_PENDING,
                 ]);
@@ -1112,7 +1467,7 @@ class FragCityAPI extends Extension
                 'order_reference_conflict', 'zarinpal_payment_already_used' => 409,
                 'paid_option_pricing_not_configured', 'invalid_egg_variable', 'egg_validation_failed',
                 'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
-                'cs2_plan_invalid', 'invalid_order_payload', 'egg_combination_invalid' => 422,
+                'cs2_plan_invalid', 'cs2_plan_price_missing', 'cs2_quote_amount_mismatch', 'invalid_order_payload', 'egg_combination_invalid' => 422,
                 'cs2_config_option_mapping_invalid', 'cs2_config_option_price_missing' => 503,
                 'order_processing_incomplete' => 503,
                 default => 500,
