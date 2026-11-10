@@ -25,6 +25,11 @@ Route::post('/api/v1/fragcity/bridge/wallet/balance', [FragCityAPI::class, 'wall
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.wallet.balance');
 
+Route::post('/api/v1/fragcity/bridge/wallet/topups/zarinpal', [FragCityAPI::class, 'createWalletTopup'])
+    ->middleware('throttle:20,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.wallet.topups.zarinpal');
+
 Route::post('/api/v1/fragcity/bridge/orders/cs2', [FragCityAPI::class, 'createCs2Order'])
     ->middleware('throttle:20,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
