@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Obsidian Theme - Install Guide</title>
+  <style>
+    :root{
+      --bg:#0b0f1a;
+      --card:#0f172a;
+      --muted:rgba(255,255,255,.65);
+      --text:#ffffff;
+      --border:rgba(255,255,255,.10);
+      --accent:#a855f7;
+      --accent2:#3b82f6;
+      --code:#0b1220;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;
+      background:linear-gradient(180deg,var(--bg),#070a12 60%, #05060b);
+      color:var(--text);
+      line-height:1.55;
+    }
+    .wrap{
+      max-width:980px;
+      margin:0 auto;
+      padding:48px 18px 70px;
+    }
+    h1,h2,h3{margin:0 0 10px}
+    h1{font-size:34px;letter-spacing:-.02em}
+    h2{font-size:22px;margin-top:28px}
+    h3{font-size:16px;margin-top:18px}
+    p{margin:10px 0;color:var(--muted)}
+    a{color:#c4b5fd;text-decoration:none}
+    a:hover{text-decoration:underline}
+    .hero{
+      padding:22px 18px;
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      border-radius:18px;
+    }
+    .note{
+      border:1px solid rgba(168,85,247,.35);
+      background:rgba(168,85,247,.10);
+      padding:14px 14px;
+      border-radius:14px;
+      margin-top:14px;
+      color:rgba(255,255,255,.85);
+    }
+    .note strong{color:#fff}
+    .warn{
+      border:1px solid rgba(245,158,11,.35);
+      background:rgba(245,158,11,.10);
+      padding:14px 14px;
+      border-radius:14px;
+      margin-top:14px;
+      color:rgba(255,255,255,.90);
+    }
+    .warn strong{color:#fff}
+    .grid{
+      display:grid;
+      grid-template-columns:1fr;
+      gap:14px;
+      margin-top:14px;
+    }
+    .card{
+      border:1px solid var(--border);
+      background:rgba(255,255,255,.04);
+      border-radius:18px;
+      padding:16px;
+    }
+    .card h3{margin-top:0}
+    .step{
+      display:flex;
+      gap:10px;
+      margin:12px 0 0;
+      padding-top:12px;
+      border-top:1px solid rgba(255,255,255,.08);
+    }
+    .badge{
+      flex:0 0 auto;
+      width:28px;height:28px;
+      border-radius:10px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      font-weight:800;
+      font-size:13px;
+      border:1px solid rgba(255,255,255,.12);
+      background:rgba(255,255,255,.06);
+    }
+    code, pre{
+      font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,"Liberation Mono","Courier New",monospace;
+    }
+    pre{
+      margin:12px 0 0;
+      padding:12px 14px;
+      background:var(--code);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      overflow:auto;
+      color:rgba(255,255,255,.9);
+      font-size:13px;
+      line-height:1.45;
+    }
+    ul{margin:10px 0 0 18px;color:var(--muted)}
+    li{margin:6px 0}
+    .divider{
+      height:1px;
+      background:rgba(255,255,255,.08);
+      margin:22px 0;
+    }
+    .pill{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      border:1px solid rgba(59,130,246,.35);
+      background:rgba(59,130,246,.10);
+      color:rgba(255,255,255,.85);
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:700;
+      font-size:12px;
+      margin-top:10px;
+    }
+    .mini{
+      font-size:12px;
+      color:rgba(255,255,255,.55);
+      margin-top:6px;
+    }
+  </style>
+</head>
+
+<body>
+  <main class="wrap">
+    <section class="hero">
+      <h1>Obsidian Theme - Installation Guide</h1>
+      <p>
+        Thank you for buying the <strong>Obsidian</strong> theme.
+        Once you are happy with the theme and the service, please consider leaving a review.
+        If you need help at any point, join the Discord for support:
+        <a href="https://discord.gg/hkrxptUjmV" target="_blank" rel="noopener noreferrer">https://discord.gg/hkrxptUjmV</a>
+      </p>
+
+      <div class="warn">
+        <strong>Recommended:</strong> Make a backup before installing.
+        This install involves replacing theme files and a core class file. If anything goes wrong, a backup makes it easy to restore.
+      </div>
+
+      <div class="note">
+        <strong>Important:</strong> Follow the steps in order. If something does not show up immediately,
+        clear caches and refresh the admin panel.
+      </div>
+
+      <div class="pill">Two parts: Theme install + Extensions install</div>
+    </section>
+
+    <h2>Before you start: Backup (recommended)</h2>
+    <div class="card">
+      <p>
+        Before making changes, it is strongly recommended to back up both your files and your database.
+        At minimum, back up these locations:
+      </p>
+      <ul>
+        <li><code>/var/www/paymenter/themes/</code></li>
+        <li><code>/var/www/paymenter/extensions/</code></li>
+        <li><code>/var/www/paymenter/app/Classes/</code> (especially <code>FilamentInput.php</code>)</li>
+      </ul>
+      <p class="mini">
+        If you have a server control panel or snapshot feature, use that as well.
+      </p>
+    </div>
+
+    <h2>Section 1 - Install the Theme</h2>
+    <div class="grid">
+      <div class="card">
+        <h3>1) Upload the theme folder</h3>
+        <p>Copy the <strong>obsidian</strong> theme folder into the Paymenter themes directory.</p>
+        <pre>/var/www/paymenter/themes/</pre>
+        <p class="mini">You should end up with: <code>/var/www/paymenter/themes/obsidian</code></p>
+      </div>
+
+      <div class="card">
+        <h3>2) Upload the updated FilamentInput.php</h3>
+        <p>
+          Replace (or upload) the updated <code>FilamentInput.php</code> into the Paymenter app classes directory:
+        </p>
+        <pre>/var/www/paymenter/app/Classes/</pre>
+      </div>
+
+      <div class="card">
+        <h3>3) Checkout icons setup (SVG)</h3>
+        <p>
+          For checkout icons to work, upload an SVG file into the images directory using the exact product name.
+          Example: for <strong>Minecraft Forge</strong>, name the file:
+        </p>
+        <pre>MinecraftForge.svg</pre>
+        <p>Upload it here:</p>
+        <pre>/var/www/paymenter/public/assets/images/</pre>
+        <p class="mini">
+          Tip: Keep the filename exact (no spaces). Use PascalCase like <code>MinecraftForge.svg</code>.
+        </p>
+      </div>
+
+      <div class="card">
+        <h3>4) Build the theme assets</h3>
+        <p>From your Paymenter root directory, run:</p>
+        <pre>npm run build obsidian</pre>
+        <p class="mini">
+          If you see an error, make sure Node/NPM are installed and you are in the correct directory.
+        </p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2>Section 2 - Install the Extensions</h2>
+    <div class="card">
+      <h3>Extensions to upload</h3>
+      <p>Copy these extension folders into:</p>
+      <pre>/var/www/paymenter/extensions/Others/</pre>
+
+      <ul>
+        <li><code>ObsidianFooterEditor</code></li>
+        <li><code>ObsidianTermsAndCondition</code></li>
+        <li><code>ObsidianAboutPage</code></li>
+        <li><code>ObsidianNavbarEditor</code></li>
+      </ul>
+
+      <div class="step">
+        <div class="badge">1</div>
+        <div>
+          <p style="margin:0;color:rgba(255,255,255,.85);font-weight:700;">Go to the Extensions page</p>
+          <p style="margin:6px 0 0;">
+            Visit:
+            <code>www.theredomain.com/admin/extensions/extension</code>
+          </p>
+          <p class="mini">Replace <code>www.theredomain.com</code> with your real domain.</p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="badge">2</div>
+        <div>
+          <p style="margin:0;color:rgba(255,255,255,.85);font-weight:700;">Install / Upload and enable</p>
+          <p style="margin:6px 0 0;">
+            For each extension, click <strong>Ready to Install</strong> (or <strong>Upload</strong>) and then <strong>Enable</strong>.
+          </p>
+        </div>
+      </div>
+
+      <div class="step">
+        <div class="badge">3</div>
+        <div>
+          <p style="margin:0;color:rgba(255,255,255,.85);font-weight:700;">Configure in the Obsidian Theme section</p>
+          <p style="margin:6px 0 0;">
+            After enabling them, scroll the left sidebar in admin and you will see an <strong>Obsidian Theme</strong> section.
+            From there you can edit each extension to match your needs.
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2>Recommended: Clear caches if something does not show</h2>
+    <div class="card">
+      <p>If an extension page or UI does not appear, run these from the Paymenter root:</p>
+      <pre>php artisan view:clear
+php artisan cache:clear
+php artisan config:clear</pre>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2>Need help?</h2>
+    <div class="card">
+      <p>
+        If you get stuck, join the Discord support:
+        <a href="https://discord.gg/hkrxptUjmV" target="_blank" rel="noopener noreferrer">https://discord.gg/hkrxptUjmV</a>
+      </p>
+      <p class="mini">
+        If you are happy with everything after installing and using it, please consider leaving a review.
+      </p>
+    </div>
+
+    <div class="divider"></div>
+
+    <h2>Done</h2>
+    <div class="card">
+      <p>
+        Once the theme is installed and the extensions are enabled, you are ready to customize your navbar, footer, terms, and about pages from the admin panel.
+      </p>
+      <p class="mini">
+        If anything looks wrong after install, restore from your backup and ask in Discord.
+      </p>
+    </div>
+  </main>
+</body>
+</html>
