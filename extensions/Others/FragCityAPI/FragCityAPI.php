@@ -127,7 +127,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.7.0',
+            'version' => '1.9.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -653,9 +653,9 @@ class FragCityAPI extends Extension
             'payment.amount_rial' => ['required', 'integer', 'min:10'],
             'duration_days' => ['required', 'integer', 'in:1,7,15,30'],
             'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9 ]+$/'],
-            'resources.memory_mb' => ['required', 'integer', 'in:1024,1280,1536'],
-            'resources.disk_mb' => ['required', 'integer', 'min:5120', 'max:10240'],
-            'resources.cpu_percent' => ['required', 'integer', 'in:100,200,300,400'],
+            'resources.memory_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
+            'resources.disk_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
+            'resources.cpu_percent' => ['required', 'integer', 'min:1', 'max:6400'],
             'feature_limits' => ['sometimes', 'array'],
             'feature_limits.databases' => ['sometimes', 'integer', 'in:0,1,2,3,5,10'],
             'feature_limits.additional_allocations' => ['sometimes', 'integer', 'in:0,1,2,3,5'],
@@ -694,7 +694,9 @@ class FragCityAPI extends Extension
         if (
             $amountToman > intdiv(PHP_INT_MAX, 10)
             || $amountRial !== $amountToman * 10
-            || (($diskMb - 5120) % 1024) !== 0
+            || $memoryMb < 1
+            || $diskMb < 1
+            || $cpuPercent < 1
         ) {
             return response()->json([
                 'success' => false,
