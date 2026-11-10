@@ -36,6 +36,7 @@ for needle in \
   "Cache::add(" \
   "function cs2Catalog" \
   "function quoteCs2Order" \
+  "expected_amount_rial" \
   "function createCs2Order" \
   "Settings::tax(\$user)" \
   "cs2_quote_amount_mismatch" \
