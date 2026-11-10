@@ -101,7 +101,7 @@ After uploading and enabling the ZarinPal Gateway, configure its Merchant ID, cu
 
 To enable the built-in wallet, open **Admin → Settings → Credits** and enable Credits. Set the minimum deposit, maximum single deposit and maximum wallet balance in the Paymenter currency's stored unit. Keep automatic credit use enabled when you want recurring service invoices to be paid from available balance. Customers can then open **Account → Credits** to create a top-up invoice. A wallet balance is credited only after the invoice has a successful Paymenter transaction.
 
-See extensions/Gateways/ZarinPal/README.md for the callback, idempotency and reconciliation design. Test both a wallet top-up and a normal service invoice with a ZarinPal sandbox merchant before production.
+See extensions/Gateways/ZarinPal/README.md for the callback, idempotency and reconciliation design. Test both a wallet top-up and a normal service invoice with a ZarinPal sandbox merchant before production. The callback must return to `https://checkout.fragcity.ir/extensions/zarinpal/callback`; the ZarinPal extension verifies the payment server-to-server and then returns the customer to the Paymenter invoice.
 
 ## Updating an existing extension
 
