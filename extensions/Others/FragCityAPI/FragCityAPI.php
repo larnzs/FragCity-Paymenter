@@ -1198,10 +1198,10 @@ class FragCityAPI extends Extension
                     ];
                 }
 
-                $usedPayment = DB::table('fragcity_server_orders')
+                $usedPayment = DB::table('fragcity_payment_receipts')
                     ->where(function ($query) use ($authority, $zarinpalRef): void {
-                        $query->where('zarinpal_authority', $authority)
-                            ->orWhere('zarinpal_ref_id', $zarinpalRef);
+                        $query->where('authority', $authority)
+                            ->orWhere('ref_id', $zarinpalRef);
                     })
                     ->lockForUpdate()
                     ->first();
@@ -1750,6 +1750,7 @@ class FragCityAPI extends Extension
                     'steamid64' => $steamId,
                     'zarinpal_authority' => $authority,
                     'zarinpal_ref_id' => $zarinpalRef,
+                    'payment_method' => 'zarinpal',
                     'amount_toman' => $amountToman,
                     'amount_rial' => $amountRial,
                     'currency_code' => $currencyCode,
@@ -1761,6 +1762,21 @@ class FragCityAPI extends Extension
                     'paymenter_invoice_id' => (int) $invoice->id,
                     'paymenter_service_id' => (int) $service->id,
                     'status' => 'accepted',
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+                DB::table('fragcity_payment_receipts')->insert([
+                    'provider' => 'zarinpal',
+                    'authority' => $authority,
+                    'ref_id' => $zarinpalRef,
+                    'reference' => $orderRef,
+                    'purpose' => 'cs2_server',
+                    'steamid64' => $steamId,
+                    'amount_toman' => $amountToman,
+                    'amount_rial' => $amountRial,
+                    'currency_code' => $currencyCode,
+                    'paymenter_invoice_id' => (int) $invoice->id,
                     'created_at' => $now,
                     'updated_at' => $now,
                 ]);
@@ -1817,10 +1833,10 @@ class FragCityAPI extends Extension
                     ], 409);
                 }
 
-                $paymentUsed = DB::table('fragcity_server_orders')
+                $paymentUsed = DB::table('fragcity_payment_receipts')
                     ->where(function ($query) use ($authority, $zarinpalRef): void {
-                        $query->where('zarinpal_authority', $authority)
-                            ->orWhere('zarinpal_ref_id', $zarinpalRef);
+                        $query->where('authority', $authority)
+                            ->orWhere('ref_id', $zarinpalRef);
                     })
                     ->exists();
 
