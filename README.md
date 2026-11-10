@@ -38,7 +38,7 @@ The theme is not an Extension: extract its fragcity/ directory into Paymenter's 
 
 Previous Releases remain available for rollback. The Actions artifact is retained only as a secondary 30-day copy.
 
-The ZarinPal Gateway is intentionally not included. ZarinPal verification and payment remain on the FragCity website; Paymenter accepts only the signed, verified order from the backend bridge.
+ZarinPal is packaged as a native Paymenter Gateway. It verifies payments server-to-server and records successful payments through Paymenter's invoice transaction flow. Paymenter's built-in Credits feature is used as the FragCity wallet; wallet top-ups are ordinary native Paymenter invoices.
 
 Full instructions, configuration and update safeguards: [Plug-and-play installation guide](docs/INSTALL-EXTENSIONS.md).
 
