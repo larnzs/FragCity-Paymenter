@@ -25,8 +25,8 @@ while IFS= read -r -d '' file; do
 done < <(find "$migration_dir" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.11.0'" "$api"
-grep -Fq "'version' => '1.11.0'" "$api"
+grep -Fq "version: '1.12.0'" "$api"
+grep -Fq "'version' => '1.12.0'" "$api"
 grep -Fq "version: '1.7.0'" "$cs2"
 
 # Signed bridge, authoritative billing, receipt idempotency and native provisioning.
