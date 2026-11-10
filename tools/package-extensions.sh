@@ -27,6 +27,7 @@ rm -f \
     "$OUT_DIR"/FragCityAPI-v*.zip \
     "$OUT_DIR"/FragCitySupportAPI-v*.zip \
     "$OUT_DIR"/FragCityCS2-v*.zip \
+    "$OUT_DIR"/ZarinPal-v*.zip \
     "$OUT_DIR"/SHA256SUMS \
     "$OUT_DIR"/PACKAGES.txt
 

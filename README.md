@@ -15,6 +15,7 @@ This repository is **not** a Paymenter fork or a full Paymenter installation. Up
 - extensions/Others/FragCityAPI: private signed website-to-Paymenter bridge for account synchronization, verified CS2 orders and service coordination.
 - extensions/Others/FragCitySupportAPI: separate signed identity bridge for FragCity support workflows.
 - extensions/Servers/FragCityCS2: CS2 Egg contract, validation and Pterodactyl provisioning layer.
+- extensions/Gateways/ZarinPal: native ZarinPal v4 invoice gateway, including Paymenter Credits top-ups.
 - themes/fragcity: retained FragCity theme assets. This is a theme, not a Paymenter Extension.
 
 ## Versioned Releases and ready-to-deploy packages
@@ -22,7 +23,7 @@ This repository is **not** a Paymenter fork or a full Paymenter installation. Up
 Every relevant push to main that changes a FragCity Extension or the Paymenter theme automatically builds a new [GitHub Release](https://github.com/larnzs/FragCity-Paymenter/releases/latest).
 
 Each Release contains:
-- Three separate Paymenter Extension ZIPs for native Drag & Drop upload.
+- Four separate Paymenter Extension ZIPs for native Drag & Drop upload.
 - A separate FragCity Paymenter Theme source ZIP for manual theme deployment.
 - SHA-256 checksums and package manifests.
 
@@ -31,12 +32,13 @@ Install order for Extensions:
 1. FragCityAPI under **Others**.
 2. FragCitySupportAPI under **Others**.
 3. FragCityCS2 under **Servers**.
+4. ZarinPal under **Gateways**.
 
 The theme is not an Extension: extract its fragcity/ directory into Paymenter's themes/ directory and rebuild Vite assets from the Paymenter installation root with `npm run build -- fragcity`.
 
 Previous Releases remain available for rollback. The Actions artifact is retained only as a secondary 30-day copy.
 
-The ZarinPal Gateway is intentionally not included. ZarinPal verification and payment remain on the FragCity website; Paymenter accepts only the signed, verified order from the backend bridge.
+ZarinPal is packaged as a native Paymenter Gateway. It verifies payments server-to-server and records successful payments through Paymenter's invoice transaction flow. Paymenter's built-in Credits feature is used as the FragCity wallet; wallet top-ups are ordinary native Paymenter invoices.
 
 Full instructions, configuration and update safeguards: [Plug-and-play installation guide](docs/INSTALL-EXTENSIONS.md).
 
@@ -49,9 +51,7 @@ Full instructions, configuration and update safeguards: [Plug-and-play installat
 
 ## Product boundary
 
-FragCity's Raw PHP website owns the public storefront, customer dashboard, administrator dashboard, checkout and payment experience. Customers are not directed to Paymenter or Pterodactyl.
-
-Paymenter is used privately as the commercial/service supervisor and provisioning coordinator. Pterodactyl/Wings remain responsible for actual game-server records and runtime lifecycle.
+FragCity's public website remains the marketing and community entry point. The shop, checkout, invoices, payments and wallet are moving into Paymenter and will be exposed through shop.fragcity.ir. Pterodactyl/Wings remain the game-server runtime and are never the customer-facing storefront.
 
 ## Upstream integrity
 

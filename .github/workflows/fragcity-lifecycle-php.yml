@@ -6,6 +6,7 @@ on:
     paths:
       - "extensions/Others/FragCityAPI/**"
       - "extensions/Servers/FragCityCS2/**"
+      - "extensions/Gateways/ZarinPal/**"
       - "tools/validate-fragcity-paymenter.sh"
       - ".github/workflows/fragcity-lifecycle-php.yml"
   pull_request:
