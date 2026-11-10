@@ -401,22 +401,19 @@ class ZarinPal extends Gateway
 
             $body = $verifyResponse->json();
             $code = (int) data_get($body, 'data.code', 0);
-            $verifiedAmount = (int) data_get($body, 'data.amount', 0);
             $referenceId = trim((string) data_get($body, 'data.ref_id', ''));
 
-            // Code 101 means already verified. If Paymenter did not record the
-            // matching transaction, require the API to return both amount and
-            // reference ID before recovering; never guess from the callback.
-            if (
-                !in_array($code, [100, 101], true)
-                || $verifiedAmount !== (int) $payment->amount_rial
-                || $referenceId === ''
-            ) {
-                if ($code === 101) {
-                    $this->markManualReview($payment->id, $invoice->id, 'already_verified_without_complete_receipt');
-                    return redirect()->route('invoices.show', $invoice);
-                }
+            // The v4 verify request itself is bound to the stored Rial amount.
+            // A successful first verification is code 100 with a receipt ID.
+            // Code 101 means the authority was verified earlier; recover it
+            // only when the matching successful Paymenter transaction exists
+            // (handled above), otherwise leave it for manual reconciliation.
+            if ($code === 101) {
+                $this->markManualReview($payment->id, $invoice->id, 'already_verified_without_paymenter_transaction');
+                return redirect()->route('invoices.show', $invoice);
+            }
 
+            if ($code !== 100 || $referenceId === '') {
                 DB::table(self::TABLE)->where('id', $payment->id)->update([
                     'status' => 'failed',
                     'updated_at' => now(),
