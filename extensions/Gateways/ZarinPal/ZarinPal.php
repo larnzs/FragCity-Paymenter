@@ -303,10 +303,6 @@ class ZarinPal extends Gateway
             !$payment
             || !$payment->authority
             || !hash_equals((string) $payment->authority, $authority)
-            || (
-                $payment->status !== 'succeeded'
-                && ($payment->expires_at === null || now()->greaterThan($payment->expires_at))
-            )
         ) {
             abort(404, 'Payment request not found or expired.');
         }
@@ -325,7 +321,7 @@ class ZarinPal extends Gateway
                 return 'succeeded';
             }
 
-            if (in_array($locked->status, ['cancelled', 'failed', 'expired', 'manual_review'], true)) {
+            if (in_array($locked->status, ['cancelled', 'failed', 'manual_review'], true)) {
                 return $locked->status;
             }
 
@@ -337,7 +333,7 @@ class ZarinPal extends Gateway
                 return 'in_progress';
             }
 
-            if (!in_array($locked->status, ['pending', 'verifying', 'verification_error'], true)) {
+            if (!in_array($locked->status, ['pending', 'expired', 'verifying', 'verification_error'], true)) {
                 return 'invalid';
             }
 
