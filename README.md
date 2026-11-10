@@ -16,15 +16,15 @@ This repository is **not** a Paymenter fork or a full Paymenter installation. Up
 - extensions/Others/FragCitySupportAPI: separate signed identity bridge for FragCity support workflows.
 - extensions/Servers/FragCityCS2: CS2 Egg contract, validation and Pterodactyl provisioning layer.
 - extensions/Gateways/ZarinPal: native ZarinPal v4 invoice gateway, including Paymenter Credits top-ups.
-- themes/fragcity: retained FragCity theme assets. This is a theme, not a Paymenter Extension.
+- themes/fragcity: FragCity's Laravel Blade customer-facing theme. This is a Theme, not a Paymenter Extension.
 
 ## Versioned Releases and ready-to-deploy packages
 
 Every relevant push to main that changes a FragCity Extension or the Paymenter theme automatically builds a new [GitHub Release](https://github.com/larnzs/FragCity-Paymenter/releases/latest).
 
 Each Release contains:
-- Four separate Paymenter Extension ZIPs for native Drag & Drop upload.
-- A separate FragCity Paymenter Theme source ZIP for manual theme deployment.
+- Four separate Paymenter Extension ZIPs for native Extension Uploader installation.
+- One deploy-ready FragCity Theme overlay ZIP with both Laravel Blade source and precompiled Vite assets.
 - SHA-256 checksums and package manifests.
 
 Install order for Extensions:
@@ -34,13 +34,22 @@ Install order for Extensions:
 3. FragCityCS2 under **Servers**.
 4. ZarinPal under **Gateways**.
 
-The theme is not an Extension: extract its fragcity/ directory into Paymenter's themes/ directory and rebuild Vite assets from the Paymenter installation root with `npm run build -- fragcity`.
+### Installing the Theme on shared hosting
+
+The theme ZIP is **not** uploaded through Admin → Extensions. It contains these two paths:
+
+- `themes/fragcity/`
+- `public/fragcity/` (including `manifest.json` and compiled JS/CSS)
+
+Upload the ZIP through cPanel File Manager to the Paymenter application root and extract it there, allowing the `themes` and `public` directories to merge. The package is built in GitHub Actions against upstream Paymenter v1.5.9, so the hosting account does not need Node.js, npm, Composer or SSH.
+
+Full instructions and rollback notes: [Theme installation guide](docs/INSTALL-THEME.md).
 
 Previous Releases remain available for rollback. The Actions artifact is retained only as a secondary 30-day copy.
 
 ZarinPal is packaged as a native Paymenter Gateway. It verifies payments server-to-server and records successful payments through Paymenter's invoice transaction flow. Paymenter's built-in Credits feature is used as the FragCity wallet; wallet top-ups are ordinary native Paymenter invoices.
 
-Full instructions, configuration and update safeguards: [Plug-and-play installation guide](docs/INSTALL-EXTENSIONS.md).
+Full extension instructions, configuration and update safeguards: [Plug-and-play installation guide](docs/INSTALL-EXTENSIONS.md).
 
 ## Design identity
 
