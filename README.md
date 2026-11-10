@@ -24,7 +24,7 @@ Every relevant push to main that changes a FragCity Extension or the Paymenter t
 
 Each Release contains:
 - Four separate Paymenter Extension ZIPs for native Extension Uploader installation.
-- One deploy-ready FragCity Theme overlay ZIP with both Laravel Blade source and precompiled Vite assets.
+- One deploy-ready FragCity Theme overlay ZIP with Laravel Blade source, precompiled Vite assets and a scoped Linux permission helper.
 - SHA-256 checksums and package manifests.
 
 Install order for Extensions:
@@ -41,7 +41,7 @@ The theme ZIP is **not** uploaded through Admin → Extensions. It contains thes
 - `themes/fragcity/`
 - `public/fragcity/` (including `manifest.json` and compiled JS/CSS)
 
-Upload the ZIP through cPanel File Manager to the Paymenter application root and extract it there, allowing the `themes` and `public` directories to merge. The package is built in GitHub Actions against upstream Paymenter v1.5.9, so the hosting account does not need Node.js, npm, Composer or SSH.
+Upload the ZIP through File Manager to the Paymenter application root and extract it there, allowing the `themes` and `public` directories to merge. On Linux servers where PHP-FPM runs as a separate user, run the included `fragcity-fix-permissions.sh` as root after extraction. It adjusts only `themes/fragcity`, `public/fragcity` and group inheritance on their parent directories; it never changes Paymenter core files. The package is built in GitHub Actions against upstream Paymenter v1.5.9, so the host does not need Node.js, npm or Composer.
 
 Full instructions and rollback notes: [Theme installation guide](docs/INSTALL-THEME.md).
 
