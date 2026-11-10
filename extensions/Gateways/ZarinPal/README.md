@@ -17,7 +17,7 @@ Paymenter v1.5.9 Gateway extension for ZarinPal v4. It settles native Paymenter 
 - Sandbox mode: enable only for a sandbox merchant.
 - Payment description prefix: optional short text shown by ZarinPal.
 
-FragCity's current Paymenter currency is configured as IRR with Rial as its display suffix, so the correct initial configuration is IRR + Rial. Do not multiply these invoice amounts by 10 again.
+FragCity's current Paymenter currency is configured as IRR with Rial as its display suffix, so the correct initial configuration is IRR + Rial. The request explicitly sends `currency: IRR`; when Toman is selected it sends `currency: IRT` and converts the amount to Rial. Do not multiply these invoice amounts by 10 again.
 
 ## Native wallet / Credits
 
