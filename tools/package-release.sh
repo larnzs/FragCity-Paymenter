@@ -13,7 +13,7 @@ fi
 mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 
-# Build and validate the three native Paymenter Extension ZIPs.
+# Build and validate all native Paymenter Extension ZIPs.
 bash "$ROOT/tools/package-extensions.sh" "$OUT_DIR"
 
 THEME_DIR="$ROOT/themes/fragcity"
@@ -92,7 +92,7 @@ mv "$TMP_DIR/$THEME_ARCHIVE" "$OUT_DIR/$THEME_ARCHIVE"
 )
 
 echo
-echo "SUCCESS: Built 3 Paymenter Extension ZIPs and 1 FragCity Theme source ZIP."
+echo "SUCCESS: Built 4 Paymenter Extension ZIPs and 1 FragCity Theme source ZIP."
 echo "Release tag: $RELEASE_TAG"
 echo "Output: $OUT_DIR"
 echo "Checksums: $OUT_DIR/SHA256SUMS"
