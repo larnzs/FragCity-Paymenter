@@ -17,6 +17,8 @@ if (!is_file($root . '/bootstrap/app.php')) {
     exit(1);
 }
 
+require $root . '/vendor/autoload.php';
+
 $app = require $root . '/bootstrap/app.php';
 $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
