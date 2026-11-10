@@ -36,6 +36,7 @@ done < <(find "$zarinpal_migrations" -maxdepth 1 -type f -name '*.php' -print0 |
 # Native ZarinPal gateway and Paymenter Credits wallet contract.
 grep -Fq "version: '1.0.1'" "$zarinpal"
 test -f "$zarinpal_migrations/2026_11_10_000002_widen_encrypted_merchant_id.php"
+grep -Fq "Crypt::encryptString(\$stored)" "$zarinpal_migrations/2026_11_10_000002_widen_encrypted_merchant_id.php"
 grep -Fq "function canUseGateway" "$zarinpal"
 grep -Fq "function installed" "$zarinpal"
 grep -Fq "function upgraded" "$zarinpal"
