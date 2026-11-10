@@ -13,13 +13,17 @@ ARCHIVE="FragCityPaymenterTheme-$RELEASE_TAG.zip"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-for command_name in zip unzip sha256sum node; do
+for command_name in zip unzip sha256sum node python3; do
     command -v "$command_name" >/dev/null 2>&1 || {
         echo "ERROR: Required command not found: $command_name" >&2
         exit 1
     }
 done
 
+[[ -f "$ROOT/tools/fix-theme-permissions.sh" ]] || {
+    echo "ERROR: Theme permission helper is missing: $ROOT/tools/fix-theme-permissions.sh" >&2
+    exit 1
+}
 [[ -f "$THEME_DIR/theme.php" ]] || {
     echo "ERROR: Theme metadata is missing: $THEME_DIR/theme.php" >&2
     exit 1
@@ -101,13 +105,20 @@ STAGE="$TMP_DIR/stage"
 mkdir -p "$STAGE/themes" "$STAGE/public"
 cp -a "$THEME_DIR" "$STAGE/themes/fragcity"
 cp -a "$ASSET_DIR" "$STAGE/public/fragcity"
+install -m 0755 "$ROOT/tools/fix-theme-permissions.sh" "$STAGE/fragcity-fix-permissions.sh"
+
+# ZIP files do not preserve ownership. Normalize archive modes, then ship a
+# narrowly scoped helper that assigns the deployed theme to the PHP-FPM group.
+find "$STAGE" -type d -exec chmod 0755 {} +
+find "$STAGE" -type f -exec chmod 0644 {} +
+chmod 0755 "$STAGE/fragcity-fix-permissions.sh"
 
 mkdir -p "$OUT_DIR"
 OUT_DIR="$(cd "$OUT_DIR" && pwd)"
 
 (
     cd "$STAGE"
-    zip -qr "$TMP_DIR/$ARCHIVE" themes/fragcity public/fragcity \
+    zip -qr "$TMP_DIR/$ARCHIVE" themes/fragcity public/fragcity fragcity-fix-permissions.sh \
         -x "themes/fragcity/.DS_Store" \
            "themes/fragcity/**/.DS_Store" \
            "themes/fragcity/**/.git/**" \
@@ -123,6 +134,30 @@ unzip -Z1 "$TMP_DIR/$ARCHIVE" | grep -Fqx "public/fragcity/manifest.json" || {
     echo "ERROR: Deployment ZIP is missing public/fragcity/manifest.json." >&2
     exit 1
 }
+unzip -Z1 "$TMP_DIR/$ARCHIVE" | grep -Fqx "fragcity-fix-permissions.sh" || {
+    echo "ERROR: Deployment ZIP is missing fragcity-fix-permissions.sh." >&2
+    exit 1
+}
+
+# Verify the ZIP stores predictable Unix modes. The target host's umask and
+# extractor may still change effective permissions; the helper repairs group
+# access after extraction without touching Paymenter core.
+python3 - "$TMP_DIR/$ARCHIVE" <<'PY'
+import sys
+import zipfile
+
+archive = sys.argv[1]
+with zipfile.ZipFile(archive) as bundle:
+    for entry in bundle.infolist():
+        mode = (entry.external_attr >> 16) & 0o777
+        expected = 0o755 if entry.is_dir() or entry.filename == "fragcity-fix-permissions.sh" else 0o644
+        if mode != expected:
+            raise SystemExit(
+                f"ERROR: Unexpected ZIP mode for {entry.filename}: "
+                f"{mode:04o}, expected {expected:04o}"
+            )
+print("FragCity ZIP Unix file modes validated.")
+PY
 
 mv "$TMP_DIR/$ARCHIVE" "$OUT_DIR/$ARCHIVE"
 
@@ -133,6 +168,7 @@ mv "$TMP_DIR/$ARCHIVE" "$OUT_DIR/$ARCHIVE"
     echo "This archive contains:"
     echo "- themes/fragcity/ (Laravel Blade theme source)"
     echo "- public/fragcity/ (Vite production manifest and compiled assets)"
+    echo "- fragcity-fix-permissions.sh (scoped PHP-FPM group and permission setup)"
     echo
     echo "Upload and extract this ZIP at the Paymenter application root."
     echo "Do not upload it through Admin -> Extensions -> Upload Extension."
@@ -151,11 +187,12 @@ mv "$TMP_DIR/$ARCHIVE" "$OUT_DIR/$ARCHIVE"
     echo "1. Back up the existing themes/fragcity and public/fragcity directories."
     echo "2. Upload this ZIP to the Paymenter application root using File Manager."
     echo "3. Extract it at the application root and allow folders to merge."
-    echo "4. Keep the active theme setting as fragcity only after both directories exist."
-    echo "5. Never use the Paymenter Extension Uploader for this ZIP."
+    echo "4. On a Linux host with SSH/root, run: bash ./fragcity-fix-permissions.sh"
+    echo "5. Keep the active theme setting as fragcity only after both directories exist."
+    echo "6. Never use the Paymenter Extension Uploader for this ZIP."
     echo
-    echo "The ZIP includes the Vite production manifest and all compiled JS/CSS assets."
-    echo "No Node.js, npm, Composer or SSH command is required on the hosting account."
+    echo "The ZIP includes Vite production assets and a helper limited to themes/fragcity and public/fragcity."
+    echo "The helper grants read/traverse access to the PHP-FPM group and sets group inheritance on themes/ and public/."
 } > "$OUT_DIR/THEME-PACKAGE.txt"
 
 echo "SUCCESS: Built deploy-ready FragCity theme package: $OUT_DIR/$ARCHIVE"
