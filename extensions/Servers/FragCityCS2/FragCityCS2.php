@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.7.0',
+    version: '1.7.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -831,20 +831,30 @@ class FragCityCS2 extends PterodactylExtension
             );
         }
 
-        if (!in_array($resolved['memory'], [1024, 1280, 1536], true)) {
-            throw new RuntimeException('FragCity CS2 RAM Config Option contains an unsupported value.');
-        }
+        // The customer-facing catalog is built from the Product's actual
+        // native Config Option children. The quote and paid-order endpoints
+        // validate that each selected child belongs to the expected Product
+        // option and has a valid Plan/currency price. Do not freeze the
+        // provisioner to yesterday's RAM/SSD/CPU tiers: that caused a paid
+        // selection accepted by Paymenter to fail only when CreateJob ran.
+        //
+        // Keep the same hard safety ceilings as FragCityAPI's quote and
+        // create-order validators. These are Pterodactyl units: MB for RAM
+        // and disk, percentage points for CPU.
+        $resourceMaximums = [
+            'memory' => 1048576,
+            'disk' => 1048576,
+            'cpu' => 6400,
+        ];
 
-        if (
-            $resolved['disk'] < 5120
-            || $resolved['disk'] > 10240
-            || (($resolved['disk'] - 5120) % 1024) !== 0
-        ) {
-            throw new RuntimeException('FragCity CS2 Storage Config Option contains an unsupported value.');
-        }
+        foreach ($resourceMaximums as $resource => $maximum) {
+            $value = $resolved[$resource];
 
-        if (!in_array($resolved['cpu'], [100, 200, 300, 400], true)) {
-            throw new RuntimeException('FragCity CS2 CPU Config Option contains an unsupported value.');
+            if ($value < 1 || $value > $maximum) {
+                throw new RuntimeException(
+                    "FragCity CS2 {$resource} Config Option must be between 1 and {$maximum}."
+                );
+            }
         }
 
         // These keys are consumed by the inherited Paymenter Pterodactyl
