@@ -11,7 +11,7 @@ if (!is_dir($themeViews)) {
 }
 
 $app = require $root . '/bootstrap/app.php';
-$kernel = $app->make(Illuminate\\Contracts\\Console\\Kernel::class);
+$kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 $compiler = $app->make('blade.compiler');
