@@ -56,8 +56,12 @@ return new class extends Migration
 
                 try {
                     $plain = Crypt::decryptString($stored);
-                } catch (Throwable) {
-                    $plain = $stored;
+                } catch (Throwable $e) {
+                    throw new RuntimeException(
+                        'Cannot safely downgrade the ZarinPal merchant ID column because an encrypted value could not be decrypted.',
+                        0,
+                        $e
+                    );
                 }
 
                 DB::table('zarinpal_gateway_payments')
