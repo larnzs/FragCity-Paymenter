@@ -34,7 +34,9 @@ while IFS= read -r -d '' file; do
 done < <(find "$zarinpal_migrations" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
 
 # Native ZarinPal gateway and Paymenter Credits wallet contract.
-grep -Fq "version: '1.0.0'" "$zarinpal"
+grep -Fq "version: '1.0.1'" "$zarinpal"
+test -f "$zarinpal_migrations/2026_11_10_000002_widen_encrypted_merchant_id.php"
+grep -Fq "Crypt::encryptString(\$stored)" "$zarinpal_migrations/2026_11_10_000002_widen_encrypted_merchant_id.php"
 grep -Fq "function canUseGateway" "$zarinpal"
 grep -Fq "function installed" "$zarinpal"
 grep -Fq "function upgraded" "$zarinpal"
@@ -43,6 +45,8 @@ grep -Fq "ExtensionHelper::runMigrations('extensions/Gateways/ZarinPal/database/
 grep -Fq "ExtensionHelper::addPayment(" "$zarinpal"
 grep -Fq "InvoiceTransactionStatus::Succeeded" "$zarinpal"
 grep -Fq "token_hash" "$zarinpal"
+grep -Fq "Crypt::encryptString(\$merchantId)" "$zarinpal"
+grep -Fq "Crypt::decryptString((string) \$payment->merchant_id)" "$zarinpal"
 grep -Fq "hash('sha256', \$token)" "$zarinpal"
 grep -Fq "verify.json" "$zarinpal"
 grep -Fq "'currency' => \$attempt['currency_unit'] === 'toman' ? 'IRT' : 'IRR'" "$zarinpal"
