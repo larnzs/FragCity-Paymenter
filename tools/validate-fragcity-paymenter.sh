@@ -10,8 +10,12 @@ api_readme="extensions/Others/FragCityAPI/README.md"
 cs2="extensions/Servers/FragCityCS2/FragCityCS2.php"
 cs2_readme="extensions/Servers/FragCityCS2/README.md"
 manifest="extensions/Servers/FragCityCS2/resources/cs2-egg-variables.json"
+zarinpal="extensions/Gateways/ZarinPal/ZarinPal.php"
+zarinpal_routes="extensions/Gateways/ZarinPal/routes.php"
+zarinpal_readme="extensions/Gateways/ZarinPal/README.md"
+zarinpal_migrations="extensions/Gateways/ZarinPal/database/migrations"
 
-for dir in extensions/Others/FragCityAPI extensions/Others/FragCitySupportAPI extensions/Servers/FragCityCS2; do
+for dir in extensions/Others/FragCityAPI extensions/Others/FragCitySupportAPI extensions/Servers/FragCityCS2 extensions/Gateways/ZarinPal; do
   test -d "$dir"
   while IFS= read -r -d '' file; do
     php -l "$file"
@@ -23,6 +27,31 @@ test -d "$migration_dir"
 while IFS= read -r -d '' file; do
   php -l "$file"
 done < <(find "$migration_dir" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
+
+test -d "$zarinpal_migrations"
+while IFS= read -r -d '' file; do
+  php -l "$file"
+done < <(find "$zarinpal_migrations" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
+
+# Native ZarinPal gateway and Paymenter Credits wallet contract.
+grep -Fq "version: '1.0.0'" "$zarinpal"
+grep -Fq "function canUseGateway" "$zarinpal"
+grep -Fq "function installed" "$zarinpal"
+grep -Fq "function upgraded" "$zarinpal"
+grep -Fq "function callback" "$zarinpal"
+grep -Fq "ExtensionHelper::runMigrations('extensions/Gateways/ZarinPal/database/migrations')" "$zarinpal"
+grep -Fq "ExtensionHelper::addPayment(" "$zarinpal"
+grep -Fq "InvoiceTransactionStatus::Succeeded" "$zarinpal"
+grep -Fq "token_hash" "$zarinpal"
+grep -Fq "hash('sha256', $token)" "$zarinpal"
+grep -Fq "verify.json" "$zarinpal"
+grep -Fq "manual_review" "$zarinpal"
+grep -Fq "status' => 'succeeded'" "$zarinpal"
+grep -Fq "extensions.gateways.zarinpal.callback" "$zarinpal_routes"
+grep -Fq "credits_enabled" "$zarinpal_readme"
+grep -Fq "credits_auto_use" "$zarinpal_readme"
+! grep -Fq "Cache::" "$zarinpal"
+! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
 grep -Fq "version: '1.13.0'" "$api"
