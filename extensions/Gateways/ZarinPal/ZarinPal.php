@@ -355,7 +355,7 @@ class ZarinPal extends Gateway
         }
 
         if ($claim === 'in_progress') {
-            return redirect()->route('invoices.show', $invoice) . '?checkPayment=1';
+            return redirect()->to(route('invoices.show', $invoice) . '?checkPayment=1');
         }
 
         if ($claim !== 'claimed') {
@@ -363,11 +363,11 @@ class ZarinPal extends Gateway
         }
 
         if ($callbackStatus !== 'OK') {
-            DB::table(self::TABLE)->where('id', $payment->id)->update([
-                'status' => 'cancelled',
-                'updated_at' => now(),
-            ]);
-
+            // Status is a browser-return parameter, not a trusted payment
+            // result. Do not permanently cancel the stored attempt based on
+            // it: the customer can alter the query string after paying.
+            // Leave the authority pending so a later genuine success callback
+            // can still be verified server-to-server.
             return redirect()->route('invoices.show', $invoice);
         }
 
