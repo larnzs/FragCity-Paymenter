@@ -8,6 +8,7 @@ on:
       - "themes/fragcity/**"
       - "tools/package-extensions.sh"
       - "tools/package-release.sh"
+      - "tools/validate-fragcity-paymenter.sh"
   workflow_dispatch:
 
 permissions:
@@ -24,6 +25,16 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up PHP for release validation
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          extensions: mbstring, pdo_mysql
+          coverage: none
+
+      - name: Validate PHP, billing and provisioning before publishing
+        run: bash tools/validate-fragcity-paymenter.sh
 
       - name: Generate unique Release tag
         id: release-meta
