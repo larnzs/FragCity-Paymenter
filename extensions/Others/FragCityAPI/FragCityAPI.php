@@ -1028,11 +1028,34 @@ class FragCityAPI extends Extension
         $validator = Validator::make(is_array($payload) ? $payload : [], [
             'order_ref' => ['required', 'string', 'regex:/^[a-f0-9]{32}$/i'],
             'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
-            'payment.provider' => ['required', 'in:zarinpal'],
-            'payment.authority' => ['required', 'string', 'max:128', 'regex:/^[A-Za-z0-9_-]+$/'],
-            'payment.ref_id' => ['required', 'string', 'max:64', 'regex:/^[A-Za-z0-9_-]+$/'],
-            'payment.amount_toman' => ['required', 'integer', 'min:1'],
-            'payment.amount_rial' => ['required', 'integer', 'min:10'],
+            'payment' => ['required', 'array'],
+            'payment.provider' => ['required', 'in:zarinpal,wallet'],
+            'payment.authority' => [
+                'required_if:payment.provider,zarinpal',
+                'prohibited_if:payment.provider,wallet',
+                'string',
+                'max:128',
+                'regex:/^[A-Za-z0-9_-]+$/',
+            ],
+            'payment.ref_id' => [
+                'required_if:payment.provider,zarinpal',
+                'prohibited_if:payment.provider,wallet',
+                'string',
+                'max:64',
+                'regex:/^[A-Za-z0-9_-]+$/',
+            ],
+            'payment.amount_toman' => [
+                'required_if:payment.provider,zarinpal',
+                'prohibited_if:payment.provider,wallet',
+                'integer',
+                'min:1',
+            ],
+            'payment.amount_rial' => [
+                'required_if:payment.provider,zarinpal',
+                'prohibited_if:payment.provider,wallet',
+                'integer',
+                'min:10',
+            ],
             'duration_days' => ['required', 'integer', 'in:1,7,15,30'],
             'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9 ]+$/'],
             'resources.memory_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
@@ -1056,10 +1079,12 @@ class FragCityAPI extends Extension
         $data = $validator->validated();
         $orderRef = strtolower((string) $data['order_ref']);
         $steamId = (string) $data['steamid64'];
-        $authority = (string) $data['payment']['authority'];
-        $zarinpalRef = (string) $data['payment']['ref_id'];
-        $amountToman = (int) $data['payment']['amount_toman'];
-        $amountRial = (int) $data['payment']['amount_rial'];
+        $paymentProvider = (string) $data['payment']['provider'];
+        $isZarinpal = $paymentProvider === 'zarinpal';
+        $authority = $isZarinpal ? (string) $data['payment']['authority'] : '';
+        $zarinpalRef = $isZarinpal ? (string) $data['payment']['ref_id'] : '';
+        $amountToman = $isZarinpal ? (int) $data['payment']['amount_toman'] : 0;
+        $amountRial = $isZarinpal ? (int) $data['payment']['amount_rial'] : 0;
         $durationDays = (int) $data['duration_days'];
         $serverName = trim((string) $data['server_name']);
         $memoryMb = (int) $data['resources']['memory_mb'];
@@ -1074,8 +1099,10 @@ class FragCityAPI extends Extension
         $eggValues = is_array($data['egg']) ? $data['egg'] : [];
 
         if (
-            $amountToman > intdiv(PHP_INT_MAX, 10)
-            || $amountRial !== $amountToman * 10
+            ($isZarinpal && (
+                $amountToman > intdiv(PHP_INT_MAX, 10)
+                || $amountRial !== $amountToman * 10
+            ))
             || $memoryMb < 1
             || $diskMb < 1
             || $cpuPercent < 1
@@ -1128,9 +1155,9 @@ class FragCityAPI extends Extension
             'order_ref' => $orderRef,
             'steamid64' => $steamId,
             'payment' => [
-                'provider' => 'zarinpal',
-                'authority' => $authority,
-                'ref_id' => $zarinpalRef,
+                'provider' => $paymentProvider,
+                'authority' => $isZarinpal ? $authority : null,
+                'ref_id' => $isZarinpal ? $zarinpalRef : null,
                 'amount_toman' => $amountToman,
                 'amount_rial' => $amountRial,
             ],
@@ -1159,6 +1186,8 @@ class FragCityAPI extends Extension
                 $steamId,
                 $authority,
                 $zarinpalRef,
+                $paymentProvider,
+                $isZarinpal,
                 $amountToman,
                 $amountRial,
                 $durationDays,
@@ -1198,16 +1227,18 @@ class FragCityAPI extends Extension
                     ];
                 }
 
-                $usedPayment = DB::table('fragcity_payment_receipts')
-                    ->where(function ($query) use ($authority, $zarinpalRef): void {
-                        $query->where('authority', $authority)
-                            ->orWhere('ref_id', $zarinpalRef);
-                    })
-                    ->lockForUpdate()
-                    ->first();
+                if ($isZarinpal) {
+                    $usedPayment = DB::table('fragcity_payment_receipts')
+                        ->where(function ($query) use ($authority, $zarinpalRef): void {
+                            $query->where('authority', $authority)
+                                ->orWhere('ref_id', $zarinpalRef);
+                        })
+                        ->lockForUpdate()
+                        ->first();
 
-                if ($usedPayment) {
-                    throw new RuntimeException('zarinpal_payment_already_used');
+                    if ($usedPayment) {
+                        throw new RuntimeException('zarinpal_payment_already_used');
+                    }
                 }
 
                 $userLink = DB::table('fragcity_user_links')
@@ -1665,10 +1696,45 @@ class FragCityAPI extends Extension
                 if (
                     abs($computedInvoiceTotal - $wholeRialTotal) > 0.00001
                     || ($wholeRialTotal % 10) !== 0
-                    || $amountRial !== $wholeRialTotal
-                    || $amountToman !== intdiv($wholeRialTotal, 10)
                 ) {
                     throw new RuntimeException('cs2_quote_amount_mismatch');
+                }
+
+                // A verified external payment must exactly equal Paymenter's
+                // computed total. Wallet purchases do not send an amount at all:
+                // Paymenter chooses the amount and checks/debits its own Credit row.
+                if ($isZarinpal) {
+                    if (
+                        $amountRial !== $wholeRialTotal
+                        || $amountToman !== intdiv($wholeRialTotal, 10)
+                    ) {
+                        throw new RuntimeException('cs2_quote_amount_mismatch');
+                    }
+                } else {
+                    $creditsEnabled = filter_var(
+                        (string) (Settings::getSetting('credits_enabled')->value ?? false),
+                        FILTER_VALIDATE_BOOLEAN
+                    );
+                    if (!$creditsEnabled) {
+                        throw new RuntimeException('wallet_not_enabled');
+                    }
+
+                    $credit = $user->credits()
+                        ->where('currency_code', $currencyCode)
+                        ->lockForUpdate()
+                        ->first();
+
+                    $availableCredit = (float) ($credit?->amount ?? 0);
+                    if (!$credit || $availableCredit < $computedInvoiceTotal) {
+                        throw new RuntimeException('wallet_insufficient_credit');
+                    }
+
+                    // The linked Paymenter user row is already locked in this
+                    // transaction; the credit row is now locked too. This debit
+                    // is atomic with Order, Service, Invoice and transaction creation.
+                    $credit->decrement('amount', $computedInvoiceTotal);
+                    $amountRial = $wholeRialTotal;
+                    $amountToman = intdiv($wholeRialTotal, 10);
                 }
 
                 $paymenterAmount = $computedInvoiceTotal;
@@ -1733,8 +1799,9 @@ class FragCityAPI extends Extension
                     null,
                     $paymenterAmount,
                     null,
-                    'zarinpal:' . $zarinpalRef,
-                    InvoiceTransactionStatus::Succeeded
+                    $isZarinpal ? 'zarinpal:' . $zarinpalRef : 'fragcity-credit:' . $orderRef,
+                    InvoiceTransactionStatus::Succeeded,
+                    !$isZarinpal
                 );
 
                 if ($product->stock !== null) {
@@ -1748,9 +1815,9 @@ class FragCityAPI extends Extension
                 DB::table('fragcity_server_orders')->insert([
                     'order_ref' => $orderRef,
                     'steamid64' => $steamId,
-                    'zarinpal_authority' => $authority,
-                    'zarinpal_ref_id' => $zarinpalRef,
-                    'payment_method' => 'zarinpal',
+                    'zarinpal_authority' => $isZarinpal ? $authority : null,
+                    'zarinpal_ref_id' => $isZarinpal ? $zarinpalRef : null,
+                    'payment_method' => $paymentProvider,
                     'amount_toman' => $amountToman,
                     'amount_rial' => $amountRial,
                     'currency_code' => $currencyCode,
@@ -1766,20 +1833,22 @@ class FragCityAPI extends Extension
                     'updated_at' => $now,
                 ]);
 
-                DB::table('fragcity_payment_receipts')->insert([
-                    'provider' => 'zarinpal',
-                    'authority' => $authority,
-                    'ref_id' => $zarinpalRef,
-                    'reference' => $orderRef,
-                    'purpose' => 'cs2_server',
-                    'steamid64' => $steamId,
-                    'amount_toman' => $amountToman,
-                    'amount_rial' => $amountRial,
-                    'currency_code' => $currencyCode,
-                    'paymenter_invoice_id' => (int) $invoice->id,
-                    'created_at' => $now,
-                    'updated_at' => $now,
-                ]);
+                if ($isZarinpal) {
+                    DB::table('fragcity_payment_receipts')->insert([
+                        'provider' => 'zarinpal',
+                        'authority' => $authority,
+                        'ref_id' => $zarinpalRef,
+                        'reference' => $orderRef,
+                        'purpose' => 'cs2_server',
+                        'steamid64' => $steamId,
+                        'amount_toman' => $amountToman,
+                        'amount_rial' => $amountRial,
+                        'currency_code' => $currencyCode,
+                        'paymenter_invoice_id' => (int) $invoice->id,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ]);
+                }
 
                 return [
                     'order_id' => (int) $order->id,
@@ -1867,7 +1936,8 @@ class FragCityAPI extends Extension
                 'order_reference_conflict', 'zarinpal_payment_already_used' => 409,
                 'paid_option_pricing_not_configured', 'invalid_egg_variable', 'egg_validation_failed',
                 'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
-                'cs2_plan_invalid', 'cs2_plan_price_missing', 'cs2_quote_amount_mismatch', 'invalid_order_payload', 'egg_combination_invalid' => 422,
+                'cs2_plan_invalid', 'cs2_plan_price_missing', 'cs2_quote_amount_mismatch', 'invalid_order_payload', 'egg_combination_invalid',
+                'wallet_insufficient_credit', 'wallet_not_enabled' => 422,
                 'cs2_config_option_mapping_invalid', 'cs2_config_option_price_missing' => 503,
                 'order_processing_incomplete' => 503,
                 default => 500,
