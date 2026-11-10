@@ -298,8 +298,10 @@ class ZarinPal extends Gateway
             !$payment
             || !$payment->authority
             || !hash_equals((string) $payment->authority, $authority)
-            || $payment->expires_at === null
-            || now()->greaterThan($payment->expires_at)
+            || (
+                $payment->status !== 'succeeded'
+                && ($payment->expires_at === null || now()->greaterThan($payment->expires_at))
+            )
         ) {
             abort(404, 'Payment request not found or expired.');
         }
@@ -501,12 +503,18 @@ class ZarinPal extends Gateway
     {
         $factor = $unit === 'toman' ? 10 : 1;
         $rial = (float) $amount * $factor;
+        $roundedRial = round($rial);
 
-        if (!is_finite($rial) || $rial <= 0 || $rial > PHP_INT_MAX) {
-            throw new DisplayException('The ZarinPal payment amount is outside the supported range.');
+        if (
+            !is_finite($rial)
+            || $rial <= 0
+            || $rial > PHP_INT_MAX
+            || abs($rial - $roundedRial) > 0.000001
+        ) {
+            throw new DisplayException('The invoice amount must convert to a whole Rial amount before paying with ZarinPal.');
         }
 
-        return (int) round($rial);
+        return (int) $roundedRial;
     }
 
     private function apiBase(bool $sandbox): string
