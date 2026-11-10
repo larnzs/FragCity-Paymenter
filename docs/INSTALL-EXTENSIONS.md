@@ -11,10 +11,11 @@ The workflow builds one ZIP per Paymenter Extension found under the repository's
 | FragCityAPI | Admin → Extensions → Others | Private HMAC bridge, account sync, verified CS2 order acceptance and service coordination |
 | FragCitySupportAPI | Admin → Extensions → Others | Separate signed support identity bridge |
 | FragCityCS2 | Admin → Extensions → Servers | CS2 Egg contract, validation and Pterodactyl provisioning layer |
+| ZarinPal | Admin → Extensions → Gateways | Native ZarinPal v4 invoice payments and Paymenter wallet top-ups |
 
 The FragCity theme is not a Paymenter Extension and cannot be installed through the Extension ZIP uploader. It remains a separate theme/Vite deployment.
 
-The ZarinPal Gateway is intentionally not packaged from main. ZarinPal payment verification belongs to the FragCity website backend; Paymenter receives only the authenticated, verified order from the website bridge.
+The ZarinPal Gateway is packaged as a normal Paymenter Gateway. It verifies ZarinPal payments server-to-server and records them through Paymenter's native invoice transaction system. Wallet top-ups use Paymenter's built-in Credits feature.
 
 ## Download the packages
 
@@ -23,11 +24,11 @@ All deployable packages are published together in GitHub Releases:
 - [Latest FragCity Release](https://github.com/larnzs/FragCity-Paymenter/releases/latest)
 - [All previous Releases](https://github.com/larnzs/FragCity-Paymenter/releases)
 
-Each Release contains three independent Paymenter Extension ZIPs, one FragCity Paymenter Theme source ZIP, a package manifest and SHA-256 checksums. Download only the assets you need. The GitHub Actions artifact is kept as a secondary copy for 30 days.
+Each Release contains four independent Paymenter Extension ZIPs, one FragCity Paymenter Theme source ZIP, a package manifest and SHA-256 checksums. Download only the assets you need. The GitHub Actions artifact is kept as a secondary copy for 30 days.
 
 ### What to install from a Release
 
-- `FragCityAPI-v*.zip`, `FragCitySupportAPI-v*.zip` and `FragCityCS2-v*.zip`: upload each separately through Paymenter Admin → Extensions → Upload Extension.
+- `FragCityAPI-v*.zip`, `FragCitySupportAPI-v*.zip`, `FragCityCS2-v*.zip` and `ZarinPal-v*.zip`: upload each separately through Paymenter Admin → Extensions → Upload Extension.
 - `FragCityPaymenterTheme-*.zip`: this is a theme source bundle, not an Extension. Do not upload it through Extension Uploader.
 - `SHA256SUMS`: verify the downloaded ZIP assets before deployment.
 - `PACKAGES.txt` and `THEME-PACKAGE.txt`: package versions, source revision and installation boundary.
@@ -51,6 +52,7 @@ Use the Paymenter Admin panel while logged in as an administrator:
 1. Open **Admin → Extensions → Others**. Choose **Upload Extension**, drag in the FragCityAPI ZIP, and upload it. Then install **FragCity API** from the ready-to-install list.
 2. Still under **Others**, upload and install the FragCitySupportAPI ZIP.
 3. Open **Admin → Extensions → Servers**, upload and install the FragCityCS2 ZIP.
+4. Open **Admin → Extensions → Gateways**, upload the ZarinPal ZIP, then install and enable **ZarinPal**.
 
 Install FragCityAPI first. FragCitySupportAPI reads the customer-to-Paymenter mapping created by FragCityAPI and therefore depends on its database table. FragCityCS2 is installed after the two API extensions so the complete FragCity integration is available before assigning it to a Product.
 
@@ -93,6 +95,14 @@ Then open the CS2 Product and select **FragCity CS2** as its Server extension. C
 
 See each extension's README for exact settings, routes, permissions and integration contracts.
 
+## ZarinPal Gateway and native wallet
+
+After uploading and enabling the ZarinPal Gateway, configure its Merchant ID, currency code and unit, and Sandbox mode. FragCity's existing Paymenter currency is IRR displayed in Rial, so use currency code IRR and unit **Rial** (no multiplication by 10).
+
+To enable the built-in wallet, open **Admin → Settings → Credits** and enable Credits. Set the minimum deposit, maximum single deposit and maximum wallet balance in the Paymenter currency's stored unit. Keep automatic credit use enabled when you want recurring service invoices to be paid from available balance. Customers can then open **Account → Credits** to create a top-up invoice. A wallet balance is credited only after the invoice has a successful Paymenter transaction.
+
+See extensions/Gateways/ZarinPal/README.md for the callback, idempotency and reconciliation design. Test both a wallet top-up and a normal service invoice with a ZarinPal sandbox merchant before production.
+
 ## Updating an existing extension
 
 1. Back up the Paymenter database and the extension's current directory.
@@ -110,7 +120,7 @@ Packages are built from the repository's **main** branch only. The current main-
 - FragCitySupportAPI **1.3.0**
 - FragCityCS2 **1.5.0**
 
-The experimental native-Paymenter-Checkout proposal (PR #4, closed without merging) used a separate FragCityAPI 1.6.0 code line and included a Paymenter-side ZarinPal Gateway. That implementation was intentionally not merged because FragCity remains the storefront and payment-verification source of truth; Paymenter receives only the authenticated, verified order.
+The native-Paymenter-Checkout proposal (PR #4) was closed as a draft while the architecture was reconsidered. The current feature branch reintroduces the Gateway as a standalone extension; this does not require copying or modifying Paymenter Core.
 
 If an existing Paymenter instance reports FragCityAPI **1.6.0**, do not upload the main-branch 1.5.1 ZIP as an update until that instance's code and the main-branch Bridge changes have been reconciled. Paymenter's uploader replaces the code directory; it does not block semantic-version downgrades.
 
@@ -119,5 +129,5 @@ If an existing Paymenter instance reports FragCityAPI **1.6.0**, do not upload t
 - Upload one extension ZIP at a time. The package builder validates the root folder layout and Paymenter's 10 MiB upload limit.
 - Never upload secrets, .env, vendor, Paymenter Core, customer data, database dumps or runtime storage.
 - Never upload an older package over a newer installed version without reviewing the source changes.
-- The packages contain no Paymenter core modifications and do not install ZarinPal inside Paymenter.
+- The packages contain no Paymenter Core modifications. ZarinPal is installed only as a Paymenter Gateway extension.
 - Keep customer checkout and payment on FragCity. Paymenter is the private commercial and provisioning backend.
