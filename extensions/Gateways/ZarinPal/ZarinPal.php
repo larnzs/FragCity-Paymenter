@@ -560,7 +560,7 @@ class ZarinPal extends Gateway
 
     private function buildCallbackUrl(string $token): string
     {
-        $baseUrl = trim((string) ($this->config('callback_base_url') ?: config('app.url')));
+        $baseUrl = trim((string) ($this->config('callback_base_url') ?: 'https://checkout.fragcity.ir'));
         $parts = parse_url($baseUrl);
 
         if (
