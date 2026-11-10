@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.9.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.11.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -12,6 +12,7 @@ Provides a narrow private server-to-server bridge for FragCity identity, paid CS
 - `POST /api/v1/fragcity/bridge/wallet/topups/prepare`
 - `POST /api/v1/fragcity/bridge/wallet/topups/zarinpal`
 - `POST /api/v1/fragcity/bridge/users/sync`
+- `POST /api/v1/fragcity/bridge/quotes/cs2`
 - `POST /api/v1/fragcity/bridge/orders/cs2`
 - `POST /api/v1/fragcity/bridge/servers/list`
 - `POST /api/v1/fragcity/bridge/servers/password`
@@ -115,6 +116,28 @@ and set the minimum deposit, maximum deposit and maximum credit in the configure
 Rial currency's units. The extension fails closed when Credits are disabled or
 those limits are not configured.
 
+## Authoritative CS2 checkout quotes
+
+The FragCity backend calls `POST /api/v1/fragcity/bridge/quotes/cs2` before
+creating a ZarinPal payment request. The request contains the linked SteamID64,
+duration, server name, resource selections, feature limits and allow-listed Egg
+selections. The quote endpoint is read-only: it never creates an invoice, order,
+service or wallet transaction.
+
+Paymenter resolves the configured Product and duration Plan, resolves all eight
+native Config Option child values, loads the linked Paymenter User, and applies
+`Settings::tax($user)` to the same Plan + recurring Config Option prices + setup
+fees used by the paid-order endpoint. It returns an exact Rial total and its
+whole-Toman equivalent only when the total is representable in whole Toman.
+It does not accept any price, tax amount, Plan ID, Product ID or Config Option ID
+from FragCity.
+
+The quote is a short-lived display/confirmation value, not a payment token.
+When the paid order is submitted, `orders/cs2` independently reloads the current
+Plan and Config Option prices and recalculates tax. A ZarinPal receipt must match
+that new total exactly; a price or tax change between quote and payment therefore
+fails closed instead of silently charging a different amount. Wallet purchases
+continue to be priced and debited atomically by Paymenter.
 ## Paid CS2 server orders
 
 `POST /api/v1/fragcity/bridge/orders/cs2` accepts a server-to-server order using either a verified ZarinPal receipt or the linked customer's Paymenter Wallet. For ZarinPal, FragCity must first verify the payment with ZarinPal's Verify API; Paymenter does **not** trust a browser redirect, a browser-supplied `Status=OK`, or a client-provided payment claim. For Wallet, the request contains only `payment.provider=wallet`; Paymenter computes the amount and locks/debits its own Credit row. The HMAC-authenticated website backend is the only caller.

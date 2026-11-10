@@ -35,6 +35,11 @@ Route::post('/api/v1/fragcity/bridge/wallet/topups/prepare', [FragCityAPI::class
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.wallet.topups.prepare');
 
+Route::post('/api/v1/fragcity/bridge/quotes/cs2', [FragCityAPI::class, 'quoteCs2Order'])
+    ->middleware('throttle:30,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.quotes.cs2');
+
 Route::post('/api/v1/fragcity/bridge/orders/cs2', [FragCityAPI::class, 'createCs2Order'])
     ->middleware('throttle:20,1')
     ->withoutMiddleware([VerifyCsrfToken::class])

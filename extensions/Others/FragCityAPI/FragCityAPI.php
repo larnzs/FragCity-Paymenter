@@ -30,7 +30,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server catalogue, wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.10.0',
+    version: '1.11.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -128,7 +128,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.10.0',
+            'version' => '1.11.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -1325,6 +1325,533 @@ class FragCityAPI extends Extension
      *
      * This method never calls Pterodactyl directly and never trusts browser data.
      */
+    /**
+     * Calculate an authoritative CS2 checkout quote for the linked FragCity user.
+     *
+     * This is a read-only pre-payment operation. The website sends selections,
+     * never a price; Paymenter resolves every native Config Option and applies
+     * the same customer tax policy used again by createCs2Order().
+     */
+    public function quoteCs2Order(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'duration_days' => ['required', 'integer', 'in:1,7,15,30'],
+            'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9 ]+$/'],
+            'resources.memory_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
+            'resources.disk_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
+            'resources.cpu_percent' => ['required', 'integer', 'min:1', 'max:6400'],
+            'feature_limits' => ['sometimes', 'array'],
+            'feature_limits.databases' => ['sometimes', 'integer', 'in:0,1,2,3,5,10'],
+            'feature_limits.additional_allocations' => ['sometimes', 'integer', 'in:0,1,2,3,5'],
+            'feature_limits.backups' => ['sometimes', 'integer', 'in:0,1,2,3,5,10'],
+            'egg' => ['required', 'array'],
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'validation_failed',
+                'fields' => $validator->errors()->keys(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $steamId = (string) $data['steamid64'];
+        $durationDays = (int) $data['duration_days'];
+        $serverName = trim((string) $data['server_name']);
+        $memoryMb = (int) $data['resources']['memory_mb'];
+        $diskMb = (int) $data['resources']['disk_mb'];
+        $cpuPercent = (int) $data['resources']['cpu_percent'];
+        $featureInput = is_array($data['feature_limits'] ?? null) ? $data['feature_limits'] : [];
+        $featureLimits = [
+            'databases' => (int) ($featureInput['databases'] ?? 0),
+            'additional_allocations' => (int) ($featureInput['additional_allocations'] ?? 0),
+            'backups' => (int) ($featureInput['backups'] ?? 0),
+        ];
+        $eggValues = is_array($data['egg'] ?? null) ? $data['egg'] : [];
+
+        // Bot Guard remains a paid add-on until its surcharge is part of the
+        // authoritative quote. Do not let the browser request it as a free option.
+        if ((string) ($eggValues['ENABLE_GUARD'] ?? '0') !== '0') {
+            return response()->json([
+                'success' => false,
+                'error' => 'paid_option_pricing_not_configured',
+            ], 422);
+        }
+
+        $currencyCode = strtoupper(trim((string) $this->config('cs2_currency_code')));
+        $productId = (int) $this->config('cs2_product_id');
+        $planSettings = [
+            1 => 'cs2_plan_id_1_day',
+            7 => 'cs2_plan_id_7_days',
+            15 => 'cs2_plan_id_15_days',
+            30 => 'cs2_plan_id_30_days',
+        ];
+        $planSetting = $planSettings[$durationDays] ?? null;
+        $planId = $planSetting !== null ? (int) $this->config($planSetting) : 0;
+
+        if ($productId < 1 || $planId < 1 || $currencyCode === '') {
+            return response()->json([
+                'success' => false,
+                'error' => 'cs2_checkout_not_configured',
+            ], 503);
+        }
+
+        try {
+            $userLink = DB::table('fragcity_user_links')
+                ->where('steamid64', $steamId)
+                ->first();
+
+            if (!$userLink) {
+                throw new RuntimeException('fragcity_user_not_linked');
+            }
+
+            $user = User::query()
+                ->with('properties')
+                ->find((int) $userLink->user_id);
+
+            if (!$user) {
+                throw new RuntimeException('linked_paymenter_user_missing');
+            }
+
+            $product = Product::query()
+                ->with([
+                    'server',
+                    'plans.prices',
+                    'configOptions.children.plans.prices',
+                ])
+                ->find($productId);
+
+            if (
+                !$product
+                || !(bool) $product->enabled
+                || $product->server?->extension !== 'FragCityCS2'
+            ) {
+                throw new RuntimeException('cs2_product_invalid');
+            }
+
+            if ($product->stock !== null && (int) $product->stock < 1) {
+                throw new RuntimeException('cs2_product_out_of_stock');
+            }
+
+            $perUserLimit = (int) ($product->per_user_limit ?? 0);
+            if (
+                $perUserLimit > 0
+                && $user->services()->where('product_id', $product->id)->count() >= $perUserLimit
+            ) {
+                throw new RuntimeException('cs2_product_user_limit');
+            }
+
+            $plan = $product->plans->firstWhere('id', $planId);
+            $expectedPlan = match ($durationDays) {
+                1 => [1, 'day'],
+                7 => [1, 'week'],
+                15 => [15, 'day'],
+                30 => [1, 'month'],
+            };
+
+            if (
+                !$plan
+                || in_array((string) $plan->type, ['free', 'one-time'], true)
+                || (int) $plan->billing_period !== $expectedPlan[0]
+                || (string) $plan->billing_unit !== $expectedPlan[1]
+                || !$plan->prices->contains('currency_code', $currencyCode)
+            ) {
+                throw new RuntimeException('cs2_plan_invalid');
+            }
+
+            // Resolve all eight native Config Options in exactly the same way
+            // as the paid-order endpoint. Numeric child values are never trusted
+            // unless they exist beneath the expected parent Config Option.
+            $targets = [
+                'memory_mb' => [
+                    'aliases' => ['memory', 'memorymb', 'ram', 'rammb', 'memorylimit', 'ramlimit'],
+                    'value' => (string) $memoryMb,
+                ],
+                'disk_mb' => [
+                    'aliases' => ['disk', 'diskmb', 'storage', 'storagemb', 'ssd', 'ssdmb', 'disklimit', 'storagelimit'],
+                    'value' => (string) $diskMb,
+                ],
+                'cpu_percent' => [
+                    'aliases' => ['cpu', 'cpupercent', 'cpulimit'],
+                    'value' => (string) $cpuPercent,
+                ],
+                'max_players' => [
+                    'aliases' => ['srcdsmaxplayers'],
+                    'value' => (string) ($eggValues['SRCDS_MAXPLAYERS'] ?? ''),
+                    'allowed_values' => array_map('strval', range(5, 64)),
+                ],
+                'tickrate' => [
+                    'aliases' => ['tickrate'],
+                    'value' => (string) ($eggValues['TICKRATE'] ?? '64'),
+                    'allowed_values' => ['64', '128'],
+                ],
+                'databases' => [
+                    'aliases' => ['databases'],
+                    'value' => (string) $featureLimits['databases'],
+                    'allowed_values' => ['0', '1', '2', '3', '5', '10'],
+                ],
+                'additional_allocations' => [
+                    'aliases' => ['additionalallocations'],
+                    'value' => (string) $featureLimits['additional_allocations'],
+                    'allowed_values' => ['0', '1', '2', '3', '5'],
+                ],
+                'backups' => [
+                    'aliases' => ['backups'],
+                    'value' => (string) $featureLimits['backups'],
+                    'allowed_values' => ['0', '1', '2', '3', '5', '10'],
+                ],
+            ];
+
+            $normalizeOptionName = static function ($value): string {
+                return strtolower((string) preg_replace('/[^a-z0-9]/i', '', trim((string) $value)));
+            };
+
+            $recurringSubtotal = 0.0;
+            $setupFeeTotal = 0.0;
+            $priceLines = [];
+            $usedConfigOptionIds = [];
+
+            foreach ($targets as $targetName => $target) {
+                if (
+                    isset($target['allowed_values'])
+                    && !in_array($target['value'], $target['allowed_values'], true)
+                ) {
+                    throw new RuntimeException('cs2_config_option_mapping_invalid');
+                }
+
+                $matchingOptions = collect($product->configOptions)->filter(
+                    function ($option) use ($target, $normalizeOptionName) {
+                        $identifiers = array_map(
+                            $normalizeOptionName,
+                            [$option->env_variable ?? '', $option->name ?? '']
+                        );
+
+                        return array_intersect($target['aliases'], $identifiers) !== [];
+                    }
+                );
+
+                if ($matchingOptions->count() !== 1) {
+                    throw new RuntimeException('cs2_config_option_mapping_invalid');
+                }
+
+                $option = $matchingOptions->first();
+                $matchingChildren = $option->children->filter(
+                    fn ($child) => trim((string) $child->env_variable) === $target['value']
+                );
+
+                if ($matchingChildren->count() !== 1) {
+                    throw new RuntimeException('cs2_config_option_mapping_invalid');
+                }
+
+                if (
+                    (string) $option->type !== 'select'
+                    || !(bool) ($option->upgradable ?? false)
+                    || in_array((int) $option->id, $usedConfigOptionIds, true)
+                ) {
+                    throw new RuntimeException('cs2_config_option_mapping_invalid');
+                }
+
+                $child = $matchingChildren->first();
+                $childPrice = $child->price(
+                    null,
+                    (int) $plan->billing_period,
+                    (string) $plan->billing_unit,
+                    $currencyCode
+                );
+
+                if (!$childPrice->available) {
+                    throw new RuntimeException('cs2_config_option_price_missing');
+                }
+
+                $mustBeFree = (
+                    $targetName === 'max_players' && $target['value'] === '5'
+                ) || in_array($targetName, [
+                    'tickrate',
+                    'databases',
+                    'additional_allocations',
+                    'backups',
+                ], true);
+
+                if (
+                    $mustBeFree
+                    && (
+                        (float) $childPrice->price !== 0.0
+                        || (float) ($childPrice->setup_fee ?? 0) !== 0.0
+                    )
+                ) {
+                    throw new RuntimeException('cs2_config_option_price_missing');
+                }
+
+                $recurringSubtotal += (float) $childPrice->price;
+                $setupFeeTotal += (float) ($childPrice->setup_fee ?? 0);
+                $priceLines[] = [
+                    'option' => (string) $option->name,
+                    'value' => (string) $child->name,
+                    'recurring_price' => number_format((float) $childPrice->price, 2, '.', ''),
+                    'setup_fee' => number_format((float) ($childPrice->setup_fee ?? 0), 2, '.', ''),
+                ];
+                $usedConfigOptionIds[] = (int) $option->id;
+            }
+
+            // Validate the Egg fields against Paymenter's live Checkout manifest.
+            $checkoutFields = ExtensionHelper::getCheckoutConfig($product);
+            if (!is_array($checkoutFields) || $checkoutFields === []) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+
+            $manifestPath = dirname(__DIR__, 2) . '/Servers/FragCityCS2/resources/cs2-egg-variables.json';
+            if (!is_file($manifestPath)) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+
+            $manifest = json_decode(
+                (string) file_get_contents($manifestPath),
+                true,
+                512,
+                JSON_THROW_ON_ERROR
+            );
+            if (!is_array($manifest)) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+
+            $allowedEggKeys = [];
+            $eggRules = [];
+            $normalizedEggValues = [];
+
+            foreach ($checkoutFields as $field) {
+                $name = (string) ($field['name'] ?? '');
+                if ($name === '') {
+                    continue;
+                }
+
+                $allowedEggKeys[] = $name;
+                $value = $eggValues[$name] ?? $field['default'] ?? null;
+                $normalizedEggValues[$name] = $value;
+
+                $rules = [!empty($field['required']) ? 'required' : 'nullable'];
+                $fieldRules = $field['validation'] ?? [];
+                if (is_string($fieldRules)) {
+                    $fieldRules = array_filter(explode('|', $fieldRules));
+                }
+                if (is_array($fieldRules)) {
+                    $rules = array_merge($rules, $fieldRules);
+                }
+
+                if (in_array((string) ($field['type'] ?? ''), ['select', 'radio'], true)) {
+                    $options = $field['options'] ?? [];
+                    if (is_array($options) && array_is_list($options) && isset($options[0]) && is_array($options[0])) {
+                        $optionValues = array_map(
+                            static fn ($option): string => (string) ($option['value'] ?? ''),
+                            $options
+                        );
+                    } else {
+                        $optionValues = is_array($options)
+                            ? array_map('strval', array_keys($options))
+                            : [];
+                    }
+
+                    if ($optionValues !== []) {
+                        $rules[] = 'in:' . implode(',', array_map(
+                            static fn (string $value): string => str_replace(',', '\\,', $value),
+                            $optionValues
+                        ));
+                    }
+                }
+
+                $eggRules[$name] = array_values(array_unique($rules));
+            }
+
+            // The manifest also defines five native Paymenter Config Options:
+            // Max Players and Tickrate are Egg values; database/allocation/backup
+            // values are feature limits and must not be sent as arbitrary Egg keys.
+            $nativeConfigOptionFields = $manifest['paymenter']['config_options'] ?? [];
+            if (!is_array($nativeConfigOptionFields) || count($nativeConfigOptionFields) !== 5) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+
+            foreach ($nativeConfigOptionFields as $field) {
+                $fieldTarget = (string) ($field['target'] ?? 'egg');
+                $envVariable = trim((string) ($field['env_variable'] ?? ''));
+
+                if ($fieldTarget === 'feature_limit') {
+                    $optionValues = array_map(
+                        static fn ($option): string => (string) ($option['value'] ?? ''),
+                        is_array($field['options'] ?? null) ? $field['options'] : []
+                    );
+                    if (
+                        $envVariable === ''
+                        || !array_key_exists($envVariable, $featureLimits)
+                        || in_array($envVariable, $allowedEggKeys, true)
+                        || !in_array((string) $featureLimits[$envVariable], $optionValues, true)
+                    ) {
+                        throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                    }
+
+                    continue;
+                }
+
+                if ($fieldTarget !== 'egg') {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $name = strtoupper($envVariable);
+                if ($name === '' || in_array($name, $allowedEggKeys, true)) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $allowedEggKeys[] = $name;
+                $value = $eggValues[$name] ?? $field['default'] ?? null;
+                $normalizedEggValues[$name] = $value;
+
+                $rules = [!empty($field['required']) ? 'required' : 'nullable'];
+                $fieldRules = $field['validation'] ?? [];
+                if (is_string($fieldRules)) {
+                    $fieldRules = array_filter(explode('|', $fieldRules));
+                }
+                if (is_array($fieldRules)) {
+                    $rules = array_merge($rules, $fieldRules);
+                }
+
+                $optionValues = array_map(
+                    static fn ($option): string => (string) ($option['value'] ?? ''),
+                    is_array($field['options'] ?? null) ? $field['options'] : []
+                );
+                if ($optionValues === [] || in_array('', $optionValues, true)) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $rules[] = 'in:' . implode(',', array_map(
+                    static fn (string $value): string => str_replace(',', '\\,', $value),
+                    $optionValues
+                ));
+                $eggRules[$name] = array_values(array_unique($rules));
+            }
+
+            if (array_diff(array_keys($eggValues), $allowedEggKeys) !== []) {
+                throw new RuntimeException('invalid_egg_variable');
+            }
+
+            $eggValidator = Validator::make($normalizedEggValues, $eggRules);
+            if ($eggValidator->fails()) {
+                throw new RuntimeException('egg_validation_failed');
+            }
+
+            $cfgOptions = $manifest['game_mode_manager']['cfg_options'] ?? [];
+            $selectedCfg = null;
+            foreach (is_array($cfgOptions) ? $cfgOptions : [] as $cfgOption) {
+                if ((string) ($cfgOption['config'] ?? '') === (string) ($normalizedEggValues['EXEC'] ?? '')) {
+                    $selectedCfg = $cfgOption;
+                    break;
+                }
+            }
+
+            $compatibleMapGroups = $selectedCfg['mapGroups'] ?? [];
+            if (
+                !is_array($compatibleMapGroups)
+                || !in_array((string) ($normalizedEggValues['MAPGROUP'] ?? ''), $compatibleMapGroups, true)
+            ) {
+                throw new RuntimeException('egg_combination_invalid');
+            }
+
+            $planPrice = $plan->price($currencyCode);
+            if (!$planPrice->available) {
+                throw new RuntimeException('cs2_plan_price_missing');
+            }
+
+            $recurringSubtotal += (float) $planPrice->price;
+            $setupFeeTotal += (float) ($planPrice->setup_fee ?? 0);
+            array_unshift($priceLines, [
+                'option' => (string) $plan->name,
+                'value' => (string) $durationDays . ' days',
+                'recurring_price' => number_format((float) $planPrice->price, 2, '.', ''),
+                'setup_fee' => number_format((float) ($planPrice->setup_fee ?? 0), 2, '.', ''),
+            ]);
+
+            $customerTax = Settings::tax($user);
+            $invoicePrice = new Price(
+                [
+                    'price' => $recurringSubtotal,
+                    'setup_fee' => $setupFeeTotal,
+                    'currency' => $planPrice->currency,
+                ],
+                apply_exclusive_tax: true,
+                tax: $customerTax
+            );
+
+            $computedTotal = round((float) $invoicePrice->total, 2);
+            $wholeRialTotal = (int) round($computedTotal);
+            if (
+                abs($computedTotal - $wholeRialTotal) > 0.00001
+                || $wholeRialTotal < 1
+                || ($wholeRialTotal % 10) !== 0
+            ) {
+                throw new RuntimeException('cs2_quote_amount_mismatch');
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'currency_code' => $currencyCode,
+                    'currency_unit' => 'rial',
+                    'amount_rial' => $wholeRialTotal,
+                    'amount_toman' => intdiv($wholeRialTotal, 10),
+                    'recurring_subtotal_rial' => (int) round($recurringSubtotal),
+                    'setup_fee_total_rial' => (int) round($setupFeeTotal),
+                    'tax_rial' => $wholeRialTotal - (int) round($recurringSubtotal + $setupFeeTotal),
+                    'duration_days' => $durationDays,
+                    'server_name' => $serverName,
+                    'price_lines' => $priceLines,
+                    'expires_in_seconds' => 60,
+                ],
+            ]);
+        } catch (RuntimeException $e) {
+            $status = match ($e->getMessage()) {
+                'fragcity_user_not_linked', 'linked_paymenter_user_missing' => 404,
+                'cs2_checkout_not_configured', 'cs2_checkout_manifest_unavailable' => 503,
+                'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
+                'cs2_plan_invalid', 'cs2_plan_price_missing', 'cs2_config_option_mapping_invalid',
+                'cs2_config_option_price_missing', 'cs2_quote_amount_mismatch',
+                'egg_combination_invalid', 'invalid_egg_variable', 'egg_validation_failed',
+                'paid_option_pricing_not_configured' => 422,
+                default => 500,
+            };
+
+            if ($status === 500) {
+                Log::error('FragCity CS2 quote failed.', [
+                    'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                    'exception' => get_class($e),
+                    'reason' => $e->getMessage(),
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => 'cs2_quote_unavailable',
+                ], 500);
+            }
+
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], $status);
+        } catch (Throwable $e) {
+            Log::error('FragCity CS2 quote failed.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'exception' => get_class($e),
+            ]);
+            return response()->json([
+                'success' => false,
+                'error' => 'cs2_quote_unavailable',
+            ], 500);
+        }
+    }
+
     public function createCs2Order(Request $request): JsonResponse
     {
         $authError = $this->authenticateBridgeRequest($request);
@@ -1336,6 +1863,7 @@ class FragCityAPI extends Extension
         $validator = Validator::make(is_array($payload) ? $payload : [], [
             'order_ref' => ['required', 'string', 'regex:/^[a-f0-9]{32}$/i'],
             'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'expected_amount_rial' => ['sometimes', 'integer', 'min:10'],
             'payment' => ['required', 'array'],
             'payment.provider' => ['required', 'in:zarinpal,wallet'],
             'payment.authority' => [
@@ -1393,6 +1921,9 @@ class FragCityAPI extends Extension
         $zarinpalRef = $isZarinpal ? (string) $data['payment']['ref_id'] : '';
         $amountToman = $isZarinpal ? (int) $data['payment']['amount_toman'] : 0;
         $amountRial = $isZarinpal ? (int) $data['payment']['amount_rial'] : 0;
+        $expectedAmountRial = isset($data['expected_amount_rial'])
+            ? (int) $data['expected_amount_rial']
+            : null;
         $durationDays = (int) $data['duration_days'];
         $serverName = trim((string) $data['server_name']);
         $memoryMb = (int) $data['resources']['memory_mb'];
@@ -1510,7 +2041,8 @@ class FragCityAPI extends Extension
                 $currencyUnit,
                 $productId,
                 $planId,
-                $paymenterAmount
+                $paymenterAmount,
+                $expectedAmountRial
             ): array {
                 $existing = DB::table('fragcity_server_orders')
                     ->where('order_ref', $orderRef)
@@ -1997,6 +2529,10 @@ class FragCityAPI extends Extension
                 $computedInvoiceTotal = round((float) $invoicePrice->total, 2);
                 $computedServicePrice = round((float) $serviceRecurringPrice->price, 2);
                 $wholeRialTotal = (int) round($computedInvoiceTotal);
+
+                if ($expectedAmountRial !== null && $expectedAmountRial !== $wholeRialTotal) {
+                    throw new RuntimeException('cs2_quote_amount_mismatch');
+                }
 
                 // ZarinPal's Toman amount must map exactly to Paymenter's Rial
                 // total. We reject fractional Rial or a remainder that cannot be
