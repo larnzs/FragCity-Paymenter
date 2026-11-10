@@ -89,7 +89,7 @@ jobs:
           QUEUE_CONNECTION=sync
           LOG_CHANNEL=stderr
           ENV
-          php "$GITHUB_WORKSPACE/tools/validate-fragcity-theme-views.php"
+          php "$GITHUB_WORKSPACE/tools/validate-fragcity-theme-views.php" "$GITHUB_WORKSPACE/paymenter-core"
 
       - name: Validate PHP, billing and provisioning before publishing
         run: bash tools/validate-fragcity-paymenter.sh
