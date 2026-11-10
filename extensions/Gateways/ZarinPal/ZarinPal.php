@@ -159,6 +159,11 @@ class ZarinPal extends Gateway
 
             if ($activeAttempt) {
                 if ($activeAttempt->status === 'pending' && $activeAttempt->authority) {
+                    $activeAmount = number_format((float) $activeAttempt->amount_paymenter, 2, '.', '');
+                    if ($activeAmount !== $amountPaymenter) {
+                        throw new DisplayException('The outstanding invoice amount changed while an earlier ZarinPal payment is still active. Check the invoice or wait for the existing payment attempt to expire.');
+                    }
+
                     return [
                         'reuse_url' => $this->paymentUrl((bool) $activeAttempt->sandbox, (string) $activeAttempt->authority),
                     ];
