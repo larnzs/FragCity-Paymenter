@@ -2,11 +2,18 @@
 
 declare(strict_types=1);
 
-$root = dirname(__DIR__);
+$root = isset($argv[1]) && $argv[1] !== ''
+    ? rtrim($argv[1], DIRECTORY_SEPARATOR)
+    : dirname(__DIR__);
 $themeViews = $root . '/themes/fragcity/views';
 
 if (!is_dir($themeViews)) {
-    fwrite(STDERR, "Theme views directory is missing.\n");
+    fwrite(STDERR, "Theme views directory is missing: {$themeViews}\n");
+    exit(1);
+}
+
+if (!is_file($root . '/bootstrap/app.php')) {
+    fwrite(STDERR, "Paymenter application root is invalid: {$root}\n");
     exit(1);
 }
 
