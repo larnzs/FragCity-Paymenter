@@ -25,8 +25,8 @@ while IFS= read -r -d '' file; do
 done < <(find "$migration_dir" -maxdepth 1 -type f -name '*.php' -print0 | sort -z)
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.12.0'" "$api"
-grep -Fq "'version' => '1.12.0'" "$api"
+grep -Fq "version: '1.13.0'" "$api"
+grep -Fq "'version' => '1.13.0'" "$api"
 grep -Fq "version: '1.7.0'" "$cs2"
 
 # The first supported CS2 subscription is now three days. Keep the historical
@@ -34,8 +34,10 @@ grep -Fq "version: '1.7.0'" "$cs2"
 grep -Fq "'label' => 'CS2 3-day Plan ID'" "$api"
 test "$(grep -Fc "3 => 'cs2_plan_id_1_day'" "$api")" -eq 3
 test "$(grep -Fc "3 => [3, 'day']" "$api")" -eq 3
+test "$(grep -Fc "7 => [7, 'day']" "$api")" -eq 3
 test "$(grep -Fc "'in:3,7,15,30'" "$api")" -eq 2
 grep -Fq '3 days = `3 days`' "$api_readme"
+grep -Fq '7 days = `7 days`' "$api_readme"
 
 # Signed bridge, authoritative billing, receipt idempotency and native provisioning.
 for needle in \
