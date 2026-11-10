@@ -43,7 +43,7 @@ grep -Fq "ExtensionHelper::runMigrations('extensions/Gateways/ZarinPal/database/
 grep -Fq "ExtensionHelper::addPayment(" "$zarinpal"
 grep -Fq "InvoiceTransactionStatus::Succeeded" "$zarinpal"
 grep -Fq "token_hash" "$zarinpal"
-grep -Fq "hash('sha256', $token)" "$zarinpal"
+grep -Fq "hash('sha256', \$token)" "$zarinpal"
 grep -Fq "verify.json" "$zarinpal"
 grep -Fq "manual_review" "$zarinpal"
 grep -Fq "status' => 'succeeded'" "$zarinpal"
