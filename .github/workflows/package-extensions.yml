@@ -71,6 +71,7 @@ jobs:
           1. FragCityAPI-v*.zip — install under Others.
           2. FragCitySupportAPI-v*.zip — install under Others.
           3. FragCityCS2-v*.zip — install under Servers.
+          4. ZarinPal-v*.zip — install under Gateways.
 
           Install/update order: FragCityAPI → FragCitySupportAPI → FragCityCS2.
 
