@@ -80,9 +80,9 @@ test "$readme_route_count" -eq "$route_count"
 php -r '
   $manifest = json_decode(file_get_contents($argv[1]), true, 512, JSON_THROW_ON_ERROR);
   $checkout = array_column($manifest["paymenter"]["checkout_fields"] ?? [], "name");
-  $expectedCheckout = ["SRCDS_MAP", "SRCDS_MAXPLAYERS", "TICKRATE", "EXEC", "MAPGROUP", "COOLDOWN", "ENABLE_GUARD", "GUARD_BAN_MINUTES"];
+  $expectedCheckout = ["SRCDS_MAP", "EXEC", "MAPGROUP", "COOLDOWN", "ENABLE_GUARD", "GUARD_BAN_MINUTES"];
   if (array_diff($expectedCheckout, $checkout) || array_diff($checkout, $expectedCheckout)) {
-    fwrite(STDERR, "CS2 Egg Checkout manifest does not match the eight-field bridge contract.\\n");
+    fwrite(STDERR, "CS2 Egg Checkout manifest does not match the six-field Checkout contract.\\n");
     exit(1);
   }
 
