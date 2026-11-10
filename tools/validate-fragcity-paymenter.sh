@@ -36,7 +36,7 @@ for needle in \
   "Cache::add(" \
   "function cs2Catalog" \
   "function createCs2Order" \
-  "Settings::tax($user)" \
+  "Settings::tax(\$user)" \
   "cs2_quote_amount_mismatch" \
   "zarinpal_payment_already_used" \
   "order_reference_conflict" \
@@ -51,23 +51,23 @@ done
 
 grep -Fq "function createServer" "$cs2"
 grep -Fq "function upgradeServer" "$cs2"
-grep -Fq "applyResourceLimitsFromConfigOptions($service, $properties)" "$cs2"
+grep -Fq "applyResourceLimitsFromConfigOptions(\$service, \$properties)" "$cs2"
 test "$(grep -Fc 'applyNativeConfigOptions($service, $properties)' "$cs2")" -ge 2
 
 # All eight service-level Config Options must survive Paymenter's native upgrade flow.
-grep -Fq "!(bool) ($configOption->upgradable ?? false)" "$api"
-grep -Fq "!(bool) ($option->upgradable ?? false)" "$cs2"
+grep -Fq "!(bool) (\$configOption->upgradable ?? false)" "$api"
+grep -Fq "!(bool) (\$option->upgradable ?? false)" "$cs2"
 grep -Fq 'Enable `Upgradable` for all eight Config Options' "$cs2_readme"
 grep -Fq 'Enable `Upgradable` for all eight Config Options' "$api_readme"
 
 # Paymenter is Rial-only; do not reintroduce a browser-selected currency unit or
 # duplicated resource properties that could drift from native ServiceConfig rows.
-grep -Fq "$currencyUnit = 'rial'" "$api"
-grep -Fq "$paymenterAmount = $amountRial;" "$api"
+grep -Fq "\$currencyUnit = 'rial'" "$api"
+grep -Fq "\$paymenterAmount = \$amountRial;" "$api"
 ! grep -Fq "'name' => 'cs2_currency_unit'" "$api"
-! grep -Fq "'memory' => (string) $memoryMb" "$api"
-! grep -Fq "'disk' => (string) $diskMb" "$api"
-! grep -Fq "'cpu' => (string) $cpuPercent" "$api"
+! grep -Fq "'memory' => (string) \$memoryMb" "$api"
+! grep -Fq "'disk' => (string) \$diskMb" "$api"
+! grep -Fq "'cpu' => (string) \$cpuPercent" "$api"
 
 grep -Fq "/api/v1/fragcity/bridge/orders/cs2" "$routes"
 grep -Fq "/api/v1/fragcity/bridge/wallet/topups/prepare" "$routes"
