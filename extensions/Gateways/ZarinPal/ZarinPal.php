@@ -325,7 +325,7 @@ class ZarinPal extends Gateway
             if (
                 $locked->status === 'verifying'
                 && $locked->verify_started_at
-                && now()->diffInSeconds($locked->verify_started_at) < self::VERIFY_LEASE_SECONDS
+                && strtotime((string) $locked->verify_started_at) > (time() - self::VERIFY_LEASE_SECONDS)
             ) {
                 return 'in_progress';
             }
@@ -502,7 +502,7 @@ class ZarinPal extends Gateway
         $factor = $unit === 'toman' ? 10 : 1;
         $rial = (float) $amount * $factor;
 
-        if (!is_finite($rial) || $rial < 10 || $rial > PHP_INT_MAX) {
+        if (!is_finite($rial) || $rial <= 0 || $rial > PHP_INT_MAX) {
             throw new DisplayException('The ZarinPal payment amount is outside the supported range.');
         }
 
