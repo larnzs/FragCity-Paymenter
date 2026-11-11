@@ -1,12 +1,14 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.14.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.15.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
 Provides a narrow private server-to-server bridge for FragCity identity, paid CS2 orders and customer server access:
 
 - `POST /api/v1/fragcity/bridge/ping`
+- `GET /auth/fragcity/sso/start`
+- `POST /auth/fragcity/sso/callback`
 - `POST /api/v1/fragcity/bridge/catalog/cs2`
 - `POST /api/v1/fragcity/bridge/wallet/balance`
 - `POST /api/v1/fragcity/bridge/wallet/topups/prepare`
@@ -23,6 +25,34 @@ Provides a narrow private server-to-server bridge for FragCity identity, paid CS
 - `POST /api/v1/fragcity/bridge/orders/vip/revoke`
 
 All bridge routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are server-to-server endpoints; the browser must never call them directly.
+
+## Browser SSO (Steam and FragCity account)
+
+The extension provides a browser SSO provider without modifying Paymenter Core:
+
+- `GET /auth/fragcity/sso/start` creates a random state value in the Paymenter session and redirects to the main FragCity website.
+- FragCity authenticates the browser using its existing Steam OpenID or username/password flow. Existing valid FragCity remember-me tokens are also accepted.
+- After checking the linked account, the main website sends a short-lived HMAC-SHA256 ticket to Paymenter through an auto-submitted HTTPS form POST.
+- `POST /auth/fragcity/sso/callback` validates the expected website Origin, Paymenter session state, ticket signature, issuer/audience, timestamp, expiry and SteamID64-to-Paymenter-user mapping. A unique hashed ticket ID prevents replay.
+- Paymenter then uses its native login action and session model. If Paymenter two-factor authentication is enabled, the normal Paymenter 2FA challenge is still required.
+
+The SSO ticket contains only the linked SteamID64, Paymenter user ID, state, issue/expiry timestamps, one-time ID and remember preference. It never contains a password, API key, PHP session ID or a browser-supplied user ID. The ticket is valid for at most 90 seconds and is consumed once.
+
+When the FragCity account was signed in with its remember-me option, the SSO ticket asks Paymenter to create its normal 30-day remembered session. Otherwise Paymenter creates a normal browser session. Existing Paymenter sessions for a different user are never silently replaced.
+
+### SSO configuration
+
+Under **Paymenter Admin → Extensions → Others → FragCity API**, configure:
+
+- `sso_enabled`: enable or disable the FragCity browser SSO button and routes.
+- `website_base_url`: canonical HTTPS origin `https://fragcity.ir` (origin only; no path or trailing slash).
+- `shared_secret`: the same secret already configured in the FragCity website's private `settings/settings.json` at `integrations.paymenter_backend.shared_secret`.
+
+The main website must have `integrations.paymenter_backend.base_url` set to `https://billing.fragcity.ir` and use the same HMAC secret. No additional API key or Steam Web API key is needed for SSO. The Steam OpenID verification remains on the main FragCity website.
+
+The login button is added to the FragCity Paymenter theme. The main website's Store links also enter Billing through the SSO start route, preserving the intended local Paymenter destination. If the browser is not signed in to FragCity, the user can choose Steam or the normal FragCity username/password form and is returned to Billing after authentication/account completion.
+
+**Paymenter v1.5.9 limitation:** its built-in Settings → Social Login list is hard-coded to Google, GitHub and Discord and has no extension hook for registering a new provider. To keep Paymenter Core unmodified, FragCity SSO is configured in the FragCityAPI extension settings and rendered by the FragCity theme instead of patching Paymenter Core.
 
 ## Configuration
 
