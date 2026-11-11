@@ -88,3 +88,7 @@ Route::post('/auth/fragcity/sso/callback', [FragCityAPI::class, 'completeSso'])
     ->middleware(['web', 'throttle:20,1'])
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.sso.callback');
+
+Route::get('/auth/fragcity/sso/2fa', [FragCityAPI::class, 'ssoTfaPage'])
+    ->middleware(['web', 'guest'])
+    ->name('extensions.fragcity-api.sso.2fa');
