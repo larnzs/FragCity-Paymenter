@@ -1,5 +1,7 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-account-page fc-account-notifications-page" dir="rtl">
     <x-navigation.breadcrumb />
+
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / NOTIFICATIONS</span><h1>{{ __('navigation.notifications') }}</h1><p>روش دریافت اعلان‌های ایمیلی و درون‌برنامه‌ای را کنترل کن.</p></div></div>
 
     <div class="px-2">
         <!-- Configure push notifications -->
