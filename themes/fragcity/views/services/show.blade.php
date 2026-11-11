@@ -15,7 +15,7 @@
         </div>
     </div>
     @endif
-    <div class="bg-background-secondary border border-neutral p-6 rounded-lg mt-2">
+    <div class="fc-service-sheet bg-background-secondary border border-neutral p-6 rounded-lg mt-2">
         <div class="flex flex-col md:flex-row justify-between">
             <h1 class="text-2xl font-semibold">{{ __('services.services') }}</h1>
         </div>
