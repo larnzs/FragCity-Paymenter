@@ -5,7 +5,7 @@
         <div class="fc-portal-hero__copy">
             <span class="fc-portal-eyebrow"><span class="fc-portal-eyebrow__mark">FC</span> FRAGCITY / CUSTOMER CENTER</span>
             <h1>سلام {{ Auth::user()->first_name ?: Auth::user()->name }} <span aria-hidden="true">👋</span></h1>
-            <p>{{ __('dashboard.dashboard_description') }}</p>
+            <p>مدیریت سرورها، پرداخت‌ها و درخواست‌های پشتیبانی حساب FragCity از یک پنل یکپارچه.</p>
             <div class="fc-portal-hero__meta">
                 <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> حساب کاربری امن</span>
                 <span><i class="fa-solid fa-server" aria-hidden="true"></i> مدیریت سرویس‌ها</span>
@@ -55,14 +55,14 @@
                 <div class="fc-portal-panel__heading">
                     <div>
                         <span class="fc-portal-kicker">01 / SERVICES</span>
-                        <h2><i class="fa-solid fa-server" aria-hidden="true"></i> {{ __('dashboard.active_services') }}</h2>
+                        <h2><i class="fa-solid fa-server" aria-hidden="true"></i> سرویس‌های فعال</h2>
                         <p>سرویس‌های فعال و جزئیات اشتراک خود را مدیریت کن.</p>
                     </div>
                     <span class="fc-portal-count">{{ Auth::user()->services()->where('status', 'active')->count() }}</span>
                 </div>
                 <div class="fc-portal-widget"><livewire:services.widget status="active" /></div>
                 <x-navigation.link class="fc-portal-view-all" :href="route('services')">
-                    {{ __('dashboard.view_all') }}
+                    مشاهده همه
                     <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
                 </x-navigation.link>
             </section>
@@ -72,7 +72,7 @@
                 <div class="fc-portal-panel__heading">
                     <div>
                         <span class="fc-portal-kicker">02 / SUPPORT</span>
-                        <h2><i class="fa-solid fa-headset" aria-hidden="true"></i> {{ __('dashboard.open_tickets') }}</h2>
+                        <h2><i class="fa-solid fa-headset" aria-hidden="true"></i> تیکت‌های باز</h2>
                         <p>آخرین پاسخ‌ها و درخواست‌های پشتیبانی را دنبال کن.</p>
                     </div>
                     <span class="fc-portal-count">{{ Auth::user()->tickets()->where('status', '!=', 'closed')->count() }}</span>
@@ -91,7 +91,7 @@
                 <div class="fc-portal-panel__heading">
                     <div>
                         <span class="fc-portal-kicker">03 / BILLING</span>
-                        <h2><x-ri-receipt-line class="size-5" /> {{ __('dashboard.unpaid_invoices') }}</h2>
+                        <h2><i class="fa-solid fa-receipt" aria-hidden="true"></i> فاکتورهای پرداخت‌نشده</h2>
                         <p>فاکتورهای در انتظار پرداخت و سوابق مالی.</p>
                     </div>
                     <span class="fc-portal-count">{{ Auth::user()->invoices()->where('status', 'pending')->count() }}</span>
