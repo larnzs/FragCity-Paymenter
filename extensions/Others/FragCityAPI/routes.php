@@ -59,3 +59,23 @@ Route::post('/api/v1/fragcity/bridge/servers/username', [FragCityAPI::class, 'se
     ->middleware('throttle:60,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.servers.username');
+
+Route::post('/api/v1/fragcity/bridge/catalog/vip', [FragCityAPI::class, 'vipCatalog'])
+    ->middleware('throttle:60,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.catalog.vip');
+
+Route::post('/api/v1/fragcity/bridge/orders/vip', [FragCityAPI::class, 'createVipOrder'])
+    ->middleware('throttle:20,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.orders.vip');
+
+Route::post('/api/v1/fragcity/bridge/orders/vip/list', [FragCityAPI::class, 'listVipOrders'])
+    ->middleware('throttle:30,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.orders.vip.list');
+
+Route::post('/api/v1/fragcity/bridge/orders/vip/revoke', [FragCityAPI::class, 'revokeVipMembership'])
+    ->middleware('throttle:10,1')
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.orders.vip.revoke');
