@@ -53,6 +53,19 @@
     min-width: 0;
 }
 
+/* The shared header is sticky and occupies 72px in normal document flow. */
+.fc-site-sidebar {
+    top: 72px !important;
+    height: calc(100vh - 72px) !important;
+    margin-top: 0 !important;
+}
+
+@supports (height: 100dvh) {
+    .fc-site-sidebar {
+        height: calc(100dvh - 72px) !important;
+    }
+}
+
 
 /* Paymenter bindings for the shared FragCity site header. */
 .shock-auth-actions {
