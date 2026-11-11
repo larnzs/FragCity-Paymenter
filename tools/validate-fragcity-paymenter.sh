@@ -75,8 +75,17 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 ! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.14.0'" "$api"
-grep -Fq "'version' => '1.14.0'" "$api"
+grep -Fq "version: '1.15.0'" "$api"
+grep -Fq "'version' => '1.15.0'" "$api"
+grep -Fq "function startSso" "$api"
+grep -Fq "function completeSso" "$api"
+grep -Fq "fragcity_sso_used_tickets" "$api"
+grep -Fq "fragcity_sso_used_tickets" "$routes"
+grep -Fq "/auth/fragcity/sso/start" "$routes"
+grep -Fq "/auth/fragcity/sso/callback" "$routes"
+grep -Fq "fragcitySsoEnabled" "$api"
+test -f "extensions/Others/FragCityAPI/database/migrations/2026_11_11_000009_create_fragcity_sso_used_tickets_table.php"
+grep -Fq "ticket ID prevents replay" "$api_readme"
 grep -Fq "version: '1.7.2'" "$cs2"
 
 # The first supported CS2 subscription is now three days. Keep the historical
