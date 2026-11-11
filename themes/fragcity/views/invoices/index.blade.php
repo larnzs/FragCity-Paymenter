@@ -11,7 +11,7 @@
     <div class="fc-portal-list">
         @forelse ($invoices as $invoice)
         <a href="{{ route('invoices.show', $invoice) }}" wire:navigate class="fc-portal-list-card fc-invoice-card">
-            <span class="fc-portal-list-card__icon"><x-ri-receipt-line class="size-6" /></span>
+            <span class="fc-portal-list-card__icon"><x-ri-bill-line class="size-6" /></span>
             <span class="fc-portal-list-card__body">
                 <strong>{{ !$invoice->number && config('settings.invoice_proforma', false) ? __('invoices.proforma_invoice', ['id' => $invoice->id]) : __('invoices.invoice', ['id' => $invoice->number]) }}</strong>
                 <small>{{ $invoice->created_at->format('d M Y') }} <span>·</span> {{ $invoice->items->count() }} مورد</small>
@@ -23,7 +23,7 @@
         </a>
         @empty
         <div class="fc-portal-empty">
-            <span><x-ri-receipt-line class="size-8" /></span>
+            <span><x-ri-bill-line class="size-8" /></span>
             <strong>{{ __('invoices.no_invoices') }}</strong>
             <p>پس از ثبت سفارش یا ایجاد فاکتور، سوابق مالی اینجا دیده می‌شوند.</p>
             <a href="{{ route('home') }}" wire:navigate class="fc-portal-button">رفتن به فروشگاه</a>
