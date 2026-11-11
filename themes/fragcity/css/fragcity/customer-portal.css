@@ -1569,7 +1569,7 @@
 }
 
 .fc-account-security-page .fc-account-content > div > h5,
-.fc-account-credits-page .fc-account-content > form > h4 {
+.fc-account-credits-page .fc-account-content > h4 {
     display: flex;
     align-items: center;
     gap: 9px;
