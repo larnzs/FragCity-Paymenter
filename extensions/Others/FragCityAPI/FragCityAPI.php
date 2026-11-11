@@ -3796,6 +3796,27 @@ class FragCityAPI extends Extension
                     'steamid64' => $steamId,
                 ]);
                 if (($status['active'] ?? false) !== true) {
+                    // If a previous attempt already removed VIPCore access but
+                    // the HTTP response was lost, return the existing Paymenter
+                    // refund ledger instead of failing or crediting twice.
+                    $priorRefund = DB::table('fragcity_vip_refunds')
+                        ->where('steamid64', $steamId)
+                        ->where('status', 'credited')
+                        ->orderByDesc('id')
+                        ->first();
+                    if ($priorRefund) {
+                        $balance = $user->credits()
+                            ->where('currency_code', $settings['currency'])
+                            ->value('amount');
+                        return [
+                            'revoked' => true,
+                            'refund_ref' => (string) $priorRefund->refund_ref,
+                            'refund_amount_rial' => number_format((float) $priorRefund->amount_rial, 2, '.', ''),
+                            'wallet_balance' => number_format((float) ($balance ?? 0), 2, '.', ''),
+                            'invoice_id' => (int) ($priorRefund->paymenter_invoice_id ?? 0),
+                            'replayed' => true,
+                        ];
+                    }
                     throw new RuntimeException('vip_membership_not_active');
                 }
 
@@ -4397,6 +4418,9 @@ class FragCityAPI extends Extension
             if ($httpStatus === 409 && $error === 'membership_already_active') {
                 throw new RuntimeException('vip_membership_already_active');
             }
+            if ($httpStatus === 409 && $error === 'membership_not_active') {
+                throw new RuntimeException('vip_membership_not_active');
+            }
             if ($httpStatus === 409 && $error === 'membership_upgrade_source_changed') {
                 throw new RuntimeException('vip_upgrade_source_changed');
             }
@@ -4413,7 +4437,12 @@ class FragCityAPI extends Extension
 
     private function vipOrderResponse(object $order, bool $replayed): array
     {
+        $paidAt = $order->paid_at ?? null;
+        $provisionedAt = $order->provisioned_at ?? null;
+        $createdAt = $order->created_at ?? null;
+
         return [
+            'id' => (int) $order->id,
             'order_ref' => (string) $order->order_ref,
             'invoice_id' => (int) ($order->paymenter_invoice_id ?? 0),
             'vip_level' => (int) $order->vip_level,
@@ -4421,6 +4450,13 @@ class FragCityAPI extends Extension
             'amount_rial' => number_format((float) $order->amount_rial, 2, '.', ''),
             'amount_toman' => number_format(((float) $order->amount_rial) / 10, 2, '.', ''),
             'status' => (string) $order->status,
+            'payment_method' => 'paymenter_wallet',
+            'purchase_type' => (string) ($order->purchase_type ?? 'new'),
+            'upgrade_from_level' => isset($order->upgrade_from_level) ? (int) $order->upgrade_from_level : null,
+            'created_at' => $createdAt ? (string) $createdAt : null,
+            'paid_at' => $paidAt ? (string) $paidAt : null,
+            'provisioned_at' => $provisionedAt ? (string) $provisionedAt : null,
+            'revoke_available_at' => $paidAt ? strtotime((string) $paidAt) + 3600 : null,
             'provision_pending' => (string) $order->status === 'paid',
             'expires' => (int) ($order->vip_expires_at ?? 0),
             'replayed' => $replayed,
