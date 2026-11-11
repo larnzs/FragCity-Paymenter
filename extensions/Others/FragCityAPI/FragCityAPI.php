@@ -3352,7 +3352,7 @@ class FragCityAPI extends Extension
                 $sourceRef = strtolower((string) ($paidPurchase['order_ref'] ?? ''));
                 $durationSeconds = (int) ($paidPurchase['duration_seconds'] ?? 0);
                 $durationDays = (int) round($durationSeconds / 86400);
-                    $sourceOrder = DB::table('fragcity_vip_orders')
+                $sourceOrder = DB::table('fragcity_vip_orders')
                     ->where('order_ref', $sourceRef)
                     ->where('steamid64', $steamId)
                     ->where('status', 'provisioned')
@@ -4181,7 +4181,7 @@ class FragCityAPI extends Extension
     private function calculateVipPrice(
         Product $product,
         array $settings,
-        User $user,
+        ?User $user,
         int $level,
         int $days
     ): array {
