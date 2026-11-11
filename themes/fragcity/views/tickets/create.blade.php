@@ -5,7 +5,6 @@
         <a href="{{ route('tickets') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به تیکت‌ها</a>
     </div>
     <div class="bg-primary-800 p-6 rounded-lg mt-2 fc-ticket-create-panel">
-    <h1 class="text-2xl font-semibold mb-2">{{ __('ticket.create_ticket') }}</h1>
     <div class="grid grid-cols-2 gap-4">
         <x-form.input wire:model="subject" label="{{ __('ticket.subject') }}" name="subject" required />
         @if (count($departments) > 0)
