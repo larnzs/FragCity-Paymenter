@@ -1,5 +1,7 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-account-page fc-account-security-page" dir="rtl">
     <x-navigation.breadcrumb />
+
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / ACCOUNT SECURITY</span><h1>امنیت حساب</h1><p>نشست‌های فعال، رمز عبور و تأیید دومرحله‌ای را مدیریت کن.</p></div></div>
     <div class="px-2 flex flex-col gap-4">
 
         <!-- Sessions -->
