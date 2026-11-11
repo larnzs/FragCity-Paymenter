@@ -15,17 +15,17 @@ class SsoTfa extends Component
 {
     public string $code = '';
 
-    public function mount(): void
+    public function mount()
     {
         $session = Session::get('2fa');
         if (!$session || ($session['expires'] ?? now()->subMinute()) < now()) {
             Session::forget(['2fa', 'fragcity_sso_2fa_return_to']);
 
-            $this->redirect(route('login'), true);
+            return $this->redirect(route('login'), true);
         }
     }
 
-    public function verify(Login $loginAction): void
+    public function verify(Login $loginAction)
     {
         $this->validate([
             'code' => 'required|numeric',
@@ -35,9 +35,7 @@ class SsoTfa extends Component
 
         if (!$session || ($session['expires'] ?? now()->subMinute()) < now()) {
             Session::forget(['2fa', 'fragcity_sso_2fa_return_to']);
-            $this->redirect(route('login'), true);
-
-            return;
+            return $this->redirect(route('login'), true);
         }
 
         $rateLimitKey = '2fa:' . $session['user_id'];
@@ -52,9 +50,7 @@ class SsoTfa extends Component
         $user = User::findOrFail($session['user_id']);
         if (!$user->tfa_secret) {
             Session::forget(['2fa', 'fragcity_sso_2fa_return_to']);
-            $this->redirect(route('login'), true);
-
-            return;
+            return $this->redirect(route('login'), true);
         }
 
         $tfa = new TwoFactorAuth(new EndroidQrCodeProvider, config('app.name'));
@@ -84,7 +80,7 @@ class SsoTfa extends Component
             Session::pull('fragcity_sso_2fa_return_to', route('home'))
         );
 
-        $this->redirect($destination, true);
+        return $this->redirect($destination, true);
     }
 
     private function safeLocalDestination(mixed $destination): string
