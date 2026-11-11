@@ -1,5 +1,7 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-account-page fc-account-credits-page" dir="rtl">
     <x-navigation.breadcrumb />
+
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / WALLET</span><h1>{{ __('account.credits') }}</h1><p>اعتبار حساب و شارژ کیف پول Paymenter را مدیریت کن.</p></div></div>
     <div class="px-2">
         <h4 class="text-2xl font-bold pb-3">{{ __('account.credits') }}</h4>
         @if (Auth::user()->credits->count() > 0)
