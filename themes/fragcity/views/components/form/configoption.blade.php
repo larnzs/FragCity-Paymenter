@@ -1,7 +1,8 @@
 @php
     $resourceIdentifier = strtolower(preg_replace('/[^a-z0-9]+/i', '', (string) ($config->name ?? '') . ' ' . (string) ($config->label ?? '')));
+    $resourceChildren = collect($config->children ?? []);
     $isResourceSlider = !($config->multiple ?? false)
-        && $config->children->count() > 1
+        && $resourceChildren->count() > 1
         && (
             str_contains($resourceIdentifier, 'ram')
             || str_contains($resourceIdentifier, 'memory')
