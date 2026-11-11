@@ -3425,6 +3425,13 @@ class FragCityAPI extends Extension
                 (string) (Settings::getSetting('credits_enabled')->value ?? false),
                 FILTER_VALIDATE_BOOLEAN
             );
+            $pendingOrder = $steamId !== ''
+                ? DB::table('fragcity_vip_orders')
+                    ->where('steamid64', $steamId)
+                    ->where('status', 'paid')
+                    ->orderByDesc('id')
+                    ->first()
+                : null;
 
             return response()->json([
                 'success' => true,
@@ -3438,6 +3445,7 @@ class FragCityAPI extends Extension
                     'duration_days' => [7, 15, 30, 60, 90],
                     'prices' => $prices,
                     'upgrade_prices' => $upgradePrices,
+                    'pending_order' => $pendingOrder ? $this->vipOrderResponse($pendingOrder, true) : null,
                     'wallet_balance' => number_format((float) ($credit?->amount ?? 0), 2, '.', ''),
                     'wallet_enabled' => $creditsEnabled,
                     'current_membership' => [
