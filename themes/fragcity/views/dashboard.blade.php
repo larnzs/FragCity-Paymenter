@@ -20,27 +20,27 @@
 
     <section class="fc-portal-stat-grid" aria-label="خلاصه حساب">
         <a href="{{ route('services') }}" wire:navigate class="fc-portal-stat">
-            <span class="fc-portal-stat__icon"><x-ri-server-line class="size-5" /></span>
+            <span class="fc-portal-stat__icon"><i class="fa-solid fa-server" aria-hidden="true"></i></span>
             <span class="fc-portal-stat__label">سرویس‌های من</span>
             <strong>{{ Auth::user()->services()->count() }}</strong>
             <small>مشاهده و مدیریت سرویس‌ها <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></small>
         </a>
         <a href="{{ route('invoices') }}" wire:navigate class="fc-portal-stat">
-            <span class="fc-portal-stat__icon"><x-ri-receipt-line class="size-5" /></span>
+            <span class="fc-portal-stat__icon"><i class="fa-solid fa-receipt" aria-hidden="true"></i></span>
             <span class="fc-portal-stat__label">فاکتورهای پرداخت‌نشده</span>
             <strong>{{ Auth::user()->invoices()->where('status', 'pending')->count() }}</strong>
             <small>بررسی وضعیت پرداخت <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></small>
         </a>
         @if(!config('settings.tickets_disabled', false))
         <a href="{{ route('tickets') }}" wire:navigate class="fc-portal-stat">
-            <span class="fc-portal-stat__icon"><x-ri-customer-service-line class="size-5" /></span>
+            <span class="fc-portal-stat__icon"><i class="fa-solid fa-headset" aria-hidden="true"></i></span>
             <span class="fc-portal-stat__label">تیکت‌های باز</span>
             <strong>{{ Auth::user()->tickets()->where('status', '!=', 'closed')->count() }}</strong>
             <small>پیگیری درخواست‌های پشتیبانی <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></small>
         </a>
         @endif
         <a href="{{ route('account.credits') }}" wire:navigate class="fc-portal-stat">
-            <span class="fc-portal-stat__icon"><x-ri-wallet-3-line class="size-5" /></span>
+            <span class="fc-portal-stat__icon"><i class="fa-solid fa-wallet" aria-hidden="true"></i></span>
             <span class="fc-portal-stat__label">کیف پول</span>
             <strong>{{ Auth::user()->credits->count() }}</strong>
             <small>مشاهده اعتبار حساب <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></small>
@@ -61,7 +61,7 @@
                 <div class="fc-portal-widget"><livewire:services.widget status="active" /></div>
                 <x-navigation.link class="fc-portal-view-all" :href="route('services')">
                     {{ __('dashboard.view_all') }}
-                    <x-ri-arrow-left-line class="size-5" />
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
                 </x-navigation.link>
             </section>
 
@@ -105,15 +105,15 @@
                 <div class="fc-portal-panel__heading">
                     <div>
                         <span class="fc-portal-kicker">04 / ACCOUNT</span>
-                        <h2><x-ri-settings-3-line class="size-5" /> تنظیمات حساب</h2>
+                        <h2><i class="fa-solid fa-gear" aria-hidden="true"></i> تنظیمات حساب</h2>
                         <p>اطلاعات شخصی، امنیت و روش‌های پرداخت خود را به‌روز نگه دار.</p>
                     </div>
                 </div>
                 <div class="fc-dashboard-shortcuts__grid">
-                    <a href="{{ route('account') }}" wire:navigate><x-ri-user-line class="size-5" /><span>اطلاعات شخصی</span><i class="fa-solid fa-arrow-left"></i></a>
-                    <a href="{{ route('account.security') }}" wire:navigate><x-ri-shield-keyhole-line class="size-5" /><span>امنیت حساب</span><i class="fa-solid fa-arrow-left"></i></a>
-                    <a href="{{ route('account.payment-methods') }}" wire:navigate><x-ri-bank-card-line class="size-5" /><span>روش‌های پرداخت</span><i class="fa-solid fa-arrow-left"></i></a>
-                    <a href="{{ route('account.notifications') }}" wire:navigate><x-ri-notification-3-line class="size-5" /><span>اعلان‌ها</span><i class="fa-solid fa-arrow-left"></i></a>
+                    <a href="{{ route('account') }}" wire:navigate><i class="fa-solid fa-user" aria-hidden="true"></i><span>اطلاعات شخصی</span><i class="fa-solid fa-arrow-left"></i></a>
+                    <a href="{{ route('account.security') }}" wire:navigate><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>امنیت حساب</span><i class="fa-solid fa-arrow-left"></i></a>
+                    <a href="{{ route('account.payment-methods') }}" wire:navigate><i class="fa-solid fa-credit-card" aria-hidden="true"></i><span>روش‌های پرداخت</span><i class="fa-solid fa-arrow-left"></i></a>
+                    <a href="{{ route('account.notifications') }}" wire:navigate><i class="fa-solid fa-bell" aria-hidden="true"></i><span>اعلان‌ها</span><i class="fa-solid fa-arrow-left"></i></a>
                 </div>
             </section>
             {!! hook('pages.dashboard') !!}
