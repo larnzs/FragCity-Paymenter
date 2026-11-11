@@ -1,7 +1,7 @@
 <div class="container mt-14 fc-portal-page fc-invoice-detail-page" dir="rtl">
     <x-navigation.breadcrumb />
     <div class="fc-portal-heading">
-        <div><span class="fc-portal-kicker">FRAGCITY / INVOICE DETAILS</span><h1>{{ __('invoices.invoice', ['id' => $invoice->number ?: $invoice->id]) }}</h1><p>جزئیات مبلغ، اقلام سفارش و وضعیت تراکنش این فاکتور.</p></div>
+        <div><span class="fc-portal-kicker">FRAGCITY / INVOICE DETAILS</span><h1>فاکتور شماره {{ $invoice->number ?: $invoice->id }}</h1><p>جزئیات مبلغ، اقلام سفارش و وضعیت تراکنش این فاکتور.</p></div>
         <a href="{{ route('invoices') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به فاکتورها</a>
     </div>
     <div @if ($checkPayment) wire:poll.5s="checkPaymentStatus" @endif>
