@@ -116,8 +116,14 @@
         dropdowns.forEach(function (dropdown) {
             if (!dropdown.contains(event.target)) {
                 setDropdownState(dropdown, getDropdownTrigger(dropdown), false);
+            } else if (event.target instanceof Element && event.target.closest('a')) {
+                setDropdownState(dropdown, getDropdownTrigger(dropdown), false);
             }
         });
+
+        if (event.target instanceof Element && event.target.closest('#mobileNav a')) {
+            closeMobileMenu();
+        }
     });
 
     document.addEventListener('keydown', function (event) {
@@ -172,6 +178,20 @@
         event.preventDefault();
         setNoAnimationMode(!document.documentElement.classList.contains('fc-no-animation'));
     });
+
+    // Restore the same Performance Mode preference used by the main website.
+    try {
+        const savedMotionPreference = localStorage.getItem(motionPreferenceKey);
+        if (savedMotionPreference === '1' || savedMotionPreference === '0') {
+            const enabled = savedMotionPreference === '1';
+            document.documentElement.classList.toggle('fc-no-animation', enabled);
+            window.dispatchEvent(new CustomEvent('fc-no-animation-change', {
+                detail: { enabled: enabled }
+            }));
+        }
+    } catch (error) {
+        // Continue with the current page preference when storage is unavailable.
+    }
 
     window.addEventListener('fc-motion-mode-ready', syncMotionToggleButtons);
     syncMotionToggleButtons();
