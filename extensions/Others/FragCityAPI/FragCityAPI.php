@@ -3294,30 +3294,40 @@ class FragCityAPI extends Extension
 
         $payload = $request->attributes->get('fragcity_bridge_payload');
         $validator = Validator::make(is_array($payload) ? $payload : [], [
-            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'steamid64' => ['nullable', 'string', 'regex:/^[0-9]{17}$/'],
         ]);
         if ($validator->fails()) {
             return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
         }
 
-        $steamId = (string) $validator->validated()['steamid64'];
+        $steamId = trim((string) ($validator->validated()['steamid64'] ?? ''));
         try {
             $settings = $this->vipStoreSettings();
-            $link = DB::table('fragcity_user_links')->where('steamid64', $steamId)->first();
-            if (!$link) {
-                return response()->json(['success' => false, 'error' => 'fragcity_user_not_linked'], 404);
-            }
+            $user = null;
+            $vipStatus = [
+                'active' => false,
+                'level' => 0,
+                'expires' => 0,
+                'paid_purchase' => null,
+                'paid_ledger_available' => false,
+            ];
 
-            $user = User::query()->find((int) $link->user_id);
-            if (!$user) {
-                return response()->json(['success' => false, 'error' => 'linked_paymenter_user_missing'], 404);
+            if ($steamId !== '') {
+                $link = DB::table('fragcity_user_links')->where('steamid64', $steamId)->first();
+                if (!$link) {
+                    return response()->json(['success' => false, 'error' => 'fragcity_user_not_linked'], 404);
+                }
+                $user = User::query()->find((int) $link->user_id);
+                if (!$user) {
+                    return response()->json(['success' => false, 'error' => 'linked_paymenter_user_missing'], 404);
+                }
+                $vipStatus = $this->requestVipCore($settings, [
+                    'action' => 'get_status',
+                    'steamid64' => $steamId,
+                ]);
             }
 
             $product = $this->loadVipProduct($settings);
-            $vipStatus = $this->requestVipCore($settings, [
-                'action' => 'get_status',
-                'steamid64' => $steamId,
-            ]);
 
             $prices = [];
             foreach ([7, 15, 30, 60, 90] as $days) {
@@ -3342,7 +3352,7 @@ class FragCityAPI extends Extension
                 $sourceRef = strtolower((string) ($paidPurchase['order_ref'] ?? ''));
                 $durationSeconds = (int) ($paidPurchase['duration_seconds'] ?? 0);
                 $durationDays = (int) round($durationSeconds / 86400);
-                $sourceOrder = DB::table('fragcity_vip_orders')
+                    $sourceOrder = DB::table('fragcity_vip_orders')
                     ->where('order_ref', $sourceRef)
                     ->where('steamid64', $steamId)
                     ->where('status', 'provisioned')
@@ -3408,8 +3418,10 @@ class FragCityAPI extends Extension
                 }
             }
 
-            $credit = $user->credits()->where('currency_code', $settings['currency'])->first();
-            $creditsEnabled = filter_var(
+            $credit = $user
+                ? $user->credits()->where('currency_code', $settings['currency'])->first()
+                : null;
+            $creditsEnabled = $user !== null && filter_var(
                 (string) (Settings::getSetting('credits_enabled')->value ?? false),
                 FILTER_VALIDATE_BOOLEAN
             );
