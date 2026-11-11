@@ -1,7 +1,7 @@
 <div class="container mt-14 fc-portal-page fc-account-page fc-account-credits-page" dir="rtl">
     <x-navigation.breadcrumb />
 
-    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / WALLET</span><h1>{{ __('account.credits') }}</h1><p>اعتبار حساب و شارژ کیف پول Paymenter را مدیریت کن.</p></div></div>
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / WALLET</span><h1>کیف پول</h1><p>اعتبار حساب و شارژ کیف پول Paymenter را مدیریت کن.</p></div></div>
     <div class="fc-account-content px-2">
         @if (Auth::user()->credits->count() > 0)
         <div class="flex flex-wrap gap-4">
@@ -16,7 +16,7 @@
         <p>{{ __('account.no_credit') }}</p>
         @endif
 
-        <h4 class="text-xl font-bold pb-3">{{ __('account.add_credit') }}</h4>
+        <h4 class="text-xl font-bold pb-3">شارژ کیف پول</h4>
 
         <form wire:submit.prevent="addCredit">
             <!-- Currency and amount -->
