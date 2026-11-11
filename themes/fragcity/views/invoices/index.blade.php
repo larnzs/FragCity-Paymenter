@@ -3,7 +3,7 @@
     <div class="fc-portal-heading">
         <div>
             <span class="fc-portal-kicker">FRAGCITY / BILLING HISTORY</span>
-            <h1>{{ __('invoices.invoices') }}</h1>
+            <h1>فاکتورهای من</h1>
             <p>فاکتورها، مبالغ و وضعیت پرداخت سفارش‌ها را اینجا پیگیری کن.</p>
         </div>
     </div>
@@ -24,7 +24,7 @@
         @empty
         <div class="fc-portal-empty">
             <span><x-ri-bill-line class="size-8" /></span>
-            <strong>{{ __('invoices.no_invoices') }}</strong>
+            <strong>هنوز فاکتوری برای حساب شما ثبت نشده است.</strong>
             <p>پس از ثبت سفارش یا ایجاد فاکتور، سوابق مالی اینجا دیده می‌شوند.</p>
             <a href="{{ route('home') }}" wire:navigate class="fc-portal-button">رفتن به فروشگاه</a>
         </div>
