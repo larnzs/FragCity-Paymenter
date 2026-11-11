@@ -215,7 +215,7 @@ class FragCityAPI extends Extension
     {
         View::share('fragcitySsoEnabled', $this->isSsoEnabled());
 
-        require_once __DIR__ . '/SsoTfa.php';
+        require_once __DIR__ . '/Support/SsoTfa.php';
         Livewire::component('fragcity-api.sso-tfa', SsoTfa::class);
 
         require __DIR__ . '/routes.php';
