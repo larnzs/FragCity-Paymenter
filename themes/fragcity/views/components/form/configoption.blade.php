@@ -13,6 +13,17 @@
             || str_contains($resourceIdentifier, 'disk')
             || str_contains($resourceIdentifier, 'playerslot')
         );
+    $resourceSliderStopIndexes = [];
+    $resourceSliderLastIndex = $resourceChildren->count() - 1;
+    if ($resourceSliderLastIndex >= 0) {
+        $resourceSliderStep = max(1, (int) ceil($resourceSliderLastIndex / 5));
+        for ($resourceSliderIndex = 0; $resourceSliderIndex <= $resourceSliderLastIndex; $resourceSliderIndex += $resourceSliderStep) {
+            $resourceSliderStopIndexes[] = $resourceSliderIndex;
+        }
+        if (end($resourceSliderStopIndexes) !== $resourceSliderLastIndex) {
+            $resourceSliderStopIndexes[] = $resourceSliderLastIndex;
+        }
+    }
 @endphp
 
 <div class="fc-checkout-field">
@@ -77,11 +88,12 @@
                     </div>
 
                     <div class="fc-resource-slider-control__stops">
-                        @foreach ($config->children as $child)
+                        @foreach ($resourceSliderStopIndexes as $stopIndex)
+                            @php $child = $resourceChildren[$stopIndex]; @endphp
                             <button type="button" class="fc-resource-slider-control__stop"
-                                @click="setOptionValue({{ $loop->index }})"
-                                :class="{ 'is-active': selectedOption === {{ $loop->index }} }"
-                                :aria-pressed="selectedOption === {{ $loop->index }} ? 'true' : 'false'">
+                                @click="setOptionValue({{ $stopIndex }})"
+                                :class="{ 'is-active': selectedOption === {{ $stopIndex }} }"
+                                :aria-pressed="selectedOption === {{ $stopIndex }} ? 'true' : 'false'">
                                 <span>{{ $child->name }}</span>
                                 @if ($showPriceTag && $child->price(billing_period: $plan->billing_period, billing_unit: $plan->billing_unit)->available)
                                     <small>{{ $child->price(billing_period: $plan->billing_period, billing_unit: $plan->billing_unit) }}</small>
@@ -154,10 +166,11 @@
                         id="{{ $name }}" name="{{ $name }}" aria-label="{{ $config->label ?? $config->name }}">
                 </div>
                 <div class="fc-resource-slider-control__stops">
-                    @foreach ($config->children as $child)
-                        <button type="button" class="fc-resource-slider-control__stop" @click="setOptionValue({{ $loop->index }})"
-                            :class="{ 'is-active': selectedOption === {{ $loop->index }} }"
-                            :aria-pressed="selectedOption === {{ $loop->index }} ? 'true' : 'false'">
+                    @foreach ($resourceSliderStopIndexes as $stopIndex)
+                        @php $child = $resourceChildren[$stopIndex]; @endphp
+                        <button type="button" class="fc-resource-slider-control__stop" @click="setOptionValue({{ $stopIndex }})"
+                            :class="{ 'is-active': selectedOption === {{ $stopIndex }} }"
+                            :aria-pressed="selectedOption === {{ $stopIndex }} ? 'true' : 'false'">
                             <span>{{ $child->name }}</span>
                             @if ($showPriceTag && $child->price(billing_period: $plan->billing_period, billing_unit: $plan->billing_unit)->available)
                                 <small>{{ $child->price(billing_period: $plan->billing_period, billing_unit: $plan->billing_unit) }}</small>
