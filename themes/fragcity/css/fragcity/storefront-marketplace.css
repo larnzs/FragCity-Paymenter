@@ -249,23 +249,17 @@
     font-weight: 850;
 }
 
-.fc-marketplace__overview-live {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    color: #a9b5a8;
-    font-size: .58rem;
+.fc-marketplace__overview-tag {
+    flex: 0 0 auto;
+    padding: 5px 8px;
+    border: 1px solid rgba(255, 179, 71, .20);
+    border-radius: 7px;
+    background: rgba(249, 115, 22, .07);
+    color: #d5a16f;
+    font-size: .56rem;
     font-weight: 850;
-    letter-spacing: .08em;
+    letter-spacing: .07em;
     direction: ltr;
-}
-
-.fc-marketplace__overview-live i {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: #63c58a;
-    box-shadow: 0 0 10px rgba(99, 197, 138, .65);
 }
 
 .fc-marketplace__overview-stats {
