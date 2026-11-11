@@ -1,4 +1,8 @@
-<div>
+<div class="fc-payment-flow">
+    <div class="fc-payment-flow__intro">
+        <span class="fc-payment-flow__secure"><i class="fa-solid fa-lock" aria-hidden="true"></i> پرداخت امن FragCity</span>
+        <p>روش پرداخت موردنظرت را انتخاب کن. مبلغ قابل پرداخت: <strong>{{ $invoice->formattedRemaining }}</strong></p>
+    </div>
     <!-- Show apply credits button if available -->
     @php
     $credit = Auth::user()->credits()
@@ -8,11 +12,11 @@
     $itemHasCredit = $invoice->items()->where('reference_type', App\Models\Credit::class)->exists();
     @endphp
     @if($credit && !$itemHasCredit)
-    <div class="mb-6">
+    <div class="mb-6 fc-payment-option-group">
         <h3 class="text-lg font-semibold mb-2">{{ __('invoices.pay_with_credits') }}</h3>
         <div wire:click="$set('selectedMethod', 'credit')"
             wire:loading.class="opacity-50 pointer-events-none" wire:target="selectedMethod,processPayment"
-            class="flex items-center justify-between p-4 bg-background-secondary border border-neutral rounded-lg cursor-pointer transition-all {{ $selectedMethod === 'credit' ? 'border-primary ring-2 ring-primary' : 'border-neutral hover:border-neutral-focus' }}">
+            class="fc-payment-option flex items-center justify-between p-4 bg-background-secondary border border-neutral rounded-lg cursor-pointer transition-all {{ $selectedMethod === 'credit' ? 'fc-payment-option--selected border-primary ring-2 ring-primary' : 'border-neutral hover:border-neutral-focus' }}">
             <div class="flex items-center space-x-4">
                 <div class="text-xl">
                     <x-ri-copper-coin-line class="size-6 text-primary" />
@@ -37,8 +41,8 @@
         <div class="space-y-3">
             @foreach($this->savedPaymentMethods as $method)
             <div wire:click="$set('selectedMethod', '{{ $method->ulid }}')"
-                class="flex items-center justify-between p-4 bg-background-secondary border rounded-lg cursor-pointer transition-all
-                    {{ $selectedMethod === $method->ulid ? 'border-primary ring-2 ring-primary' : 'border-neutral hover:border-neutral-focus' }}"
+                class="fc-payment-option flex items-center justify-between p-4 bg-background-secondary border rounded-lg cursor-pointer transition-all
+                    {{ $selectedMethod === $method->ulid ? 'fc-payment-option--selected border-primary ring-2 ring-primary' : 'border-neutral hover:border-neutral-focus' }}"
                     wire:loading.class="opacity-50 pointer-events-none" wire:target="selectedMethod,processPayment">
                 <div class="flex items-center gap-4">
                     <div>
@@ -99,9 +103,9 @@
     @endif
 
     @if($this->gateways && count($this->gateways) > 0)
-    <div class="mb-6" x-data="{ showOneTime: @if($this->savedPaymentMethods->count() == 0) true @else false @endif }">
+    <div class="mb-6 fc-payment-option-group fc-payment-one-time" x-data="{ showOneTime: @if($this->savedPaymentMethods->count() == 0) true @else false @endif }">
         <button @click="showOneTime = !showOneTime"
-            class="flex items-center justify-between w-full p-3 text-left rounded-lg border border-neutral transition-colors @if($this->savedPaymentMethods->count() == 0) hidden @endif">
+            class="fc-payment-one-time__toggle flex items-center justify-between w-full p-3 text-left rounded-lg border border-neutral transition-colors @if($this->savedPaymentMethods->count() == 0) hidden @endif">
             <span class="text-sm font-medium">
                 {{ __('invoices.pay_with_one_time_method') }}
             </span>
@@ -111,7 +115,7 @@
         <div class="space-y-3 mt-3" x-show="showOneTime" x-transition>
             @foreach($this->gateways as $method)
             <div wire:click="$set('selectedMethod', 'gateway-{{ $method->id }}')"
-                class="flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all {{ $selectedMethod === 'gateway-' . $method->id ? 'border-primary ring-2 ring-primary' : 'border-neutral hover:border-neutral-focus' }}"
+                class="fc-payment-option flex items-center justify-between p-4 border rounded-lg cursor-pointer transition-all {{ $selectedMethod === 'gateway-' . $method->id ? 'fc-payment-option--selected border-primary ring-2 ring-primary' : 'border-neutral hover:border-neutral-focus' }}"
                 wire:loading.class="opacity-50 pointer-events-none" wire:target="selectedMethod,processPayment">
                 <div class="flex items-center space-x-4">
                     <div
@@ -145,7 +149,7 @@
     </div>
     @endif
 
-    <div class="mt-6">
+    <div class="mt-6 fc-payment-flow__submit">
         <x-button.primary class="w-full" wire:click="processPayment" wire:loading.attr="disabled"
             :disabled="!$selectedMethod">
             <x-loading target="processPayment" />
