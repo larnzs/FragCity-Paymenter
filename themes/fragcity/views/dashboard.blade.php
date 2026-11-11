@@ -39,12 +39,14 @@
             <small>پیگیری درخواست‌های پشتیبانی <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></small>
         </a>
         @endif
+        @if(config('settings.credits_enabled', false))
         <a href="{{ route('account.credits') }}" wire:navigate class="fc-portal-stat">
             <span class="fc-portal-stat__icon"><i class="fa-solid fa-wallet" aria-hidden="true"></i></span>
             <span class="fc-portal-stat__label">کیف پول</span>
             <strong>{{ Auth::user()->credits->count() }}</strong>
             <small>مشاهده اعتبار حساب <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></small>
         </a>
+        @endif
     </section>
 
     <div class="fc-dashboard-grid">
@@ -53,7 +55,7 @@
                 <div class="fc-portal-panel__heading">
                     <div>
                         <span class="fc-portal-kicker">01 / SERVICES</span>
-                        <h2><x-ri-server-line class="size-5" /> {{ __('dashboard.active_services') }}</h2>
+                        <h2><i class="fa-solid fa-server" aria-hidden="true"></i> {{ __('dashboard.active_services') }}</h2>
                         <p>سرویس‌های فعال و جزئیات اشتراک خود را مدیریت کن.</p>
                     </div>
                     <span class="fc-portal-count">{{ Auth::user()->services()->where('status', 'active')->count() }}</span>
@@ -70,7 +72,7 @@
                 <div class="fc-portal-panel__heading">
                     <div>
                         <span class="fc-portal-kicker">02 / SUPPORT</span>
-                        <h2><x-ri-customer-service-line class="size-5" /> {{ __('dashboard.open_tickets') }}</h2>
+                        <h2><i class="fa-solid fa-headset" aria-hidden="true"></i> {{ __('dashboard.open_tickets') }}</h2>
                         <p>آخرین پاسخ‌ها و درخواست‌های پشتیبانی را دنبال کن.</p>
                     </div>
                     <span class="fc-portal-count">{{ Auth::user()->tickets()->where('status', '!=', 'closed')->count() }}</span>
@@ -78,7 +80,7 @@
                 <div class="fc-portal-widget"><livewire:tickets.widget /></div>
                 <x-navigation.link class="fc-portal-view-all" :href="route('tickets')">
                     {{ __('dashboard.view_all') }}
-                    <x-ri-arrow-left-line class="size-5" />
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
                 </x-navigation.link>
             </section>
             @endif
@@ -97,7 +99,7 @@
                 <div class="fc-portal-widget"><livewire:invoices.widget :limit="3" /></div>
                 <x-navigation.link class="fc-portal-view-all" :href="route('invoices')">
                     {{ __('dashboard.view_all') }}
-                    <x-ri-arrow-left-line class="size-5" />
+                    <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
                 </x-navigation.link>
             </section>
 
