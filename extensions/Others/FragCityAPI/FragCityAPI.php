@@ -4745,7 +4745,8 @@ class FragCityAPI extends Extension
             app(\App\Actions\Auth\Logout::class)->execute();
         }
 
-        $destination = $returnTo === '/' ? route('home') : $returnTo;
+        // Keep the storefront root literal; named route generation can inherit an erroneous APP_URL path suffix.
+        $destination = $returnTo === '/' ? '/' : $returnTo;
 
         if (Auth::check()) {
             return redirect()->to($destination);
@@ -4811,7 +4812,7 @@ class FragCityAPI extends Extension
     private function safeSsoReturnPath(mixed $value): string
     {
         if (!is_string($value) || $value === '' || strlen($value) > 1024) {
-            return route('home');
+            return '/';
         }
 
         $value = trim($value);
@@ -4828,7 +4829,7 @@ class FragCityAPI extends Extension
             || isset($parts['user'])
             || isset($parts['pass'])
         ) {
-            return route('home');
+            return '/';
         }
 
         return $value;

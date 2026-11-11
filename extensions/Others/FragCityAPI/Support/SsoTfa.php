@@ -77,7 +77,7 @@ class SsoTfa extends Component
         RateLimiter::clear($rateLimitKey);
 
         $destination = $this->safeLocalDestination(
-            Session::pull('fragcity_sso_2fa_return_to', route('home'))
+            Session::pull('fragcity_sso_2fa_return_to', '/')
         );
 
         return $this->redirect($destination, true);
@@ -86,7 +86,7 @@ class SsoTfa extends Component
     private function safeLocalDestination(mixed $destination): string
     {
         if (!is_string($destination) || $destination === '' || strlen($destination) > 1024) {
-            return route('home');
+            return '/';
         }
 
         $parts = parse_url($destination);
@@ -101,7 +101,7 @@ class SsoTfa extends Component
             || isset($parts['user'])
             || isset($parts['pass'])
         ) {
-            return route('home');
+            return '/';
         }
 
         return $destination;

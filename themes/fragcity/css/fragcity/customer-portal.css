@@ -1537,3 +1537,180 @@
         display: none !important;
     }
 }
+
+
+/* Final consistency pass for account forms and transaction surfaces. */
+.fc-portal-page > .fc-portal-heading {
+    position: relative;
+    padding-bottom: 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, .065);
+}
+
+.fc-portal-page > .fc-portal-heading::after {
+    position: absolute;
+    right: 2px;
+    bottom: -1px;
+    width: 74px;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #f97316, #ffb36b);
+    content: "";
+}
+
+.fc-account-security-page .fc-account-content > div,
+.fc-account-credits-page .fc-account-content > form {
+    padding: 21px !important;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 15px;
+    background:
+        radial-gradient(circle at 100% 0, rgba(249, 115, 22, .055), transparent 34%),
+        linear-gradient(145deg, #191919, #121212) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .12);
+}
+
+.fc-account-security-page .fc-account-content > div > h5,
+.fc-account-credits-page .fc-account-content > form > h4 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0 0 15px;
+    color: #fff;
+}
+
+.fc-account-security-page .fc-account-content > div > div.flex.flex-row {
+    gap: 14px;
+    border-color: rgba(255, 255, 255, .07);
+}
+
+.fc-account-security-page .fc-account-content > div > div.flex.flex-row > div p:first-child {
+    color: #ffb477 !important;
+    font-variant-numeric: tabular-nums;
+}
+
+.fc-account-security-page .fc-account-content form {
+    margin-top: 6px;
+}
+
+.fc-account-credits-page .fc-account-content > form {
+    margin-top: 8px;
+}
+
+.fc-account-credits-page .fc-account-content > form > div.grid {
+    gap: 15px;
+}
+
+.fc-account-credits-page .fc-account-content > form button[type="submit"],
+.fc-account-security-page .fc-account-content form button[type="submit"] {
+    min-height: 47px;
+    border-radius: 11px !important;
+}
+
+.fc-account-payment-methods-page .fc-account-content > a {
+    display: block;
+    margin-bottom: 10px;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 13px;
+    overflow: hidden;
+    background: #151515;
+    transition: border-color .18s ease, background .18s ease;
+}
+
+.fc-account-payment-methods-page .fc-account-content > a:hover {
+    border-color: rgba(249, 115, 22, .3);
+    background: #1a1714;
+}
+
+.fc-account-payment-methods-page .fc-account-content > a > div {
+    gap: 12px;
+    padding: 13px !important;
+    border: 0 !important;
+    background: transparent !important;
+}
+
+.fc-account-payment-methods-page .fc-account-content > a > div > div {
+    flex-wrap: wrap;
+    gap: 8px 14px;
+}
+
+.fc-account-credits-page .fc-account-content > div.flex.flex-wrap > div p {
+    color: #ffb477 !important;
+    font-size: 1.05rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.fc-cart-page .fc-cart-items > h1 {
+    padding: 26px;
+    border: 1px dashed rgba(249, 115, 22, .24);
+    border-radius: 15px;
+    color: #d8d8d8;
+    background: rgba(249, 115, 22, .035);
+    text-align: center;
+}
+
+.fc-invoice-detail-page .fc-invoice-sheet table th,
+.fc-invoice-detail-page .fc-invoice-sheet table td {
+    padding: 14px 16px;
+}
+
+.fc-invoice-detail-page .fc-invoice-sheet table tbody tr:nth-child(even) {
+    background: rgba(255, 255, 255, .018);
+}
+
+.fc-modal-panel--payment .fc-payment-flow {
+    padding-bottom: 2px;
+}
+
+.fc-modal-panel--payment .fc-payment-option {
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+
+.fc-modal-panel--payment .fc-payment-one-time__toggle {
+    border-radius: 11px !important;
+}
+
+.fc-payment-provider-content {
+    overflow-wrap: anywhere;
+}
+
+.fc-payment-provider-content form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fc-payment-provider-content label {
+    color: #ddd;
+    font-size: .8rem;
+    font-weight: 700;
+}
+
+.fc-payment-provider-content input,
+.fc-payment-provider-content select,
+.fc-payment-provider-content textarea {
+    min-height: 43px;
+    border: 1px solid rgba(255, 255, 255, .13) !important;
+    color: #f3f3f3 !important;
+    background: #101010 !important;
+}
+
+@media (max-width: 720px) {
+    .fc-portal-page > .fc-portal-heading {
+        padding-bottom: 14px;
+    }
+
+    .fc-account-security-page .fc-account-content > div,
+    .fc-account-credits-page .fc-account-content > form {
+        padding: 15px !important;
+    }
+
+    .fc-account-payment-methods-page .fc-account-content > a > div > div {
+        align-items: flex-start;
+    }
+
+    .fc-invoice-detail-page .fc-invoice-sheet table th,
+    .fc-invoice-detail-page .fc-invoice-sheet table td {
+        padding: 11px;
+    }
+}
