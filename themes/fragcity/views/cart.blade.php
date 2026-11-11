@@ -1,4 +1,7 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-cart-page" dir="rtl">
+    <x-navigation.breadcrumb />
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / SHOPPING CART</span><h1>سبد خرید</h1><p>سفارش خود را مرور کن و پیش از پرداخت، گزینه‌ها و مبلغ نهایی را بررسی کن.</p></div></div>
+
     <div class="flex flex-col md:grid md:grid-cols-4 gap-8">
         <div class="flex flex-col col-span-3 gap-4">
             @if (Cart::items()->count() === 0)
