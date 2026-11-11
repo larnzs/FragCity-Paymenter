@@ -12,6 +12,15 @@ The home page is a product-first marketplace, not a second marketing landing pag
 - Checkout, configurable options, invoices and customer account actions continue to use Paymenter's native routes and billing flow.
 - The home page includes category discovery, product cards, purchase benefits and a three-step ordering guide.
 
+The category, product-detail and checkout views use a shared FragCity storefront design:
+
+- Category listings show the category image/description, subcategories, product cards, stock state and Paymenter-formatted starting prices.
+- Product details render the saved product description as styled rich content (headings, lists, tables, links, code blocks and media).
+- Checkout separates plan selection, product Config Options, Egg startup fields and the order summary.
+- RAM, CPU, SSD/Storage and Player Slots Config Options are displayed as discrete range controls when their Paymenter Config Option names match those resources. Each slider maps its position to the existing Config Option child ID through Livewire entanglement; it does not submit arbitrary resource values.
+- Other Config Options and FragCityCS2 checkout fields keep Paymenter's native select/radio/input controls.
+- The order summary uses Paymenter's live `$total`, subtotal, tax and setup-fee values. No browser-side price calculation or custom checkout endpoint is introduced.
+
 ## Shared FragCity site chrome
 
 The storefront header and footer use the same component styles and visual structure as the main FragCity website:
