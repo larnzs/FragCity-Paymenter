@@ -49,7 +49,7 @@ The signed-in customer area now uses the same FragCity orange/charcoal visual la
 
 The customer-area styling is isolated in `css/fragcity/customer-portal.css` and imported from the existing `css/app.css` entry point. It includes responsive layouts, keyboard focus states and reduced-motion handling. The shared modal component accepts a `variant` prop; invoice payment uses `variant="payment"` for the branded payment selector while other modals use the default surface.
 
-No Paymenter core files are patched. The Store navigation points directly to the Billing root `/`, and the FragCity SSO callback maps the root return target to Paymenter's home route. For customers who have Paymenter TOTP enabled, FragCityAPI uses a branded SSO-specific TOTP screen that preserves the original return path after successful verification; it uses Paymenter's native TOTP verifier, rate limiter, replay cache and Login action.
+No Paymenter core files are patched. The Store navigation points directly to the Billing root `/`. FragCity SSO also returns a root destination to the literal `/` path instead of generating it from the configured application URL, so a path suffix in `APP_URL` cannot redirect the storefront to `/dashboard`. For customers who have Paymenter TOTP enabled, FragCityAPI uses a branded SSO-specific TOTP screen that preserves the original return path after successful verification; it uses Paymenter's native TOTP verifier, rate limiter, replay cache and Login action.
 
 ## Assets and build
 
