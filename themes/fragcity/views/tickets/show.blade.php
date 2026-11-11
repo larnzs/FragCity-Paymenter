@@ -5,7 +5,7 @@
         <a href="{{ route('tickets') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به تیکت‌ها</a>
     </div>
     <div class="fc-ticket-chat-shell bg-primary-800 p-6 rounded-lg mt-2">
-        <h1 class="text-2xl font-semibold">Ticket #{{ $ticket->id }} - {{ $ticket->subject }}</h1>
+        <div class="fc-ticket-chat__id"><span class="fc-portal-status fc-portal-status--{{ $ticket->status }}">#{{ $ticket->id }}</span></div>
 
         <div class="md:grid grid-cols-4 flex flex-col gap-4">
             <div class="md:col-span-3">
