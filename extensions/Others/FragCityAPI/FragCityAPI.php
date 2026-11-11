@@ -4581,8 +4581,8 @@ class FragCityAPI extends Extension
         $returnTo = $this->safeSsoReturnPath($request->query('redirect', '/'));
 
         // Always prove the FragCity identity, even when a Paymenter session
-        // already exists. The callback accepts that session only when it is
-        // the exact same linked Paymenter user; a different account is rejected.
+        // already exists. The callback validates the signed identity and then aligns
+        // the Billing session with that exact linked Paymenter user.
         $state = bin2hex(random_bytes(32));
         Session::put('fragcity_sso_state', $state);
         Session::put('fragcity_sso_return_to', $returnTo);
@@ -4730,7 +4730,7 @@ class FragCityAPI extends Extension
         // existing Billing customer session instead of falling through the
         // guest middleware and accidentally landing on /dashboard.
         if (Auth::check() && (int) Auth::id() !== (int) $user->id) {
-            app(\\App\\Actions\\Auth\\Logout::class)->execute();
+            app(\App\Actions\Auth\Logout::class)->execute();
         }
 
         $destination = $returnTo === '/' ? route('home') : $returnTo;
