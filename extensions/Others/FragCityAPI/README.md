@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.13.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.14.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -17,6 +17,10 @@ Provides a narrow private server-to-server bridge for FragCity identity, paid CS
 - `POST /api/v1/fragcity/bridge/servers/list`
 - `POST /api/v1/fragcity/bridge/servers/password`
 - `POST /api/v1/fragcity/bridge/servers/username`
+- `POST /api/v1/fragcity/bridge/catalog/vip`
+- `POST /api/v1/fragcity/bridge/orders/vip`
+- `POST /api/v1/fragcity/bridge/orders/vip/list`
+- `POST /api/v1/fragcity/bridge/orders/vip/revoke`
 
 All bridge routes require an HMAC-SHA256 signature, a timestamp within five minutes, a unique nonce and HTTPS. They are server-to-server endpoints; the browser must never call them directly.
 
