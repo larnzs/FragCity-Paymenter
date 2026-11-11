@@ -23,7 +23,7 @@
         </div>
 
         <div class="fc-invoice-sheet bg-background-secondary border border-neutral p-12 rounded-lg mt-2">
-            <h1 class="text-2xl font-bold sm:text-3xl">
+            <h2 class="text-2xl font-bold sm:text-3xl">
                 {{ !$invoice->number && config('settings.invoice_proforma', false) ? __('invoices.proforma_invoice', ['id'
             => $invoice->id]) : __('invoices.invoice', ['id' => $invoice->number]) }}
             </h1>
