@@ -2,7 +2,7 @@
     <x-navigation.breadcrumb />
 
     <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / ACCOUNT</span><h1>اطلاعات شخصی</h1><p>اطلاعات تماس و مشخصات حساب کاربری خود را به‌روز نگه دار.</p></div></div>
-    <div class="px-2">
+    <div class="fc-account-content px-2">
 
         <div class="grid md:grid-cols-2 gap-3">
 
