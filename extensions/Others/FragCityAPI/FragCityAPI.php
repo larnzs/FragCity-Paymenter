@@ -3745,8 +3745,9 @@ class FragCityAPI extends Extension
     }
 
     /**
-     * The old RawPHP wallet refund path is intentionally not called by Paymenter.
-     * Revoke is enabled only after a matching Paymenter-owned paid ledger row exists.
+     * Revoke VIPCore membership and return unused paid value to Paymenter's
+     * native Wallet. The unique refund_ref makes the financial side idempotent
+     * if Linux API revocation succeeds but the Paymenter transaction must retry.
      */
     public function revokeVipMembership(Request $request): JsonResponse
     {
@@ -3764,11 +3765,294 @@ class FragCityAPI extends Extension
         }
 
         $steamId = (string) $validator->validated()['steamid64'];
-        return response()->json([
-            'success' => false,
-            'error' => 'vip_revoke_not_enabled',
-            'message' => 'VIP cancellation/refund has not been migrated to the Paymenter ledger yet.',
-        ], 503);
+
+        try {
+            $settings = $this->vipStoreSettings();
+            $link = DB::table('fragcity_user_links')->where('steamid64', $steamId)->first();
+            if (!$link) {
+                return response()->json(['success' => false, 'error' => 'fragcity_user_not_linked'], 404);
+            }
+
+            $result = DB::transaction(function () use ($settings, $link, $steamId): array {
+                $user = User::query()->lockForUpdate()->find((int) $link->user_id);
+                if (!$user) {
+                    throw new RuntimeException('linked_paymenter_user_missing');
+                }
+
+                $status = $this->requestVipCore($settings, [
+                    'action' => 'get_status',
+                    'steamid64' => $steamId,
+                ]);
+                if (($status['active'] ?? false) !== true) {
+                    throw new RuntimeException('vip_membership_not_active');
+                }
+
+                $paidPurchase = $status['paid_purchase'] ?? null;
+                $paidOrderRef = null;
+                $remainingSeconds = 0;
+                $refundUnits = 0;
+                $ordersToRevoke = [];
+
+                if (is_array($paidPurchase)) {
+                    $paidOrderRef = strtolower((string) ($paidPurchase['order_ref'] ?? ''));
+                    if (!preg_match('/^[a-f0-9]{32}$/D', $paidOrderRef)) {
+                        throw new RuntimeException('vip_paid_membership_not_migrated');
+                    }
+
+                    $currentOrder = DB::table('fragcity_vip_orders')
+                        ->where('order_ref', $paidOrderRef)
+                        ->where('steamid64', $steamId)
+                        ->lockForUpdate()
+                        ->first();
+                    if (
+                        !$currentOrder
+                        || (string) $currentOrder->status !== 'provisioned'
+                        || (int) $currentOrder->vip_level !== (int) ($status['level'] ?? 0)
+                        || (int) $currentOrder->vip_expires_at !== (int) ($status['expires'] ?? 0)
+                    ) {
+                        throw new RuntimeException('vip_paid_membership_not_migrated');
+                    }
+
+                    $paidAt = $currentOrder->paid_at
+                        ? strtotime((string) $currentOrder->paid_at)
+                        : 0;
+                    if ($paidAt < 1) {
+                        throw new RuntimeException('vip_revoke_cooldown_unavailable');
+                    }
+                    $retryAfter = max(0, ($paidAt + 3600) - time());
+                    if ($retryAfter > 0) {
+                        throw new RuntimeException('vip_revoke_cooldown:' . $retryAfter);
+                    }
+
+                    $revokedAt = time();
+                    $expires = (int) $currentOrder->vip_expires_at;
+                    $remainingSeconds = max(0, $expires - $revokedAt);
+
+                    $seen = [];
+                    $cursor = $paidOrderRef;
+                    $depth = 0;
+                    while ($cursor !== null && $cursor !== '') {
+                        if ($depth >= 12 || isset($seen[$cursor])) {
+                            throw new RuntimeException('vip_refund_upgrade_chain_invalid');
+                        }
+                        $seen[$cursor] = true;
+                        $depth++;
+
+                        $order = DB::table('fragcity_vip_orders')
+                            ->where('order_ref', $cursor)
+                            ->where('steamid64', $steamId)
+                            ->lockForUpdate()
+                            ->first();
+                        if (!$order || !in_array((string) $order->status, ['paid', 'provisioned'], true)) {
+                            throw new RuntimeException('vip_refund_paid_order_not_found');
+                        }
+
+                        $window = (string) $order->purchase_type === 'upgrade'
+                            ? (int) ($order->upgrade_remaining_seconds ?? 0)
+                            : (int) $order->duration_seconds;
+                        if ($window < 1 || $window > 7776000) {
+                            throw new RuntimeException('vip_refund_window_invalid');
+                        }
+
+                        $amountUnits = (int) round(((float) $order->amount_rial) * 100);
+                        $eligible = min($remainingSeconds, $window);
+                        if ($eligible > 0 && $amountUnits > intdiv(PHP_INT_MAX, $eligible)) {
+                            throw new RuntimeException('vip_refund_amount_out_of_safe_range');
+                        }
+                        $refundUnits += $eligible > 0
+                            ? intdiv(($amountUnits * $eligible) + intdiv($window, 2), $window)
+                            : 0;
+
+                        $ordersToRevoke[] = (string) $order->order_ref;
+                        $cursor = (string) $order->purchase_type === 'upgrade'
+                            ? (string) ($order->upgrade_from_order_ref ?? '')
+                            : '';
+                        if ($cursor === '') {
+                            $cursor = null;
+                        }
+                    }
+
+                    // Any other captured-but-not-yet-provisioned Paymenter VIP order
+                    // is fully refunded too; pending/unpaid invoices are not touched.
+                    $pendingOrders = DB::table('fragcity_vip_orders')
+                        ->where('steamid64', $steamId)
+                        ->where('status', 'paid')
+                        ->lockForUpdate()
+                        ->get();
+                    foreach ($pendingOrders as $pending) {
+                        if (in_array((string) $pending->order_ref, $ordersToRevoke, true)) {
+                            continue;
+                        }
+                        $amountUnits = (int) round(((float) $pending->amount_rial) * 100);
+                        if ($refundUnits > PHP_INT_MAX - $amountUnits) {
+                            throw new RuntimeException('vip_refund_amount_out_of_safe_range');
+                        }
+                        $refundUnits += $amountUnits;
+                        $ordersToRevoke[] = (string) $pending->order_ref;
+                    }
+                }
+
+                // Linux API records the revocation first and returns its immutable timestamp.
+                // Retrying this exact operation returns the same audit event/order reference.
+                $revocation = $this->requestVipCore($settings, [
+                    'action' => 'revoke_membership',
+                    'steamid64' => $steamId,
+                ]);
+                if (($revocation['revoked'] ?? false) !== true) {
+                    throw new RuntimeException('vip_membership_not_active');
+                }
+
+                $revokedAt = (int) ($revocation['revoked_at'] ?? 0);
+                $returnedOrderRef = $revocation['order_ref'] ?? null;
+                if ($revokedAt < 1
+                    || ($returnedOrderRef !== null
+                        && (!is_string($returnedOrderRef) || !preg_match('/^[a-f0-9]{32}$/D', $returnedOrderRef)))) {
+                    throw new RuntimeException('vip_revocation_response_invalid');
+                }
+                if ($paidOrderRef !== null && $returnedOrderRef !== $paidOrderRef) {
+                    throw new RuntimeException('vip_revocation_order_mismatch');
+                }
+
+                $refundRef = substr(hash('sha256', $steamId . '|' . ($returnedOrderRef ?? 'manual') . '|' . $revokedAt), 0, 32);
+                $existingRefund = DB::table('fragcity_vip_refunds')
+                    ->where('refund_ref', $refundRef)
+                    ->lockForUpdate()
+                    ->first();
+                if ($existingRefund) {
+                    $balance = $user->credits()
+                        ->where('currency_code', $settings['currency'])
+                        ->value('amount');
+                    return [
+                        'revoked' => true,
+                        'refund_ref' => $refundRef,
+                        'refund_amount_rial' => number_format((float) $existingRefund->amount_rial, 2, '.', ''),
+                        'wallet_balance' => number_format((float) ($balance ?? 0), 2, '.', ''),
+                        'replayed' => true,
+                    ];
+                }
+
+                $refundAmount = number_format($refundUnits / 100, 2, '.', '');
+                $invoiceId = null;
+                if ($refundUnits > 0) {
+                    $credit = $user->credits()
+                        ->where('currency_code', $settings['currency'])
+                        ->lockForUpdate()
+                        ->first();
+                    if (!$credit) {
+                        $credit = $user->credits()->create([
+                            'currency_code' => $settings['currency'],
+                            'amount' => '0.00',
+                        ]);
+                    }
+
+                    // Credit is incremented in the same transaction as the
+                    // refund ledger. The invoice item references Product (not
+                    // Credit), so Paymenter's paid-invoice observer cannot add
+                    // the same wallet amount a second time.
+                    $credit->increment('amount', $refundAmount);
+
+                    $invoice = new Invoice([
+                        'user_id' => (int) $user->id,
+                        'due_at' => now(),
+                        'currency_code' => $settings['currency'],
+                    ]);
+                    $invoice->send_create_email = false;
+                    $invoice->save();
+
+                    $product = $this->loadVipProduct($settings);
+                    $invoice->items()->create([
+                        'reference_id' => (int) $product->id,
+                        'reference_type' => Product::class,
+                        'price' => $refundAmount,
+                        'quantity' => 1,
+                        'description' => 'FragCity VIP unused-time refund',
+                    ]);
+                    ExtensionHelper::addPayment(
+                        $invoice,
+                        null,
+                        (float) $refundAmount,
+                        null,
+                        'fragcity-vip-refund:' . $refundRef,
+                        InvoiceTransactionStatus::Succeeded,
+                        false
+                    );
+                    $invoice->status = Invoice::STATUS_PAID;
+                    $invoice->save();
+                    $invoiceId = (int) $invoice->id;
+                }
+
+                DB::table('fragcity_vip_refunds')->insert([
+                    'refund_ref' => $refundRef,
+                    'steamid64' => $steamId,
+                    'paymenter_user_id' => (int) $user->id,
+                    'paymenter_invoice_id' => $invoiceId,
+                    'revoked_order_ref' => $returnedOrderRef,
+                    'amount_rial' => $refundAmount,
+                    'currency_code' => $settings['currency'],
+                    'status' => 'credited',
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+
+                if ($ordersToRevoke) {
+                    DB::table('fragcity_vip_orders')
+                        ->whereIn('order_ref', $ordersToRevoke)
+                        ->where('steamid64', $steamId)
+                        ->whereIn('status', ['paid', 'provisioned'])
+                        ->update([
+                            'status' => 'revoked',
+                            'revoked_at' => now(),
+                            'updated_at' => now(),
+                        ]);
+                }
+
+                $balance = $user->credits()
+                    ->where('currency_code', $settings['currency'])
+                    ->value('amount');
+
+                return [
+                    'revoked' => true,
+                    'refund_ref' => $refundRef,
+                    'refund_amount_rial' => $refundAmount,
+                    'wallet_balance' => number_format((float) ($balance ?? 0), 2, '.', ''),
+                    'invoice_id' => $invoiceId,
+                    'replayed' => false,
+                ];
+            }, 3);
+
+            return response()->json(['success' => true, 'data' => $result]);
+        } catch (RuntimeException $e) {
+            if (str_starts_with($e->getMessage(), 'vip_revoke_cooldown:')) {
+                $retryAfter = (int) substr($e->getMessage(), strlen('vip_revoke_cooldown:'));
+                return response()->json([
+                    'success' => false,
+                    'error' => 'vip_revoke_cooldown',
+                    'retry_after_seconds' => max(0, $retryAfter),
+                ], 409);
+            }
+
+            $status = match ($e->getMessage()) {
+                'fragcity_user_not_linked', 'linked_paymenter_user_missing' => 404,
+                'vip_membership_not_active', 'vip_paid_membership_not_migrated',
+                'vip_refund_upgrade_chain_invalid', 'vip_refund_paid_order_not_found' => 409,
+                'vip_revoke_cooldown_unavailable', 'vipcore_unavailable',
+                'vipcore_invalid_response' => 503,
+                default => 500,
+            };
+            if ($status === 500) {
+                Log::error('FragCity VIP revoke/refund failed.', [
+                    'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                    'reason' => $e->getMessage(),
+                ]);
+            }
+            return response()->json(['success' => false, 'error' => $e->getMessage()], $status);
+        } catch (Throwable $e) {
+            Log::error('FragCity VIP revoke/refund failed.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'exception' => get_class($e),
+            ]);
+            return response()->json(['success' => false, 'error' => 'vip_refund_failed'], 500);
+        }
     }
 
     private function vipStoreSettings(): array
