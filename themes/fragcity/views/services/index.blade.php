@@ -12,7 +12,7 @@
     <div class="fc-portal-list">
         @forelse ($services as $service)
         <a href="{{ route('services.show', $service) }}" wire:navigate class="fc-portal-list-card fc-service-card">
-            <span class="fc-portal-list-card__icon"><x-ri-server-line class="size-6" /></span>
+            <span class="fc-portal-list-card__icon"><x-ri-instance-line class="size-6" /></span>
             <span class="fc-portal-list-card__body">
                 <strong>{{ $service->label }}</strong>
                 <small>{{ $service->product->name }} <span>·</span>
