@@ -1,5 +1,7 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-account-page fc-account-payment-methods-page" dir="rtl">
     <x-navigation.breadcrumb />
+
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / PAYMENT METHODS</span><h1>{{ __('account.payment_methods') }}</h1><p>روش‌های پرداخت ذخیره‌شده و تراکنش‌های اخیر را ببین.</p></div></div>
     <div class="px-2">
         @if($setupModalVisible)
         <x-modal :title="__('account.payment_methods')" open="true">
