@@ -4725,12 +4725,18 @@ class FragCityAPI extends Extension
 
         Session::forget('fragcity_sso_state');
 
-        if (Auth::check()) {
-            if ((int) Auth::id() !== (int) $user->id) {
-                return redirect()->route('login')->with('error', 'A different Billing account is already signed in. Sign out of Billing and try again.');
-            }
+        // FragCity is the identity source of truth. A valid one-time ticket
+        // explicitly requests this linked identity, so replace any other
+        // existing Billing customer session instead of falling through the
+        // guest middleware and accidentally landing on /dashboard.
+        if (Auth::check() && (int) Auth::id() !== (int) $user->id) {
+            app(\\App\\Actions\\Auth\\Logout::class)->execute();
+        }
 
-            return redirect($returnTo);
+        $destination = $returnTo === '/' ? route('home') : $returnTo;
+
+        if (Auth::check()) {
+            return redirect()->to($destination);
         }
 
         // Respect Paymenter's native two-factor flow; SSO must never bypass it.
@@ -4746,7 +4752,7 @@ class FragCityAPI extends Extension
 
         (new \App\Actions\Auth\Login)->execute($user, $claims['remember']);
 
-        return redirect($returnTo);
+        return redirect()->to($destination);
     }
 
     private function isSsoEnabled(): bool
