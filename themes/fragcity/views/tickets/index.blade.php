@@ -24,7 +24,7 @@
         @empty
         <div class="fc-portal-empty">
             <span><x-ri-ticket-line class="size-8" /></span>
-            <strong>{{ __('ticket.no_tickets') }}</strong>
+            <strong>هنوز تیکتی ثبت نکرده‌ای.</strong>
             <p>اگر به راهنمایی نیاز داری، یک تیکت پشتیبانی جدید ایجاد کن.</p>
             <a href="{{ route('tickets.create') }}" wire:navigate class="fc-portal-button">ثبت تیکت جدید</a>
         </div>
