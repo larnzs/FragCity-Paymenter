@@ -159,8 +159,8 @@
             <div class="fc-checkout-summary__plan"><span>پلن فعلی</span><strong>{{ $plan->name }}</strong></div>
 
             <div class="fc-checkout-summary__lines">
+                <div class="fc-checkout-summary__line"><span>{{ __('invoices.subtotal') }}</span><strong>{{ $total->format($total->subtotal) }}</strong></div>
                 @if ($total->total_tax > 0)
-                    <div class="fc-checkout-summary__line"><span>{{ __('invoices.subtotal') }}</span><strong>{{ $total->format($total->subtotal) }}</strong></div>
                     <div class="fc-checkout-summary__line">
                         <span>{{ \App\Classes\Settings::tax()->name }} ({{ \App\Classes\Settings::tax()->rate }}%)</span>
                         <strong>{{ $total->formatted->total_tax }}</strong>
