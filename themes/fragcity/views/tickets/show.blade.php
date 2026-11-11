@@ -4,14 +4,14 @@
         <div><span class="fc-portal-kicker">FRAGCITY / SUPPORT TICKET #{{ $ticket->id }}</span><h1>{{ $ticket->subject }}</h1><p>گفت‌وگو با تیم پشتیبانی و پیگیری وضعیت درخواست.</p></div>
         <a href="{{ route('tickets') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به تیکت‌ها</a>
     </div>
-    <div class="bg-primary-800 p-6 rounded-lg mt-2">
+    <div class="fc-ticket-chat-shell bg-primary-800 p-6 rounded-lg mt-2">
         <h1 class="text-2xl font-semibold">Ticket #{{ $ticket->id }} - {{ $ticket->subject }}</h1>
 
         <div class="md:grid grid-cols-4 flex flex-col gap-4">
             <div class="md:col-span-3">
                 <div class="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-4" wire:poll.10s>
                     @foreach ($ticket->messages()->with('user')->get() as $index => $message)
-                    <div class="bg-background-secondary hover:bg-background-secondary/80 border border-neutral p-4 rounded-lg w-full max-w-[80%]  {{ $message->user_id === $ticket->user_id ? 'ml-auto' : 'mr-auto' }}"
+                    <div class="fc-ticket-message bg-background-secondary hover:bg-background-secondary/80 border border-neutral p-4 rounded-lg w-full max-w-[80%]  {{ $message->user_id === $ticket->user_id ? 'ml-auto' : 'mr-auto' }}"
                         @if ($loop->last) x-data x-init="$nextTick(() => $el.scrollIntoView({ block: 'end' }))" @endif>
                         <div class="flex items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
