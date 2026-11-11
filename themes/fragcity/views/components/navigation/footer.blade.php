@@ -40,7 +40,7 @@
                     <li><a href="https://fragcity.ir/servers/">سرورهای بازی</a></li>
                     <li><a href="https://fragcity.ir/skins/">اسکین‌ها</a></li>
                     <li><a href="https://fragcity.ir/vip/">عضویت VIP</a></li>
-                    <li><a href="{{ route('home') }}">فروشگاه</a></li>
+                    <li><a href="/">فروشگاه</a></li>
                 </ul>
             </nav>
 
