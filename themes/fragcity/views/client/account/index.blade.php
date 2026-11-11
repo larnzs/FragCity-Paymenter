@@ -1,5 +1,7 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-account-page fc-account-details-page" dir="rtl">
     <x-navigation.breadcrumb />
+
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / ACCOUNT</span><h1>اطلاعات شخصی</h1><p>اطلاعات تماس و مشخصات حساب کاربری خود را به‌روز نگه دار.</p></div></div>
     <div class="px-2">
 
         <div class="grid md:grid-cols-2 gap-3">
