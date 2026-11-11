@@ -3819,6 +3819,7 @@ class FragCityAPI extends Extension
                         return [
                             'revoked' => true,
                             'refund_ref' => (string) $priorRefund->refund_ref,
+                            'order_ref' => (string) ($priorRefund->revoked_order_ref ?? ''),
                             'refund_amount_rial' => number_format((float) $priorRefund->amount_rial, 2, '.', ''),
                             'wallet_balance' => number_format((float) ($balance ?? 0), 2, '.', ''),
                             'invoice_id' => (int) ($priorRefund->paymenter_invoice_id ?? 0),
@@ -4054,6 +4055,7 @@ class FragCityAPI extends Extension
                 return [
                     'revoked' => true,
                     'refund_ref' => $refundRef,
+                    'order_ref' => (string) ($returnedOrderRef ?? ''),
                     'refund_amount_rial' => $refundAmount,
                     'wallet_balance' => number_format((float) ($balance ?? 0), 2, '.', ''),
                     'invoice_id' => $invoiceId,
