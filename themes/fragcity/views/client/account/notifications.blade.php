@@ -3,7 +3,7 @@
 
     <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / NOTIFICATIONS</span><h1>{{ __('navigation.notifications') }}</h1><p>روش دریافت اعلان‌های ایمیلی و درون‌برنامه‌ای را کنترل کن.</p></div></div>
 
-    <div class="px-2">
+    <div class="fc-account-content px-2">
         <!-- Configure push notifications -->
         @if($this->supportsPush())
         <div class="bg-background-secondary rounded-lg p-4 mb-6" x-data="pushNotifications">
