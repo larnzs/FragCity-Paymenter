@@ -1,50 +1,41 @@
-<div class="container mt-14 space-y-4">
+<div class="container mt-14 fc-portal-page fc-services-page" dir="rtl">
     <x-navigation.breadcrumb />
-    @forelse ($services as $service)
-    <a href="{{ route('services.show', $service) }}" wire:navigate>
-        <div class="bg-background-secondary hover:bg-background-secondary/80 border border-neutral p-4 rounded-lg mb-4">
-        <div class="flex items-center justify-between mb-2">
-            <div class="flex items-center gap-3">
-            <div class="bg-secondary/10 p-2 rounded-lg">
-                <x-ri-instance-line class="size-5 text-secondary" />
-            </div>
-            <span class="font-medium">{{ $service->label }}</span>
-            </div>
-            <div class="size-5 rounded-md p-0.5
-                @if ($service->status == 'active') text-success bg-success/20
-                @elseif($service->status == 'suspended' || $service->status == 'cancelled') text-inactive bg-inactive/20
-                @else text-warning bg-warning/20
-                @endif">
-                @if ($service->status == 'active')
-                    <x-ri-checkbox-circle-fill />
-                @elseif($service->status == 'suspended' || $service->status == 'cancelled')
-                    <x-ri-forbid-fill />
-                @elseif($service->status == 'pending')
-                    <x-ri-error-warning-fill />
-                @endif
-            </div>
+    <div class="fc-portal-heading">
+        <div>
+            <span class="fc-portal-kicker">FRAGCITY / MY SERVICES</span>
+            <h1>{{ __('services.services') }}</h1>
+            <p>وضعیت، منابع و جزئیات سرویس‌های خریداری‌شده را از این بخش مدیریت کن.</p>
         </div>
-        <div class="text-base text-sm flex gap-1">
-            {{
-                in_array($service->plan->type, ['recurring']) ?  __('services.every_period', [
-                'period' => $service->plan->billing_period > 1 ? $service->plan->billing_period : '',
-                'unit' => trans_choice(__('services.billing_cycles.' . $service->plan->billing_unit),
-                $service->plan->billing_period)
-                ]) : '' }}
-                @if($service->expires_at && $service->expires_at > now())
-                -  {{ __('services.renews_in') }}
-                <x-tooltip :message="$service->expires_at->format('M d, Y')">
-                    {{ $service->expires_at->longAbsoluteDiffForHumans() }}
-                </x-tooltip>
-                @endif
-            </div>
-        </div>
-    </a>
-    @empty
-    <div class="bg-background-secondary border border-neutral p-4 rounded-lg">
-        <p class="text-base text-sm">{{ __('services.no_services') }}</p>
+        <a href="{{ route('home') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-plus"></i> مشاهده فروشگاه</a>
     </div>
-    @endforelse
 
-    {{ $services->links() }}
+    <div class="fc-portal-list">
+        @forelse ($services as $service)
+        <a href="{{ route('services.show', $service) }}" wire:navigate class="fc-portal-list-card fc-service-card">
+            <span class="fc-portal-list-card__icon"><x-ri-server-line class="size-6" /></span>
+            <span class="fc-portal-list-card__body">
+                <strong>{{ $service->label }}</strong>
+                <small>{{ $service->product->name }} <span>·</span>
+                    {{ in_array($service->plan->type, ['recurring']) ? __('services.every_period', [
+                        'period' => $service->plan->billing_period > 1 ? $service->plan->billing_period : '',
+                        'unit' => trans_choice(__('services.billing_cycles.' . $service->plan->billing_unit), $service->plan->billing_period)
+                    ]) : 'اشتراک یک‌باره' }}
+                </small>
+                @if($service->expires_at)
+                    <small><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ __('services.renews_in') }} {{ $service->expires_at->format('Y-m-d') }}</small>
+                @endif
+            </span>
+            <span class="fc-portal-status fc-portal-status--{{ $service->status }}">{{ __('services.statuses.' . $service->status) }}</span>
+            <span class="fc-portal-list-card__arrow"><i class="fa-solid fa-arrow-left"></i></span>
+        </a>
+        @empty
+        <div class="fc-portal-empty">
+            <span><x-ri-server-line class="size-8" /></span>
+            <strong>{{ __('services.no_services') }}</strong>
+            <p>بعد از ثبت سفارش، سرویس‌های تو در همین بخش نمایش داده می‌شوند.</p>
+            <a href="{{ route('home') }}" wire:navigate class="fc-portal-button">رفتن به فروشگاه</a>
+        </div>
+        @endforelse
+    </div>
+    <div class="fc-portal-pagination">{{ $services->links() }}</div>
 </div>
