@@ -50,7 +50,8 @@
                     <li><a href="https://fragcity.ir/serverguide/">راهنمای سرور CS2</a></li>
                     <li><a href="https://fragcity.ir/rules/">قوانین استفاده</a></li>
                     <li><a href="https://fragcity.ir/privacy/">حریم خصوصی</a></li>
-                    <li><a href="https://fragcity.ir/login/">ورود / ثبت‌نام</a></li>
+                    <li><a href="{{ route('login') }}">ورود به حساب فروشگاه</a></li>
+                    <li><a href="{{ route('register') }}">ساخت حساب فروشگاه</a></li>
                 </ul>
             </nav>
 
