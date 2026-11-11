@@ -1,4 +1,4 @@
-<x-modal :title="config('settings.invoice_proforma', false) ? __('invoices.payment_for_proforma_invoice', ['id' => $invoice->id]) : __('invoices.payment_for_invoice', ['number' => $invoice->number])" open>
+<x-modal variant="payment" :title="config('settings.invoice_proforma', false) ? __('invoices.payment_for_proforma_invoice', ['id' => $invoice->id]) : __('invoices.payment_for_invoice', ['number' => $invoice->number])" open>
     <x-slot name="closeTrigger">
         <div class="flex gap-4">
             {{ __('invoices.amount_due', ['amount' => $invoice->formattedRemaining]) }}
@@ -9,7 +9,7 @@
     </x-slot>
 
     @if ($this->pay)
-        <div class="mt-8">{{ $this->pay }}</div>
+        <div class="mt-8 fc-payment-provider-content">{{ $this->pay }}</div>
     @else
         @include('invoices.partials.payment-options')
     @endif
