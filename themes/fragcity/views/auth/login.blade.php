@@ -21,6 +21,24 @@
 
     <x-button.primary class="w-full" type="submit">{{ __('auth.sign_in') }}</x-button.primary>
 
+    @if ($fragcitySsoEnabled ?? false)
+    <div class="mt-5 flex flex-col gap-3">
+        <div class="flex items-center gap-3">
+            <span aria-hidden="true" class="h-px grow bg-primary-700"></span>
+            <span class="text-xs font-medium text-gray-400">یا ورود با حساب FragCity</span>
+            <span aria-hidden="true" class="h-px grow bg-primary-700"></span>
+        </div>
+        <a href="{{ route('extensions.fragcity-api.sso.start', ['redirect' => request()->query('redirect', '/')]) }}"
+            class="flex w-full items-center justify-center gap-3 rounded-md border border-orange-500/50 bg-orange-500/10 px-4 py-3 font-semibold text-orange-300 transition hover:border-orange-400 hover:bg-orange-500/20">
+            <span class="text-lg" aria-hidden="true">♙</span>
+            ورود با Steam یا حساب FragCity
+        </a>
+        <p class="text-center text-xs leading-5 text-gray-400">
+            با انتخاب این گزینه به سایت اصلی FragCity منتقل می‌شوید؛ می‌توانید با Steam یا نام کاربری و رمز عبور وارد شوید.
+        </p>
+    </div>
+    @endif
+
     {!! hook('auth.login') !!}
 
     @if (config('settings.oauth_github') || config('settings.oauth_google') || config('settings.oauth_discord'))
