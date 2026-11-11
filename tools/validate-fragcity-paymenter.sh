@@ -75,8 +75,8 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 ! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.13.0'" "$api"
-grep -Fq "'version' => '1.13.0'" "$api"
+grep -Fq "version: '1.14.0'" "$api"
+grep -Fq "'version' => '1.14.0'" "$api"
 grep -Fq "version: '1.7.2'" "$cs2"
 
 # The first supported CS2 subscription is now three days. Keep the historical
