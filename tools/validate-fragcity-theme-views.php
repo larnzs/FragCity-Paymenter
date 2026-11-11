@@ -24,6 +24,8 @@ $kernel = $app->make(\Illuminate\Contracts\Console\Kernel::class);
 $kernel->bootstrap();
 
 $compiler = $app->make('blade.compiler');
+// Mirror the active FragCity theme's anonymous component path while compiling in CI.
+$compiler->anonymousComponentPath($themeViews . '/components');
 $iterator = new RecursiveIteratorIterator(
     new RecursiveDirectoryIterator($themeViews, FilesystemIterator::SKIP_DOTS)
 );
