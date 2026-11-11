@@ -4,6 +4,8 @@
 @import "./fragcity/components.css";
 @import "./fragcity/motion.css";
 @import "./fragcity/paymenter-shell.css";
+@import "./fragcity/site-header.css";
+@import "./fragcity/site-footer.css";
 @import "./fragcity/storefront-home.css";
 
 @plugin '@tailwindcss/forms' {
