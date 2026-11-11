@@ -171,10 +171,10 @@
                         <h4 class="h-fit">{{ __('ticket.subject') }}:</h4> {{ $ticket->subject }}
                     </div>
                     <div class="font-semibold flex md:flex-col justify-between bg-primary-800 p-2 px-4 rounded-md">
-                        <h4>{{ __('ticket.status') }}:</h4> {{ ucfirst($ticket->status) }}
+                        <h4>{{ __('ticket.status') }}:</h4> @if($ticket->status === 'open') باز @elseif($ticket->status === 'replied') پاسخ داده‌شده @elseif($ticket->status === 'closed') بسته @else {{ ucfirst($ticket->status) }} @endif
                     </div>
                     <div class="font-semibold flex md:flex-col justify-between bg-primary-800 p-2 px-4 rounded-md">
-                        <h4>{{ __('ticket.priority') }}:</h4> {{ ucfirst($ticket->priority) }}
+                        <h4>{{ __('ticket.priority') }}:</h4> @if($ticket->priority === 'low') کم @elseif($ticket->priority === 'medium') متوسط @elseif($ticket->priority === 'high') زیاد @else {{ ucfirst($ticket->priority) }} @endif
                     </div>
                     <div class="font-semibold flex md:flex-col justify-between bg-primary-800 p-2 px-4 rounded-md">
                         <h4>{{ __('ticket.created_at') }}:</h4> {{ $ticket->created_at->diffForHumans() }}
