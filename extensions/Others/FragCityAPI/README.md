@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.15.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.16.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -8,7 +8,7 @@ Provides a narrow private server-to-server bridge for FragCity identity, paid CS
 
 - `POST /api/v1/fragcity/bridge/ping`
 - `GET /auth/fragcity/sso/start`
-- `POST /auth/fragcity/sso/callback`
+- `GET /auth/fragcity/sso/2fa`\n- `POST /auth/fragcity/sso/callback`
 - `POST /api/v1/fragcity/bridge/catalog/cs2`
 - `POST /api/v1/fragcity/bridge/wallet/balance`
 - `POST /api/v1/fragcity/bridge/wallet/topups/prepare`
@@ -38,7 +38,7 @@ The extension provides a browser SSO provider without modifying Paymenter Core:
 
 The SSO ticket contains only the linked SteamID64, Paymenter user ID, state, issue/expiry timestamps, one-time ID and remember preference. It never contains a password, API key, PHP session ID or a browser-supplied user ID. The ticket is valid for at most 90 seconds and is consumed once.
 
-When the FragCity account was signed in with its remember-me option, the SSO ticket asks Paymenter to create its normal 30-day remembered session. Otherwise Paymenter creates a normal browser session. Existing Paymenter sessions for a different user are never silently replaced.
+When the FragCity account was signed in with its remember-me option, the SSO ticket asks Paymenter to create its normal 30-day remembered session. Otherwise Paymenter creates a normal browser session. When a verified FragCity ticket targets a different linked user, the existing Paymenter session is explicitly logged out and replaced with the signed, linked FragCity identity.
 
 ### SSO configuration
 
