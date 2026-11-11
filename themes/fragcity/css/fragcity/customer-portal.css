@@ -1,0 +1,1364 @@
+/*
+ * FragCity Customer Portal
+ * Dashboard, services, invoices, tickets, account, cart and payment selection.
+ * Styles are scoped to the portal so storefront/product pages keep their own design.
+ */
+
+.fc-portal-page {
+    --fc-portal-bg: #101010;
+    --fc-portal-surface: #151515;
+    --fc-portal-surface-raised: #1b1b1b;
+    --fc-portal-border: rgba(255, 255, 255, .085);
+    --fc-portal-border-strong: rgba(255, 255, 255, .14);
+    --fc-portal-text: #f5f5f5;
+    --fc-portal-muted: #a3a3a3;
+    --fc-portal-dim: #737373;
+    --fc-portal-orange: #f97316;
+    --fc-portal-orange-soft: rgba(249, 115, 22, .11);
+    --fc-portal-shadow: 0 18px 48px rgba(0, 0, 0, .26);
+    width: 100%;
+    max-width: 1380px;
+    margin-right: auto;
+    margin-left: auto;
+    padding-bottom: 64px;
+    color: var(--fc-portal-text);
+    direction: rtl;
+}
+
+.fc-portal-page a {
+    text-decoration: none;
+}
+
+.fc-portal-page .fc-portal-heading {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 20px;
+    margin: 20px 0 24px;
+    padding: 0 2px;
+}
+
+.fc-portal-kicker {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 9px;
+    color: #f9a568;
+    font-family: var(--fc-font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .11em;
+    direction: ltr;
+}
+
+.fc-portal-heading h1 {
+    margin: 0;
+    color: #fafafa;
+    font-size: clamp(1.65rem, 3vw, 2.35rem);
+    font-weight: 850;
+    line-height: 1.35;
+    letter-spacing: -.035em;
+}
+
+.fc-portal-heading p {
+    margin: 7px 0 0;
+    color: var(--fc-portal-muted);
+    font-size: .88rem;
+    line-height: 1.9;
+}
+
+.fc-portal-heading__action,
+.fc-portal-button {
+    display: inline-flex;
+    min-height: 43px;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    flex-shrink: 0;
+    padding: 9px 16px;
+    border: 1px solid rgba(249, 115, 22, .38);
+    border-radius: 11px;
+    color: #ffb477 !important;
+    background: rgba(249, 115, 22, .09);
+    font-size: .82rem;
+    font-weight: 800;
+    transition: .18s ease;
+}
+
+.fc-portal-heading__action:hover,
+.fc-portal-button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, .72);
+    background: rgba(249, 115, 22, .17);
+    color: #ffd0a6 !important;
+}
+
+.fc-portal-hero {
+    position: relative;
+    display: flex;
+    min-height: 235px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 28px;
+    overflow: hidden;
+    margin: 20px 0 24px;
+    padding: clamp(22px, 4vw, 42px);
+    border: 1px solid rgba(249, 115, 22, .22);
+    border-radius: 22px;
+    background:
+        radial-gradient(circle at 84% 10%, rgba(249, 115, 22, .19), transparent 31%),
+        radial-gradient(circle at 4% 100%, rgba(255, 179, 71, .08), transparent 34%),
+        linear-gradient(115deg, #111 0%, #171717 55%, #1d1712 100%);
+    box-shadow: var(--fc-portal-shadow);
+}
+
+.fc-portal-hero::after {
+    position: absolute;
+    inset: auto -100px -175px auto;
+    width: 360px;
+    height: 360px;
+    border: 1px solid rgba(249, 115, 22, .12);
+    border-radius: 50%;
+    content: "";
+    pointer-events: none;
+}
+
+.fc-portal-hero__copy {
+    position: relative;
+    z-index: 1;
+    max-width: 700px;
+}
+
+.fc-portal-eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    color: #f6a66f;
+    font-family: var(--fc-font-mono);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .13em;
+    direction: ltr;
+}
+
+.fc-portal-eyebrow__mark {
+    display: inline-grid;
+    width: 28px;
+    height: 28px;
+    place-items: center;
+    border: 1px solid rgba(249, 115, 22, .52);
+    border-radius: 8px;
+    color: #fff;
+    background: rgba(249, 115, 22, .16);
+    letter-spacing: 0;
+}
+
+.fc-portal-hero h1 {
+    margin: 0;
+    color: #fff;
+    font-size: clamp(1.9rem, 3.5vw, 2.8rem);
+    font-weight: 900;
+    letter-spacing: -.04em;
+    line-height: 1.35;
+}
+
+.fc-portal-hero h1 span {
+    color: #ff9c50;
+}
+
+.fc-portal-hero p {
+    max-width: 600px;
+    margin: 12px 0 0;
+    color: #b7b7b7;
+    font-size: .9rem;
+    line-height: 2;
+}
+
+.fc-portal-hero__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 18px;
+    margin-top: 20px;
+    color: #d1d1d1;
+    font-size: .75rem;
+}
+
+.fc-portal-hero__meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.fc-portal-hero__meta i {
+    color: var(--fc-portal-orange);
+}
+
+.fc-dashboard-hero__mark {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    min-width: 225px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 10px;
+    opacity: .92;
+}
+
+.fc-dashboard-hero__mark > span,
+.fc-dashboard-hero__mark small {
+    color: #9c8a7d;
+    font-family: var(--fc-font-mono);
+    font-size: 9px;
+    font-weight: 800;
+    letter-spacing: .22em;
+    direction: ltr;
+}
+
+.fc-dashboard-hero__mark strong {
+    color: #fff;
+    font-size: clamp(4rem, 7vw, 6.4rem);
+    font-weight: 950;
+    line-height: 1.1;
+    letter-spacing: -.09em;
+    text-shadow: 0 12px 38px rgba(249, 115, 22, .18);
+}
+
+.fc-dashboard-hero__mark strong span {
+    color: var(--fc-portal-orange);
+}
+
+.fc-dashboard-hero__mark small {
+    margin-top: 9px;
+    font-size: 8px;
+    letter-spacing: .14em;
+}
+
+.fc-portal-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 13px;
+    margin: 0 0 25px;
+}
+
+.fc-portal-stat {
+    position: relative;
+    display: flex;
+    min-height: 152px;
+    flex-direction: column;
+    align-items: flex-start;
+    overflow: hidden;
+    padding: 17px 18px;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 16px;
+    background: linear-gradient(145deg, #191919, #121212);
+    transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.fc-portal-stat:hover {
+    transform: translateY(-2px);
+    border-color: rgba(249, 115, 22, .34);
+    background: linear-gradient(145deg, #211a15, #141414);
+}
+
+.fc-portal-stat__icon {
+    display: grid;
+    width: 37px;
+    height: 37px;
+    place-items: center;
+    margin-bottom: 13px;
+    border: 1px solid rgba(249, 115, 22, .22);
+    border-radius: 11px;
+    color: #ff9a4d;
+    background: rgba(249, 115, 22, .10);
+    font-size: 16px;
+}
+
+.fc-portal-stat__label {
+    color: #b3b3b3;
+    font-size: .76rem;
+    font-weight: 650;
+}
+
+.fc-portal-stat > strong {
+    margin-top: 2px;
+    color: #fff;
+    font-size: 1.85rem;
+    font-weight: 900;
+    line-height: 1.35;
+}
+
+.fc-portal-stat > small {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: auto;
+    padding-top: 7px;
+    color: #f3a36a;
+    font-size: .68rem;
+}
+
+.fc-portal-stat > small i {
+    font-size: 9px;
+}
+
+.fc-dashboard-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+    gap: 18px;
+    align-items: start;
+}
+
+.fc-dashboard-column {
+    display: grid;
+    min-width: 0;
+    gap: 18px;
+}
+
+.fc-portal-panel {
+    min-width: 0;
+    padding: 21px;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 17px;
+    background: linear-gradient(150deg, #171717, #121212);
+    box-shadow: 0 12px 32px rgba(0, 0, 0, .14);
+}
+
+.fc-portal-panel__heading {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 17px;
+}
+
+.fc-portal-panel__heading > div {
+    min-width: 0;
+}
+
+.fc-portal-panel__heading h2 {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin: 0;
+    color: #f8f8f8;
+    font-size: 1.08rem;
+    font-weight: 850;
+}
+
+.fc-portal-panel__heading h2 svg,
+.fc-portal-panel__heading h2 i {
+    color: #fa9346;
+}
+
+.fc-portal-panel__heading p {
+    margin: 5px 0 0;
+    color: #929292;
+    font-size: .75rem;
+}
+
+.fc-portal-count {
+    display: inline-grid;
+    min-width: 30px;
+    height: 30px;
+    place-items: center;
+    padding: 0 8px;
+    border: 1px solid rgba(249, 115, 22, .25);
+    border-radius: 9px;
+    color: #ffb174;
+    background: rgba(249, 115, 22, .11);
+    font-size: .8rem;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+
+.fc-portal-widget {
+    min-width: 0;
+}
+
+.fc-portal-panel .fc-portal-view-all {
+    display: flex !important;
+    min-height: 42px;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 15px;
+    padding: 8px 14px !important;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 11px;
+    color: #f4a16a !important;
+    background: rgba(255, 255, 255, .025) !important;
+    font-size: .78rem;
+    font-weight: 800;
+    transition: .18s ease;
+}
+
+.fc-portal-panel .fc-portal-view-all:hover {
+    border-color: rgba(249, 115, 22, .38);
+    background: var(--fc-portal-orange-soft) !important;
+}
+
+.fc-dashboard-shortcuts__grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 9px;
+}
+
+.fc-dashboard-shortcuts__grid a {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 9px;
+    padding: 13px;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 11px;
+    color: #ddd !important;
+    background: #111;
+    font-size: .78rem;
+    font-weight: 700;
+    transition: .18s ease;
+}
+
+.fc-dashboard-shortcuts__grid a:hover {
+    border-color: rgba(249, 115, 22, .33);
+    color: #ffb477 !important;
+    background: rgba(249, 115, 22, .07);
+}
+
+.fc-dashboard-shortcuts__grid a > svg,
+.fc-dashboard-shortcuts__grid a > i:first-child {
+    flex: 0 0 auto;
+    color: #f58a3e;
+}
+
+.fc-dashboard-shortcuts__grid a > i:last-child {
+    margin-right: auto;
+    color: #7d7d7d;
+    font-size: 10px;
+}
+
+.fc-portal-list {
+    display: grid;
+    gap: 10px;
+}
+
+.fc-portal-list-card {
+    display: flex;
+    min-width: 0;
+    align-items: center;
+    gap: 15px;
+    padding: 17px;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 15px;
+    background: linear-gradient(110deg, #171717, #121212);
+    transition: transform .18s ease, border-color .18s ease, background .18s ease;
+}
+
+.fc-portal-list-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, .32);
+    background: linear-gradient(110deg, #201914, #151515);
+}
+
+.fc-portal-list-card__icon {
+    display: grid;
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+    place-items: center;
+    border: 1px solid rgba(249, 115, 22, .23);
+    border-radius: 13px;
+    color: #ff9c50;
+    background: rgba(249, 115, 22, .10);
+}
+
+.fc-portal-list-card__body {
+    display: flex;
+    min-width: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fc-portal-list-card__body strong {
+    overflow: hidden;
+    color: #f4f4f4;
+    font-size: .94rem;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc-portal-list-card__body small {
+    overflow: hidden;
+    color: #969696;
+    font-size: .72rem;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fc-portal-list-card__body small span {
+    padding: 0 4px;
+    color: #f28b45;
+}
+
+.fc-portal-list-card__body small i {
+    margin-left: 4px;
+    color: #e99555;
+}
+
+.fc-portal-list-card__arrow {
+    display: grid;
+    width: 33px;
+    height: 33px;
+    flex: 0 0 33px;
+    place-items: center;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 10px;
+    color: #aaa;
+    font-size: 11px;
+    transition: .18s ease;
+}
+
+.fc-portal-list-card:hover .fc-portal-list-card__arrow {
+    border-color: rgba(249, 115, 22, .36);
+    color: #ff9a4d;
+    background: rgba(249, 115, 22, .10);
+}
+
+.fc-portal-status {
+    display: inline-flex;
+    min-height: 27px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 4px 10px;
+    border: 1px solid rgba(255, 255, 255, .09);
+    border-radius: 999px;
+    color: #c6c6c6;
+    background: rgba(255, 255, 255, .045);
+    font-size: .68rem;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.fc-portal-status--active,
+.fc-portal-status--paid,
+.fc-portal-status--open {
+    border-color: rgba(34, 197, 94, .22);
+    color: #77e0a0;
+    background: rgba(34, 197, 94, .09);
+}
+
+.fc-portal-status--pending,
+.fc-portal-status--replied {
+    border-color: rgba(245, 158, 11, .24);
+    color: #f7c36a;
+    background: rgba(245, 158, 11, .09);
+}
+
+.fc-portal-status--suspended,
+.fc-portal-status--cancelled,
+.fc-portal-status--closed {
+    border-color: rgba(239, 68, 68, .23);
+    color: #f48a8a;
+    background: rgba(239, 68, 68, .09);
+}
+
+.fc-invoice-card__amount {
+    color: #fff;
+    font-size: .92rem;
+    font-weight: 900;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.fc-portal-empty {
+    display: flex;
+    min-height: 250px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    border: 1px dashed rgba(255, 255, 255, .14);
+    border-radius: 16px;
+    text-align: center;
+    background: rgba(255, 255, 255, .018);
+}
+
+.fc-portal-empty > span {
+    display: grid;
+    width: 56px;
+    height: 56px;
+    place-items: center;
+    margin-bottom: 14px;
+    border: 1px solid rgba(249, 115, 22, .24);
+    border-radius: 16px;
+    color: #fa974b;
+    background: rgba(249, 115, 22, .09);
+}
+
+.fc-portal-empty strong {
+    color: #eee;
+    font-size: 1rem;
+}
+
+.fc-portal-empty p {
+    margin: 7px 0 17px;
+    color: #909090;
+    font-size: .8rem;
+}
+
+.fc-portal-empty .fc-portal-button {
+    min-width: 170px;
+}
+
+.fc-portal-pagination {
+    margin-top: 22px;
+}
+
+.fc-portal-page .bg-background-secondary {
+    border-color: var(--fc-portal-border);
+    background-color: var(--fc-portal-surface);
+}
+
+.fc-portal-page .bg-primary-800 {
+    border: 1px solid var(--fc-portal-border);
+    background: var(--fc-portal-surface);
+}
+
+.fc-portal-page input:not([type="checkbox"]):not([type="radio"]),
+.fc-portal-page select,
+.fc-portal-page textarea {
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 10px;
+    color: #f3f3f3;
+    background: #101010;
+    box-shadow: none;
+}
+
+.fc-portal-page input:not([type="checkbox"]):not([type="radio"]):focus,
+.fc-portal-page select:focus,
+.fc-portal-page textarea:focus {
+    border-color: rgba(249, 115, 22, .72);
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, .13);
+}
+
+.fc-portal-page label {
+    color: #d7d7d7;
+}
+
+.fc-portal-page table {
+    border-collapse: separate;
+    border-spacing: 0;
+    overflow: hidden;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 12px;
+    background: #121212;
+}
+
+.fc-portal-page table thead {
+    color: #f4a168;
+    background: #1d1a17;
+}
+
+.fc-portal-page table th {
+    color: #f3a46d;
+    font-size: .71rem;
+    font-weight: 800;
+}
+
+.fc-portal-page table td {
+    border-top: 1px solid rgba(255, 255, 255, .055);
+    color: #d3d3d3;
+    font-size: .8rem;
+}
+
+.fc-portal-page table tbody tr:hover {
+    background: rgba(255, 255, 255, .025);
+}
+
+.fc-portal-page .text-base\/50,
+.fc-portal-page .text-base\/60,
+.fc-portal-page .text-base\/70 {
+    color: #9d9d9d;
+}
+
+/* Services */
+.fc-service-detail-page > .fc-portal-heading {
+    margin-bottom: 20px;
+}
+
+.fc-service-sheet {
+    padding: clamp(18px, 3vw, 30px) !important;
+    border-radius: 18px !important;
+    background: linear-gradient(145deg, #191919, #121212) !important;
+    box-shadow: var(--fc-portal-shadow);
+}
+
+.fc-service-detail-page .fc-service-sheet h1,
+.fc-service-detail-page .fc-service-sheet h2,
+.fc-service-detail-page .fc-service-sheet h4 {
+    color: #f5f5f5;
+}
+
+.fc-service-detail-page .fc-service-sheet .text-base {
+    line-height: 1.95;
+}
+
+.fc-service-detail-page .fc-service-sheet .bg-primary-800 {
+    margin-top: 16px;
+    padding: 16px;
+    border-radius: 14px;
+    background: #111 !important;
+}
+
+.fc-service-detail-page .fc-service-sheet .text-green-500 {
+    color: #69d995 !important;
+}
+
+.fc-service-detail-page .fc-service-sheet .text-red-500 {
+    color: #f28b8b !important;
+}
+
+.fc-service-detail-page .fc-service-sheet .text-orange-500 {
+    color: #ffad6f !important;
+}
+
+/* Invoices */
+.fc-invoices-page .fc-portal-list-card {
+    min-height: 88px;
+}
+
+.fc-invoice-detail-page .fc-invoice-sheet {
+    padding: clamp(18px, 4vw, 42px) !important;
+    border-radius: 19px !important;
+    background: linear-gradient(145deg, #191919, #111) !important;
+    box-shadow: var(--fc-portal-shadow);
+}
+
+.fc-invoice-detail-page .fc-invoice-sheet h1 {
+    color: #fff;
+    font-size: clamp(1.4rem, 3vw, 2rem);
+    font-weight: 900;
+}
+
+.fc-invoice-detail-page .fc-invoice-sheet p,
+.fc-invoice-detail-page .fc-invoice-sheet td {
+    line-height: 1.9;
+}
+
+.fc-invoice-detail-page .fc-invoice-sheet .text-green-500 {
+    color: #76dda0 !important;
+}
+
+.fc-invoice-detail-page .fc-invoice-sheet .text-yellow-500 {
+    color: #f4bd60 !important;
+}
+
+.fc-invoice-detail-page .fc-invoice-sheet .text-red-500 {
+    color: #f38b8b !important;
+}
+
+/* Tickets */
+.fc-ticket-detail-page .fc-ticket-chat-shell,
+.fc-ticket-create-page .fc-ticket-create-panel {
+    padding: clamp(15px, 3vw, 26px) !important;
+    border-radius: 18px !important;
+    background: linear-gradient(145deg, #191919, #111) !important;
+    box-shadow: var(--fc-portal-shadow);
+}
+
+.fc-ticket-detail-page .fc-ticket-message {
+    border-radius: 14px;
+    background: #1a1a1a !important;
+    border-color: rgba(255, 255, 255, .09) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .13);
+}
+
+.fc-ticket-detail-page .fc-ticket-message.ml-auto {
+    border-color: rgba(249, 115, 22, .20) !important;
+    background: linear-gradient(135deg, rgba(249, 115, 22, .12), #181818 70%) !important;
+}
+
+.fc-ticket-detail-page .fc-ticket-message .prose,
+.fc-ticket-detail-page .fc-ticket-message .prose p {
+    color: #e1e1e1;
+}
+
+.fc-ticket-detail-page .fc-ticket-message img {
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 8px;
+}
+
+.fc-ticket-detail-page .fc-ticket-chat-shell h2,
+.fc-ticket-create-page .fc-ticket-create-panel h1 {
+    color: #f7f7f7;
+}
+
+.fc-ticket-detail-page #editor,
+.fc-ticket-create-page #editor,
+.fc-ticket-detail-page .EasyMDEContainer,
+.fc-ticket-create-page .EasyMDEContainer {
+    border-color: rgba(255, 255, 255, .12);
+    border-radius: 11px;
+    color: #eee;
+    background: #101010;
+}
+
+.fc-ticket-detail-page .editor-toolbar,
+.fc-ticket-create-page .editor-toolbar {
+    border-color: rgba(255, 255, 255, .1);
+    background: #171717;
+}
+
+.fc-ticket-detail-page .editor-toolbar button,
+.fc-ticket-create-page .editor-toolbar button {
+    color: #ddd !important;
+}
+
+.fc-ticket-detail-page .CodeMirror,
+.fc-ticket-create-page .CodeMirror {
+    border-color: transparent;
+    color: #eee;
+    background: #101010;
+}
+
+.fc-ticket-detail-page .CodeMirror-cursor {
+    border-color: #f97316;
+}
+
+/* Account pages */
+.fc-account-page .fc-account-content {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 0 !important;
+}
+
+.fc-account-page .fc-account-card,
+.fc-account-page .bg-background-secondary {
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 15px;
+    background: linear-gradient(145deg, #191919, #121212) !important;
+}
+
+.fc-account-page .fc-account-card {
+    padding: 20px;
+}
+
+.fc-account-page h3,
+.fc-account-page h4,
+.fc-account-page h5 {
+    color: #f4f4f4;
+}
+
+.fc-account-page .fc-account-content > p {
+    color: #a4a4a4;
+}
+
+.fc-account-details-page .fc-account-content {
+    padding: 22px !important;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 16px;
+    background: linear-gradient(145deg, #191919, #121212);
+}
+
+.fc-account-details-page .fc-account-content > div.grid {
+    gap: 16px;
+}
+
+.fc-account-credits-page .fc-account-content > div.flex.flex-wrap > div {
+    min-width: 160px;
+    border: 1px solid rgba(249, 115, 22, .2);
+    border-radius: 15px;
+    background: linear-gradient(135deg, rgba(249, 115, 22, .12), #171717) !important;
+}
+
+.fc-account-credits-page .fc-account-content h4 {
+    margin-top: 25px;
+    color: #fff;
+}
+
+.fc-account-payment-methods-page .fc-account-content > div.flex.items-center.justify-between {
+    padding: 18px;
+    border: 1px solid var(--fc-portal-border);
+    border-radius: 14px;
+    background: #171717;
+}
+
+.fc-account-payment-methods-page .fc-account-content > div.flex.items-center.justify-between h3 {
+    margin: 0;
+}
+
+.fc-account-payment-methods-page .fc-account-content > div.fc-account-card {
+    background: #171717 !important;
+}
+
+.fc-account-notifications-page table th,
+.fc-account-notifications-page table td {
+    padding: 15px 16px;
+}
+
+.fc-account-notifications-page table th {
+    background: #1b1917;
+}
+
+.fc-account-notifications-page table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+/* Cart */
+.fc-cart-page .fc-cart-items {
+    gap: 12px;
+}
+
+.fc-cart-page .fc-cart-item {
+    gap: 20px;
+    padding: 20px;
+    border-radius: 15px;
+    background: linear-gradient(135deg, #191919, #121212) !important;
+    transition: border-color .18s ease, transform .18s ease;
+}
+
+.fc-cart-page .fc-cart-item:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, .3);
+}
+
+.fc-cart-page .fc-cart-item h2 {
+    color: #f7f7f7;
+    font-size: 1.05rem;
+}
+
+.fc-cart-page .fc-cart-item h3 {
+    color: #ffb174;
+    font-variant-numeric: tabular-nums;
+}
+
+.fc-cart-page .fc-cart-summary {
+    position: sticky;
+    top: 92px;
+    padding: 20px !important;
+    border-radius: 16px !important;
+    background: linear-gradient(145deg, #1b1b1b, #111) !important;
+    box-shadow: var(--fc-portal-shadow);
+}
+
+.fc-cart-page .fc-cart-summary h2 {
+    color: #fff;
+    font-size: 1.2rem;
+}
+
+.fc-cart-page .fc-cart-summary > div {
+    color: #ddd;
+}
+
+.fc-cart-page .fc-cart-summary > div.text-lg {
+    padding-top: 13px;
+    border-top: 1px solid var(--fc-portal-border);
+    color: #fff;
+}
+
+/* Modal foundations and payment method selector */
+.fc-modal-backdrop {
+    z-index: 1000 !important;
+    padding: 16px;
+    background: rgba(0, 0, 0, .78) !important;
+    -webkit-backdrop-filter: blur(12px) saturate(125%);
+    backdrop-filter: blur(12px) saturate(125%);
+}
+
+.fc-modal-panel {
+    width: min(100%, 680px);
+    max-height: min(88dvh, 820px) !important;
+    margin: auto !important;
+    padding: 22px !important;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 20px !important;
+    color: #f5f5f5;
+    background:
+        radial-gradient(circle at 100% 0, rgba(249, 115, 22, .12), transparent 35%),
+        linear-gradient(145deg, #1a1a1a, #101010) !important;
+    box-shadow: 0 28px 90px rgba(0, 0, 0, .62);
+}
+
+.fc-modal-panel__title {
+    color: #fff !important;
+    font-size: 1.14rem !important;
+    font-weight: 900 !important;
+}
+
+.fc-modal-panel > div:first-child {
+    gap: 12px;
+    padding-bottom: 14px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+}
+
+.fc-modal-panel > div:first-child button {
+    display: grid;
+    width: 35px;
+    height: 35px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 10px;
+    color: #bbb !important;
+    background: rgba(255, 255, 255, .045);
+}
+
+.fc-modal-panel > div:first-child button:hover {
+    border-color: rgba(249, 115, 22, .42);
+    color: #ffab70 !important;
+}
+
+.fc-payment-modal__amount {
+    color: #ffb477;
+    font-size: .8rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+.fc-modal-panel--payment {
+    width: min(100%, 620px);
+    border-color: rgba(249, 115, 22, .24);
+}
+
+.fc-payment-flow {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.fc-payment-flow__intro {
+    padding: 14px 15px;
+    border: 1px solid rgba(249, 115, 22, .18);
+    border-radius: 13px;
+    background: linear-gradient(110deg, rgba(249, 115, 22, .10), rgba(255, 255, 255, .025));
+}
+
+.fc-payment-flow__secure {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    margin-bottom: 7px;
+    color: #ffad71;
+    font-size: .72rem;
+    font-weight: 850;
+}
+
+.fc-payment-flow__intro p {
+    margin: 0;
+    color: #bcbcbc;
+    font-size: .8rem;
+    line-height: 1.8;
+}
+
+.fc-payment-flow__intro strong {
+    color: #fff;
+    font-size: .95rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+}
+
+.fc-payment-option-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.fc-payment-option-group h3 {
+    margin: 0 0 9px;
+    color: #f2f2f2;
+    font-size: .9rem;
+    font-weight: 850;
+}
+
+.fc-payment-option {
+    min-height: 72px;
+    gap: 12px;
+    padding: 14px 15px !important;
+    border: 1px solid rgba(255, 255, 255, .09) !important;
+    border-radius: 13px !important;
+    color: #eee;
+    background: #141414 !important;
+    transition: border-color .16s ease, background .16s ease, transform .16s ease, box-shadow .16s ease;
+}
+
+.fc-payment-option:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, .35) !important;
+    background: #1c1815 !important;
+}
+
+.fc-payment-option--selected {
+    border-color: #f97316 !important;
+    background: linear-gradient(110deg, rgba(249, 115, 22, .16), #191714) !important;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, .12), 0 8px 22px rgba(249, 115, 22, .07);
+}
+
+.fc-payment-option > div:first-child {
+    gap: 13px;
+    align-items: center;
+}
+
+.fc-payment-option > div:first-child > div:last-child,
+.fc-payment-option > div:first-child > div:nth-child(2) {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.fc-payment-option p,
+.fc-payment-option .font-semibold {
+    margin: 0;
+    color: #f4f4f4;
+    font-size: .84rem;
+    font-weight: 850;
+}
+
+.fc-payment-option p.text-sm,
+.fc-payment-option .text-sm {
+    color: #999 !important;
+    font-size: .7rem !important;
+}
+
+.fc-payment-option img,
+.fc-payment-option svg {
+    max-width: 42px;
+    max-height: 36px;
+    object-fit: contain;
+}
+
+.fc-payment-option > div:last-child {
+    flex: 0 0 auto;
+    border-color: rgba(255, 255, 255, .24) !important;
+}
+
+.fc-payment-option--selected > div:last-child {
+    border-color: #f97316 !important;
+    background: #f97316 !important;
+}
+
+.fc-payment-one-time__toggle {
+    min-height: 45px;
+    padding: 11px 13px !important;
+    border-color: rgba(255, 255, 255, .1) !important;
+    color: #e0e0e0;
+    background: #131313;
+    font-size: .78rem;
+    font-weight: 800;
+}
+
+.fc-payment-one-time__toggle:hover {
+    border-color: rgba(249, 115, 22, .3) !important;
+}
+
+.fc-payment-flow__submit {
+    padding-top: 14px;
+    border-top: 1px solid rgba(255, 255, 255, .08);
+}
+
+.fc-payment-flow__submit button {
+    min-height: 50px;
+    border-radius: 12px !important;
+    color: #17100b !important;
+    background: linear-gradient(110deg, #ff9a45, #f97316) !important;
+    box-shadow: 0 8px 22px rgba(249, 115, 22, .19);
+    font-size: .88rem;
+    font-weight: 900;
+}
+
+.fc-payment-flow__submit button:hover {
+    filter: brightness(1.06);
+}
+
+.fc-payment-flow__submit button:disabled {
+    cursor: not-allowed;
+    opacity: .46;
+}
+
+.fc-payment-provider-content {
+    color: #e8e8e8;
+}
+
+.fc-payment-provider-content input,
+.fc-payment-provider-content select,
+.fc-payment-provider-content button {
+    border-radius: 10px;
+}
+
+.fc-portal-page :focus-visible,
+.fc-modal-panel :focus-visible {
+    outline: 2px solid rgba(249, 115, 22, .88);
+    outline-offset: 3px;
+}
+
+@media (max-width: 1024px) {
+    .fc-dashboard-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fc-portal-stat-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+    .fc-portal-page {
+        padding-right: 15px !important;
+        padding-left: 15px !important;
+        padding-bottom: 42px;
+    }
+
+    .fc-portal-page .fc-portal-heading {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 13px;
+        margin-top: 14px;
+    }
+
+    .fc-portal-heading__action {
+        width: 100%;
+    }
+
+    .fc-portal-hero {
+        min-height: 0;
+        padding: 22px 18px;
+        border-radius: 17px;
+    }
+
+    .fc-dashboard-hero__mark {
+        display: none;
+    }
+
+    .fc-portal-hero h1 {
+        font-size: 1.75rem;
+    }
+
+    .fc-portal-hero p {
+        font-size: .8rem;
+    }
+
+    .fc-portal-stat-grid {
+        gap: 9px;
+    }
+
+    .fc-portal-stat {
+        min-height: 135px;
+        padding: 13px;
+        border-radius: 13px;
+    }
+
+    .fc-portal-stat__icon {
+        width: 32px;
+        height: 32px;
+        margin-bottom: 9px;
+    }
+
+    .fc-portal-stat > strong {
+        font-size: 1.5rem;
+    }
+
+    .fc-portal-stat > small {
+        font-size: .62rem;
+    }
+
+    .fc-portal-panel {
+        padding: 16px;
+        border-radius: 14px;
+    }
+
+    .fc-dashboard-shortcuts__grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .fc-portal-list-card {
+        flex-wrap: wrap;
+        gap: 11px;
+        padding: 13px;
+    }
+
+    .fc-portal-list-card__body {
+        flex-basis: calc(100% - 62px);
+    }
+
+    .fc-portal-list-card__arrow {
+        margin-right: auto;
+    }
+
+    .fc-portal-status {
+        margin-right: 57px;
+    }
+
+    .fc-invoice-card__amount {
+        margin-right: 57px;
+    }
+
+    .fc-cart-page .fc-cart-item {
+        align-items: stretch;
+        flex-direction: column;
+        gap: 14px;
+        padding: 14px;
+    }
+
+    .fc-cart-page .fc-cart-item > div:last-child {
+        align-items: stretch;
+    }
+
+    .fc-cart-page .fc-cart-item > div:last-child > div {
+        flex-wrap: wrap;
+    }
+
+    .fc-cart-page .fc-cart-summary {
+        position: static;
+    }
+
+    .fc-account-page .fc-account-content > .grid,
+    .fc-account-page .fc-account-content form .grid {
+        grid-template-columns: minmax(0, 1fr) !important;
+    }
+
+    .fc-ticket-detail-page .fc-ticket-message {
+        max-width: 100% !important;
+    }
+
+    .fc-ticket-detail-page .fc-ticket-chat-shell,
+    .fc-ticket-create-page .fc-ticket-create-panel {
+        padding: 13px !important;
+    }
+
+    .fc-portal-page table {
+        min-width: 560px;
+    }
+
+    .fc-modal-backdrop {
+        align-items: flex-end !important;
+        padding: 8px !important;
+    }
+
+    .fc-modal-panel {
+        width: 100% !important;
+        max-height: 92dvh !important;
+        margin: auto 0 0 !important;
+        padding: 18px 15px !important;
+        border-radius: 18px 18px 12px 12px !important;
+    }
+
+    .fc-payment-option {
+        min-height: 66px;
+        padding: 11px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fc-portal-page *,
+    .fc-modal-panel * {
+        scroll-behavior: auto !important;
+        transition-duration: .01ms !important;
+        animation-duration: .01ms !important;
+        animation-iteration-count: 1 !important;
+    }
+}
