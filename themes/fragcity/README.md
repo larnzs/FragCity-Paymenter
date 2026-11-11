@@ -33,7 +33,7 @@ The storefront header and footer use the same component styles and visual struct
 
 The main site's PHP session, Steam/FACEIT lookups, wallet database queries and SPA navigation are deliberately not imported into Paymenter. The visual header is preserved, while login, registration, account links, avatar and logout are supplied by Paymenter's own authentication/navigation layer. Footer login and registration links also point to Paymenter's native routes.
 
-Main-site links point to `https://fragcity.ir`; the store link uses Paymenter's current home route. The brand logo is served from the main site's public assets.
+Main-site links point to `https://fragcity.ir`; the store link points to `/` so visitors always land on the Billing storefront root. The brand logo is served from the main site's public assets.
 
 ## Customer portal
 
