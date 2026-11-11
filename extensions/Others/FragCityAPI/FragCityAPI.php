@@ -28,6 +28,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
+use Livewire\Livewire;
 use RuntimeException;
 use Throwable;
 
@@ -213,7 +214,18 @@ class FragCityAPI extends Extension
     public function boot(): void
     {
         View::share('fragcitySsoEnabled', $this->isSsoEnabled());
+
+        require_once __DIR__ . '/SsoTfa.php';
+        Livewire::component('fragcity-api.sso-tfa', SsoTfa::class);
+
         require __DIR__ . '/routes.php';
+    }
+
+    public function ssoTfaPage()
+    {
+        abort_unless($this->isSsoEnabled(), 404);
+
+        return view('auth.fragcity-sso-tfa');
     }
 
     public function ping(Request $request): JsonResponse
@@ -4739,15 +4751,17 @@ class FragCityAPI extends Extension
             return redirect()->to($destination);
         }
 
-        // Respect Paymenter's native two-factor flow; SSO must never bypass it.
+        // Keep Paymenter's native TOTP verification and replay protection,
+        // while returning SSO users to the original requested Billing page.
         if ($user->tfa_secret) {
+            Session::put('fragcity_sso_2fa_return_to', $destination);
             Session::put('2fa', [
                 'user_id' => $user->id,
                 'remember' => $claims['remember'],
                 'expires' => now()->addMinutes(5),
             ]);
 
-            return redirect()->route('2fa');
+            return redirect()->route('extensions.fragcity-api.sso.2fa');
         }
 
         (new \App\Actions\Auth\Login)->execute($user, $claims['remember']);
