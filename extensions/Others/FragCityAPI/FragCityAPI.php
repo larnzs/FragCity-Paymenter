@@ -29,8 +29,8 @@ use Throwable;
 
 #[ExtensionMeta(
     name: 'FragCity API',
-    description: 'Private signed server-to-server catalogue, wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.13.0',
+    description: 'Private signed server-to-server VIP store, Paymenter wallet, CS2 checkout and service bridge for FragCity.',
+    version: '1.14.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -100,6 +100,82 @@ class FragCityAPI extends Extension
                 'required' => true,
                 'validation' => 'required|string|max:12|regex:/^[A-Za-z0-9_-]+$/',
             ],
+            [
+                'name' => 'vip_product_id',
+                'label' => 'FragCity VIP Product ID',
+                'type' => 'number',
+                'description' => 'Non-server Paymenter Product used for Bronze, Silver and Gold VIP memberships.',
+                'required' => false,
+                'validation' => 'nullable|integer|min:1',
+            ],
+            [
+                'name' => 'vip_plan_id_7_days',
+                'label' => 'VIP 7-day Plan ID',
+                'type' => 'number',
+                'required' => false,
+                'validation' => 'nullable|integer|min:1',
+            ],
+            [
+                'name' => 'vip_plan_id_15_days',
+                'label' => 'VIP 15-day Plan ID',
+                'type' => 'number',
+                'required' => false,
+                'validation' => 'nullable|integer|min:1',
+            ],
+            [
+                'name' => 'vip_plan_id_30_days',
+                'label' => 'VIP 30-day Plan ID',
+                'type' => 'number',
+                'required' => false,
+                'validation' => 'nullable|integer|min:1',
+            ],
+            [
+                'name' => 'vip_plan_id_60_days',
+                'label' => 'VIP 60-day Plan ID',
+                'type' => 'number',
+                'required' => false,
+                'validation' => 'nullable|integer|min:1',
+            ],
+            [
+                'name' => 'vip_plan_id_90_days',
+                'label' => 'VIP 90-day Plan ID',
+                'type' => 'number',
+                'required' => false,
+                'validation' => 'nullable|integer|min:1',
+            ],
+            [
+                'name' => 'vip_level_option_id',
+                'label' => 'VIP Level Config Option ID',
+                'type' => 'number',
+                'description' => 'Native Product Config Option with child Environment Variables 1, 2 and 3.',
+                'required' => false,
+                'validation' => 'nullable|integer|min:1',
+            ],
+            [
+                'name' => 'vip_currency_code',
+                'label' => 'VIP Paymenter Currency Code',
+                'type' => 'text',
+                'description' => 'Rial currency code for VIP plans, prices and Paymenter Wallet (for example IRR).',
+                'required' => false,
+                'validation' => 'nullable|string|max:12|regex:/^[A-Za-z0-9_-]+$/',
+            ],
+            [
+                'name' => 'vipcore_api_base_url',
+                'label' => 'Linux VIPCore API HTTPS Origin',
+                'type' => 'text',
+                'description' => 'HTTPS origin only, for example https://api.fragcity.ir. Paymenter calls the signed /v1/vipcore endpoint server-to-server.',
+                'required' => false,
+                'validation' => 'nullable|url|starts_with:https://',
+            ],
+            [
+                'name' => 'vipcore_shared_secret',
+                'label' => 'Linux VIPCore API HMAC Secret',
+                'type' => 'password',
+                'description' => 'Must match the global shared_secret in /etc/fragcity-api/config.php. Kept separate from the Paymenter website-bridge secret.',
+                'required' => false,
+                'encrypted' => true,
+                'validation' => 'nullable|string|min:64|max:128',
+            ],
         ];
     }
 
@@ -128,7 +204,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.13.0',
+            'version' => '1.14.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
