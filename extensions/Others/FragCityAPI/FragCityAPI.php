@@ -17,6 +17,10 @@ use App\Models\Service;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -30,7 +34,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server VIP store, Paymenter wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.14.0',
+    version: '1.15.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -47,6 +51,23 @@ class FragCityAPI extends Extension
                 'required' => true,
                 'encrypted' => true,
                 'validation' => 'required|string|min:64|max:256',
+            ],
+            [
+                'name' => 'sso_enabled',
+                'label' => 'FragCity Single Sign-On Enabled',
+                'type' => 'checkbox',
+                'description' => 'Allow customers who are signed in to the main FragCity website to enter Billing without signing in again. Steam and FragCity username/password login are both supported.',
+                'required' => false,
+                'default' => true,
+            ],
+            [
+                'name' => 'website_base_url',
+                'label' => 'FragCity Website HTTPS Origin',
+                'type' => 'text',
+                'description' => 'Canonical main website origin used by the SSO hand-off. Use exactly https://fragcity.ir (no path or trailing slash).',
+                'required' => true,
+                'default' => 'https://fragcity.ir',
+                'validation' => 'required|url|starts_with:https://',
             ],
             [
                 'name' => 'allowed_ips',
@@ -191,6 +212,7 @@ class FragCityAPI extends Extension
 
     public function boot(): void
     {
+        View::share('fragcitySsoEnabled', $this->isSsoEnabled());
         require __DIR__ . '/routes.php';
     }
 
@@ -204,7 +226,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.14.0',
+            'version' => '1.15.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -4541,6 +4563,255 @@ class FragCityAPI extends Extension
                 ],
             ], 202);
         }
+    }
+
+
+
+    /**
+     * Start the browser-based SSO hand-off from Paymenter to the main FragCity
+     * site. The state is held only in the Paymenter session.
+     */
+    public function startSso(Request $request): RedirectResponse
+    {
+        abort_unless($this->isSsoEnabled(), 404);
+
+        $websiteOrigin = $this->ssoWebsiteOrigin();
+        abort_if($websiteOrigin === null, 503, 'FragCity SSO is not configured.');
+
+        $returnTo = $this->safeSsoReturnPath($request->query('redirect', '/'));
+        if (Auth::check()) {
+            return redirect($returnTo);
+        }
+
+        $state = bin2hex(random_bytes(32));
+        Session::put('fragcity_sso_state', $state);
+        Session::put('fragcity_sso_return_to', $returnTo);
+
+        return redirect()->away(
+            $websiteOrigin . '/api/paymenter-sso.php?state=' . rawurlencode($state)
+        );
+    }
+
+    /**
+     * Consume a short-lived, one-time HMAC ticket issued by the FragCity PHP
+     * endpoint. A browser cannot choose a Paymenter user ID or SteamID.
+     */
+    public function completeSso(Request $request): RedirectResponse
+    {
+        abort_unless($this->isSsoEnabled(), 404);
+
+        $websiteOrigin = $this->ssoWebsiteOrigin();
+        $paymenterOrigin = $this->normalizeHttpsOrigin((string) config('app.url'));
+        abort_if($websiteOrigin === null || $paymenterOrigin === null, 503, 'FragCity SSO is not configured.');
+
+        // This is a cross-origin form POST but remains same-site (both hosts are
+        // under fragcity.ir). Requiring the expected Origin adds a browser-side
+        // check on top of the per-session random state and signed ticket.
+        $requestOrigin = $this->normalizeHttpsOrigin((string) $request->header('Origin', ''));
+        if ($requestOrigin === null || !hash_equals($websiteOrigin, $requestOrigin)) {
+            return redirect()->route('login')->with('error', 'FragCity SSO origin validation failed.');
+        }
+
+        $expectedState = Session::get('fragcity_sso_state');
+        $postedState = $request->input('state');
+        $ticket = $request->input('ticket');
+
+        if (
+            !is_string($expectedState)
+            || !preg_match('/\A[a-f0-9]{64}\z/D', $expectedState)
+            || !is_string($postedState)
+            || !hash_equals($expectedState, $postedState)
+            || !is_string($ticket)
+            || strlen($ticket) > 4096
+        ) {
+            return redirect()->route('login')->with('error', 'FragCity SSO request expired. Please try again.');
+        }
+
+        $ticketParts = explode('.', $ticket);
+        if (
+            count($ticketParts) !== 2
+            || !preg_match('/\A[a-f0-9]{64}\z/D', $ticketParts[1])
+            || $ticketParts[0] === ''
+        ) {
+            return redirect()->route('login')->with('error', 'FragCity SSO ticket is invalid.');
+        }
+
+        $secret = (string) $this->config('shared_secret');
+        if (!preg_match('/\A[a-f0-9]{64,256}\z/iD', $secret)) {
+            return redirect()->route('login')->with('error', 'FragCity SSO is not configured.');
+        }
+
+        $expectedSignature = hash_hmac('sha256', $ticketParts[0], $secret);
+        if (!hash_equals($expectedSignature, strtolower($ticketParts[1]))) {
+            return redirect()->route('login')->with('error', 'FragCity SSO signature validation failed.');
+        }
+
+        $padding = str_repeat('=', (4 - (strlen($ticketParts[0]) % 4)) % 4);
+        $decoded = base64_decode(
+            strtr($ticketParts[0], '-_', '+/') . $padding,
+            true
+        );
+        if ($decoded === false) {
+            return redirect()->route('login')->with('error', 'FragCity SSO ticket is invalid.');
+        }
+
+        try {
+            $claims = json_decode($decoded, true, 16, JSON_THROW_ON_ERROR);
+        } catch (Throwable) {
+            $claims = null;
+        }
+
+        $now = time();
+        if (
+            !is_array($claims)
+            || ($claims['iss'] ?? null) !== $websiteOrigin
+            || ($claims['aud'] ?? null) !== $paymenterOrigin
+            || !is_string($claims['sub'] ?? null)
+            || !preg_match('/\A[0-9]{17}\z/D', $claims['sub'])
+            || !is_int($claims['user_id'] ?? null)
+            || $claims['user_id'] < 1
+            || !is_int($claims['iat'] ?? null)
+            || !is_int($claims['exp'] ?? null)
+            || $claims['iat'] > ($now + 30)
+            || $claims['iat'] < ($now - 120)
+            || $claims['exp'] <= $now
+            || $claims['exp'] <= $claims['iat']
+            || ($claims['exp'] - $claims['iat']) > 120
+            || !is_string($claims['jti'] ?? null)
+            || !preg_match('/\A[a-f0-9]{32}\z/D', $claims['jti'])
+            || !is_string($claims['state'] ?? null)
+            || !hash_equals($expectedState, $claims['state'])
+            || !is_bool($claims['remember'] ?? null)
+        ) {
+            return redirect()->route('login')->with('error', 'FragCity SSO ticket is expired or invalid.');
+        }
+
+        $steamId = $claims['sub'];
+        $paymenterUserId = $claims['user_id'];
+        $returnTo = $this->safeSsoReturnPath(
+            Session::pull('fragcity_sso_return_to', '/')
+        );
+
+        // A unique SHA-256 JTI key makes a valid ticket consumable only once.
+        // Ticket contents and SteamID values are deliberately not logged.
+        try {
+            DB::table('fragcity_sso_used_tickets')
+                ->where('expires_at', '<', now())
+                ->delete();
+
+            DB::table('fragcity_sso_used_tickets')->insert([
+                'jti_hash' => hash('sha256', $claims['jti']),
+                'expires_at' => now()->setTimestamp($claims['exp']),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+        } catch (QueryException) {
+            Session::forget('fragcity_sso_state');
+
+            return redirect()->route('login')->with('error', 'This FragCity SSO request has already been used or cannot be verified.');
+        }
+
+        $link = DB::table('fragcity_user_links')
+            ->where('steamid64', $steamId)
+            ->where('user_id', $paymenterUserId)
+            ->first();
+
+        $user = User::query()->find($paymenterUserId);
+        if (!$link || !$user) {
+            Session::forget('fragcity_sso_state');
+
+            return redirect()->route('login')->with('error', 'This FragCity account is not linked to a Billing account.');
+        }
+
+        Session::forget('fragcity_sso_state');
+
+        if (Auth::check()) {
+            if ((int) Auth::id() !== (int) $user->id) {
+                return redirect()->route('login')->with('error', 'A different Billing account is already signed in. Sign out of Billing and try again.');
+            }
+
+            return redirect($returnTo);
+        }
+
+        // Respect Paymenter's native two-factor flow; SSO must never bypass it.
+        if ($user->tfa_secret) {
+            Session::put('2fa', [
+                'user_id' => $user->id,
+                'remember' => $claims['remember'],
+                'expires' => now()->addMinutes(5),
+            ]);
+
+            return redirect()->route('2fa');
+        }
+
+        (new \App\Actions\Auth\Login)->execute($user, $claims['remember']);
+
+        return redirect($returnTo);
+    }
+
+    private function isSsoEnabled(): bool
+    {
+        $value = $this->config('sso_enabled');
+
+        return $value === null
+            ? true
+            : filter_var($value, FILTER_VALIDATE_BOOLEAN);
+    }
+
+    private function ssoWebsiteOrigin(): ?string
+    {
+        return $this->normalizeHttpsOrigin((string) ($this->config('website_base_url') ?: 'https://fragcity.ir'));
+    }
+
+    private function normalizeHttpsOrigin(string $value): ?string
+    {
+        $value = trim($value);
+        $parts = parse_url($value);
+
+        if (
+            !is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || empty($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || (isset($parts['path']) && $parts['path'] !== '' && $parts['path'] !== '/')
+            || (isset($parts['port']) && ((int) $parts['port'] < 1 || (int) $parts['port'] > 65535))
+        ) {
+            return null;
+        }
+
+        $host = strtolower((string) $parts['host']);
+        $port = isset($parts['port']) ? ':' . (int) $parts['port'] : '';
+
+        return 'https://' . $host . $port;
+    }
+
+    private function safeSsoReturnPath(mixed $value): string
+    {
+        if (!is_string($value) || $value === '' || strlen($value) > 1024) {
+            return route('home');
+        }
+
+        $value = trim($value);
+        $parts = parse_url($value);
+
+        if (
+            !str_starts_with($value, '/')
+            || str_starts_with($value, '//')
+            || str_contains($value, chr(92))
+            || preg_match('/[\r\n\x00-\x1F\x7F]/', $value)
+            || !is_array($parts)
+            || isset($parts['scheme'])
+            || isset($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+        ) {
+            return route('home');
+        }
+
+        return $value;
     }
 
     private function authenticateBridgeRequest(Request $request): ?JsonResponse
