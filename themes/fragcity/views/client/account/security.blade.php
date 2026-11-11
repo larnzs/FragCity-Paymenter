@@ -2,10 +2,10 @@
     <x-navigation.breadcrumb />
 
     <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / ACCOUNT SECURITY</span><h1>امنیت حساب</h1><p>نشست‌های فعال، رمز عبور و تأیید دومرحله‌ای را مدیریت کن.</p></div></div>
-    <div class="px-2 flex flex-col gap-4">
+    <div class="fc-account-content px-2 flex flex-col gap-4">
 
         <!-- Sessions -->
-        <div class="bg-background-secondary rounded-lg p-4">
+        <div class="fc-account-card bg-background-secondary rounded-lg p-4">
             <h5 class="text-lg font-bold pb-3">{{ __('account.sessions') }}</h5>
             @foreach (Auth::user()->sessions as $session)
             <div class="flex flex-row items-center justify-between py-2 border-b border-base/50">
