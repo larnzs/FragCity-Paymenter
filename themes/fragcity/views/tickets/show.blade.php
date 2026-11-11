@@ -1,4 +1,9 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-ticket-detail-page" dir="rtl">
+    <x-navigation.breadcrumb />
+    <div class="fc-portal-heading">
+        <div><span class="fc-portal-kicker">FRAGCITY / SUPPORT TICKET #{{ $ticket->id }}</span><h1>{{ $ticket->subject }}</h1><p>گفت‌وگو با تیم پشتیبانی و پیگیری وضعیت درخواست.</p></div>
+        <a href="{{ route('tickets') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به تیکت‌ها</a>
+    </div>
     <div class="bg-primary-800 p-6 rounded-lg mt-2">
         <h1 class="text-2xl font-semibold">Ticket #{{ $ticket->id }} - {{ $ticket->subject }}</h1>
 
