@@ -75,9 +75,9 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 ! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.13.0'" "$api"
-grep -Fq "'version' => '1.13.0'" "$api"
-grep -Fq "version: '1.7.1'" "$cs2"
+grep -Fq "version: '1.14.0'" "$api"
+grep -Fq "'version' => '1.14.0'" "$api"
+grep -Fq "version: '1.7.2'" "$cs2"
 
 # The first supported CS2 subscription is now three days. Keep the historical
 # setting key so an existing Product ID value is not lost during extension update.
@@ -114,6 +114,9 @@ done
 
 grep -Fq "function createServer" "$cs2"
 grep -Fq "function upgradeServer" "$cs2"
+grep -Fq "applyNativeEggConfigOptionsToPterodactyl(\$service, \$settings, \$properties)" "$cs2"
+grep -Fq "'/api/application/servers/' . \$serverId . '/startup'" "$cs2"
+grep -Fq "Pterodactyl did not persist the requested CS2 startup variable" "$cs2"
 grep -Fq "applyResourceLimitsFromConfigOptions(\$service, \$properties)" "$cs2"
 grep -Fq "'memory' => 1048576" "$cs2"
 grep -Fq "'disk' => 1048576" "$cs2"

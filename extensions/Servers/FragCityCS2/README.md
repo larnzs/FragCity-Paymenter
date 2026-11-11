@@ -18,7 +18,7 @@ If an existing client is found by email with an empty `external_id`, the extensi
 
 ## Customer server management
 
-Extension version: **1.7.1**.
+Extension version: **1.7.2**.
 
 The extension exposes two narrow methods for the signed FragCity API bridge:
 
@@ -86,7 +86,7 @@ Attach these native Paymenter Config Options to the CS2 Product:
 | Additional Allocations | `additional_allocations` | Select | `0`, `1`, `2`, `3`, `5` |
 | Backups | `backups` | Select | `0`, `1`, `2`, `3`, `5`, `10` |
 
-The signed FragCity API resolves and stores all eight selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges their selected child Environment Variables into the provisioning property map. The inherited Pterodactyl provisioner receives RAM/SSD/CPU as resource limits, Player Slots/Tickrate as Egg environment variables, and the three feature-limit selections as Pterodactyl `feature_limits` values. The same mapping is applied by `upgradeServer()` before Paymenter's inherited Pterodactyl updater changes build limits and Egg environment values.
+The signed FragCity API resolves and stores all eight selections as native `ServiceConfig` rows. Paymenter's `ExtensionHelper::getServiceProperties()` merges their selected child Environment Variables into the provisioning property map. The inherited Pterodactyl provisioner receives RAM/SSD/CPU as resource limits, Player Slots/Tickrate as Egg environment variables, and the three feature-limit selections as Pterodactyl `feature_limits` values. The same mapping is applied by `upgradeServer()` before Paymenter's inherited Pterodactyl updater changes build limits and Egg environment values. Because Paymenter's updater preserves existing values for already-populated Egg variables, FragCityCS2 then sends a narrow second Startup API update for manifest-declared native Egg Config Options (currently `SRCDS_MAXPLAYERS` and `TICKRATE`). It preserves unrelated environment values, the startup command, Egg, Docker image and skip-scripts setting, then reads the server back to verify the selected values were saved. This updates the panel's saved startup configuration; a running CS2 process still needs a restart before the new `-maxplayers` or `-tickrate` arguments take effect.
 
 Use the exact numeric value as each child Environment Variable. The values shown in the Checkout slider come from the Product's live Config Option children; the example values above are not a hard-coded allow-list. FragCity's quote/order API validates that the selected child belongs to the correct Product option and has a valid Plan/currency price. Provisioning enforces the same safety ceilings: RAM and disk up to 1,048,576 MB, CPU up to 6,400. For Player Slots, the 5-slot choice is the included base capacity and larger values represent the additional-slot surcharge. Both Tickrate children (`64` and `128`) are free. Databases, Additional Allocations and Backups are also free at this stage; create zero-price rows for all their values under every supported Plan/currency. The Egg Startup command passes the selected Tickrate through `-tickrate {{TICKRATE}}`.
 
