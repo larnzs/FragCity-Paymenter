@@ -1,4 +1,10 @@
-<div class="bg-primary-800 p-6 rounded-lg mt-2">
+<div class="container mt-14 fc-portal-page fc-ticket-create-page" dir="rtl">
+    <x-navigation.breadcrumb />
+    <div class="fc-portal-heading">
+        <div><span class="fc-portal-kicker">FRAGCITY / SUPPORT CENTER</span><h1>{{ __('ticket.create_ticket') }}</h1><p>موضوع درخواست را مشخص کن و پیام خود را برای تیم پشتیبانی بفرست.</p></div>
+        <a href="{{ route('tickets') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به تیکت‌ها</a>
+    </div>
+    <div class="bg-primary-800 p-6 rounded-lg mt-2 fc-ticket-create-panel">
     <h1 class="text-2xl font-semibold mb-2">{{ __('ticket.create_ticket') }}</h1>
     <div class="grid grid-cols-2 gap-4">
         <x-form.input wire:model="subject" label="{{ __('ticket.subject') }}" name="subject" required />
@@ -108,4 +114,5 @@
             </div>
         </div>
     </div>
+</div>
 </div>
