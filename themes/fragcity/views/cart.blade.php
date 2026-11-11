@@ -3,14 +3,14 @@
     <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / SHOPPING CART</span><h1>سبد خرید</h1><p>سفارش خود را مرور کن و پیش از پرداخت، گزینه‌ها و مبلغ نهایی را بررسی کن.</p></div></div>
 
     <div class="flex flex-col md:grid md:grid-cols-4 gap-8">
-        <div class="flex flex-col col-span-3 gap-4">
+        <div class="flex flex-col col-span-3 gap-4 fc-cart-items">
             @if (Cart::items()->count() === 0)
             <h1 class="text-2xl font-semibold">
                 {{ __('product.empty_cart') }}
             </h1>
             @endif
             @foreach (Cart::items() as $item)
-            <div class="flex flex-row justify-between w-full bg-background-secondary p-3 rounded-md border border-neutral">
+            <div class="fc-cart-item flex flex-row justify-between w-full bg-background-secondary p-3 rounded-md border border-neutral">
                 <div class="flex flex-col gap-1">
                     <h2 class="text-2xl font-semibold">
                         {{ $item->product->name }}
@@ -62,7 +62,7 @@
         </div>
         <div class="flex flex-col gap-4">
             @if (Cart::items()->count() > 0)
-            <div class="flex flex-col gap-2 w-full col-span-1 bg-background-secondary p-3 rounded-md border border-neutral">
+            <div class="fc-cart-summary flex flex-col gap-2 w-full col-span-1 bg-background-secondary p-3 rounded-md border border-neutral">
                 <h2 class="text-2xl font-semibold mb-3">
                     {{ __('product.order_summary') }}
                 </h2>
