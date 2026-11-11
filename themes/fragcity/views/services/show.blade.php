@@ -16,9 +16,7 @@
     </div>
     @endif
     <div class="fc-service-sheet bg-background-secondary border border-neutral p-6 rounded-lg mt-2">
-        <div class="flex flex-col md:flex-row justify-between">
-            <h1 class="text-2xl font-semibold">{{ __('services.services') }}</h1>
-        </div>
+        <div class="fc-service-sheet__meta"><span class="fc-portal-kicker">SERVICE / #{{ $service->id }}</span></div>
         <div class="grid md:grid-cols-2 gap-4 my-4">
             <div>
                 <h4 class="text-lg font-semibold">{{ __('services.product_details') }}:</h4>
