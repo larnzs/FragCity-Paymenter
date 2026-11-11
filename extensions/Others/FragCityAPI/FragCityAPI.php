@@ -3561,6 +3561,22 @@ class FragCityAPI extends Extension
                 }
 
                 $product = $this->loadVipProduct($settings);
+                $playerName = trim((string) $user->properties()->where('key', 'fragcity_username')->value('value'));
+                if ($playerName === '') {
+                    $playerName = trim((string) $user->name);
+                }
+                if ($playerName === '') {
+                    throw new RuntimeException('vip_player_name_missing');
+                }
+                if (function_exists('mb_strlen') && mb_strlen($playerName, 'UTF-8') > 64) {
+                    $playerName = mb_substr($playerName, 0, 64, 'UTF-8');
+                } elseif (strlen($playerName) > 64) {
+                    $playerName = substr($playerName, 0, 64);
+                }
+                if (preg_match('//u', $playerName) !== 1 || preg_match('/[\\x00-\\x1F\\x7F]/', $playerName)) {
+                    throw new RuntimeException('vip_player_name_invalid');
+                }
+
                 $vipStatus = $this->requestVipCore($settings, [
                     'action' => 'get_status',
                     'steamid64' => $steamId,
@@ -3634,6 +3650,7 @@ class FragCityAPI extends Extension
                     'order_ref' => $orderRef,
                     'steamid64' => $steamId,
                     'paymenter_user_id' => (int) $user->id,
+                    'player_name' => $playerName,
                     'product_id' => (int) $product->id,
                     'plan_id' => (int) $quote['plan_id'],
                     'config_option_id' => (int) $settings['level_option_id'],
@@ -3678,7 +3695,9 @@ class FragCityAPI extends Extension
                 'vip_order_reference_conflict' => 409,
                 'vip_paid_membership_upgrade_required', 'vip_membership_already_active',
                 'vip_paid_membership_not_migrated', 'vip_upgrade_source_changed' => 409,
-                'vip_quote_amount_mismatch' => 409,
+                'vip_quote_amount_mismatch', 'vip_upgrade_duration_mismatch',
+                'vip_upgrade_price_invalid', 'vip_upgrade_amount_too_small' => 409,
+                'vip_player_name_missing', 'vip_player_name_invalid' => 422,
                 default => 503,
             };
             return response()->json(['success' => false, 'error' => $e->getMessage()], $status);
@@ -4070,7 +4089,7 @@ class FragCityAPI extends Extension
         $httpStatus = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);
         curl_close($handle);
 
-        if (!is_string($response) || $curlError !== 0) {
+        if (!is_string($response) || $curlError !== 0 || $httpStatus < 200 || $httpStatus >= 300) {
             throw new RuntimeException('vipcore_unavailable');
         }
 
@@ -4129,7 +4148,7 @@ class FragCityAPI extends Extension
                 'action' => 'grant_paid_membership',
                 'order_ref' => (string) $order->order_ref,
                 'steamid64' => (string) $order->steamid64,
-                'player_name' => 'FragCity Player',
+                'player_name' => (string) $order->player_name,
                 'level' => (int) $order->vip_level,
                 'duration_seconds' => (int) $order->duration_seconds,
                 'tier_price_rial' => (int) $order->tier_price_rial,
