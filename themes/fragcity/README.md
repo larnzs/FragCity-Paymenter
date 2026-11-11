@@ -33,7 +33,23 @@ The storefront header and footer use the same component styles and visual struct
 
 The main site's PHP session, Steam/FACEIT lookups, wallet database queries and SPA navigation are deliberately not imported into Paymenter. The visual header is preserved, while login, registration, account links, avatar and logout are supplied by Paymenter's own authentication/navigation layer. Footer login and registration links also point to Paymenter's native routes.
 
-Main-site links point to `https://fragcity.ir`; the store link uses Paymenter's current home route. The brand logo is served from the main site's public assets.
+Main-site links point to `https://fragcity.ir`; the store link points to `/` so visitors always land on the Billing storefront root. The brand logo is served from the main site's public assets.
+
+## Customer portal
+
+The signed-in customer area now uses the same FragCity orange/charcoal visual language as the main website:
+
+- Dashboard: account overview, live service/invoice/ticket widgets and direct account shortcuts.
+- Services: service inventory cards and a branded service detail surface. Paymenter service actions, cancellation and extension-provided service views remain native.
+- Invoices: invoice history, invoice details, transaction status and PDF download remain connected to Paymenter's native invoice records.
+- Tickets: ticket list, detail conversation, reply editor, attachment upload and close actions remain the native Livewire ticket workflow.
+- Account: personal details, security/session controls, 2FA, credits, saved payment methods and notification preferences keep their existing Livewire actions.
+- Cart: editable items, quantity controls, coupon application, taxes, total and checkout remain backed by Paymenter's Cart class and Livewire Cart component.
+- Payment method modal: saved methods, native gateway choices and Paymenter credits are rendered as selectable FragCity option cards. The native `processPayment` action and the gateway's returned provider form are not replaced.
+
+The customer-area styling is isolated in `css/fragcity/customer-portal.css` and imported from the existing `css/app.css` entry point. It includes responsive layouts, keyboard focus states and reduced-motion handling. The shared modal component accepts a `variant` prop; invoice payment uses `variant="payment"` for the branded payment selector while other modals use the default surface.
+
+No Paymenter core files are patched. The Store navigation points directly to the Billing root `/`, and the FragCity SSO callback maps the root return target to Paymenter's home route. For customers who have Paymenter TOTP enabled, FragCityAPI uses a branded SSO-specific TOTP screen that preserves the original return path after successful verification; it uses Paymenter's native TOTP verifier, rate limiter, replay cache and Login action.
 
 ## Assets and build
 
@@ -42,7 +58,7 @@ The theme uses the existing Paymenter Vite entry points:
 - `js/app.js`
 - `css/app.css`
 
-The shared header/footer styles are imported by `css/app.css`; their scripts are imported by `js/app.js`. The storefront uses `css/fragcity/storefront-marketplace.css`. No extra Vite entry-point configuration is required.
+The shared header/footer styles are imported by `css/app.css`; their scripts are imported by `js/app.js`. The storefront uses `css/fragcity/storefront-marketplace.css` and the customer area uses `css/fragcity/customer-portal.css`. No extra Vite entry-point configuration is required.
 
 The layout lets the page use the window as its vertical scroll container. This keeps the shared header's scroll-direction and frosted-glass behavior synchronized with the actual page scroll, while the customer sidebar remains fixed below the 72px header.
 

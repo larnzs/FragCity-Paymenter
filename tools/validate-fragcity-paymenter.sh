@@ -75,10 +75,19 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 ! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.15.0'" "$api"
-grep -Fq "'version' => '1.15.0'" "$api"
+grep -Fq "version: '1.16.0'" "$api"
+grep -Fq "'version' => '1.16.0'" "$api"
 grep -Fq "function startSso" "$api"
 grep -Fq "function completeSso" "$api"
+grep -Fq "function ssoTfaPage" "$api"
+grep -Fq "fragcity_sso_2fa_return_to" "$api"
+grep -Fq "extensions.fragcity-api.sso.2fa" "$routes"
+test -f "extensions/Others/FragCityAPI/SsoTfa.php"
+grep -Fq "class SsoTfa extends Component" "extensions/Others/FragCityAPI/SsoTfa.php"
+grep -Fq "new TwoFactorAuth(new EndroidQrCodeProvider" "extensions/Others/FragCityAPI/SsoTfa.php"
+grep -Fq "Cache::has(\$usedCodeKey)" "extensions/Others/FragCityAPI/SsoTfa.php"
+test -f "themes/fragcity/views/auth/fragcity-sso-tfa.blade.php"
+grep -Fq "auth.fragcity-sso-tfa" "extensions/Others/FragCityAPI/SsoTfa.php"
 grep -Fq "Always prove the FragCity identity" "$api"
 grep -Fq "fragcity_sso_used_tickets" "$api"
 grep -Fq "/auth/fragcity/sso/start" "$routes"
@@ -192,5 +201,36 @@ php -r '
   }
   echo "CS2 checkout and native Config Option manifests OK", PHP_EOL;
 ' "$manifest"
+
+
+# Customer portal redesign: keep the storefront and customer workflow in the FragCity theme.
+portal_css="themes/fragcity/css/fragcity/customer-portal.css"
+grep -Fq 'customer-portal.css' themes/fragcity/css/app.css
+for file in \
+  themes/fragcity/views/dashboard.blade.php \
+  themes/fragcity/views/services/index.blade.php \
+  themes/fragcity/views/services/show.blade.php \
+  themes/fragcity/views/invoices/index.blade.php \
+  themes/fragcity/views/invoices/show.blade.php \
+  themes/fragcity/views/tickets/index.blade.php \
+  themes/fragcity/views/tickets/show.blade.php \
+  themes/fragcity/views/tickets/create.blade.php \
+  themes/fragcity/views/client/account/index.blade.php \
+  themes/fragcity/views/client/account/security.blade.php \
+  themes/fragcity/views/client/account/credits.blade.php \
+  themes/fragcity/views/client/account/payment-methods.blade.php \
+  themes/fragcity/views/client/account/notifications.blade.php \
+  themes/fragcity/views/cart.blade.php \
+  themes/fragcity/views/invoices/partials/payment-modal.blade.php \
+  themes/fragcity/views/invoices/partials/payment-options.blade.php; do
+  test -s "$file"
+done
+grep -Fq '.fc-portal-page' "$portal_css"
+grep -Fq '.fc-payment-modal' "$portal_css"
+grep -Fq '.fc-payment-option--selected' "$portal_css"
+grep -Fq 'variant="payment"' themes/fragcity/views/invoices/partials/payment-modal.blade.php
+grep -Fq 'fc-payment-flow' themes/fragcity/views/invoices/partials/payment-options.blade.php
+grep -Fq 'href="/" class="shock-nav-item active"' themes/fragcity/views/components/navigation/index.blade.php
+grep -Fq 'href="/" class="mobile-nav-link active"' themes/fragcity/views/components/navigation/index.blade.php
 
 echo "FragCity Paymenter validation passed."

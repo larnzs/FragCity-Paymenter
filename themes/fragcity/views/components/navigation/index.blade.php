@@ -24,7 +24,7 @@
             <a href="{{ $fragcityMain }}/skins/" class="shock-nav-item">
                 <i class="fa-solid fa-palette" aria-hidden="true"></i><span>انتخاب اسکین</span>
             </a>
-            <a href="{{ route('home') }}" class="shock-nav-item active" aria-current="page">
+            <a href="/" class="shock-nav-item active" aria-current="page">
                 <i class="fa-solid fa-store" aria-hidden="true"></i><span>فروشگاه</span>
             </a>
             <a href="{{ $fragcityMain }}/leaderboard/" class="shock-nav-item">
@@ -155,7 +155,7 @@
 
         <a href="{{ $fragcityMain }}/servers/" class="mobile-nav-link"><i class="fa-solid fa-server" aria-hidden="true"></i><span>لیست سرورها</span></a>
         <a href="{{ $fragcityMain }}/skins/" class="mobile-nav-link"><i class="fa-solid fa-palette" aria-hidden="true"></i><span>انتخاب اسکین</span></a>
-        <a href="{{ route('home') }}" class="mobile-nav-link active" aria-current="page"><i class="fa-solid fa-store" aria-hidden="true"></i><span>فروشگاه</span></a>
+        <a href="/" class="mobile-nav-link active" aria-current="page"><i class="fa-solid fa-store" aria-hidden="true"></i><span>فروشگاه</span></a>
         <a href="{{ $fragcityMain }}/leaderboard/" class="mobile-nav-link"><i class="fa-solid fa-trophy" aria-hidden="true"></i><span>لیدربورد</span></a>
         <a href="{{ $fragcityMain }}/banlist/" class="mobile-nav-link"><i class="fa-solid fa-gavel" aria-hidden="true"></i><span>لیست محرومیت‌ها</span></a>
         <a href="{{ $fragcityMain }}/vip/" class="mobile-nav-link mobile-nav-link--vip"><i class="fa-solid fa-crown" aria-hidden="true"></i><span>VIP</span></a>

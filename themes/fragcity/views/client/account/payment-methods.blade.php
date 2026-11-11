@@ -1,6 +1,8 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-account-page fc-account-payment-methods-page" dir="rtl">
     <x-navigation.breadcrumb />
-    <div class="px-2">
+
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / PAYMENT METHODS</span><h1>روش‌های پرداخت</h1><p>روش‌های پرداخت ذخیره‌شده و تراکنش‌های اخیر را ببین.</p></div></div>
+    <div class="fc-account-content px-2">
         @if($setupModalVisible)
         <x-modal :title="__('account.payment_methods')" open="true">
             <x-slot name="closeTrigger">
@@ -80,7 +82,7 @@
         </div>
 
         @foreach($agreements as $agreement)
-        <div class="bg-background-secondary border border-neutral p-4 rounded-lg mb-4 hover:bg-background-secondary/80 transition-colors">
+        <div class="fc-account-card bg-background-secondary border border-neutral p-4 rounded-lg mb-4 hover:bg-background-secondary/80 transition-colors">
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-4">
                     <div class="rounded-lg overflow-hidden flex items-center justify-center">

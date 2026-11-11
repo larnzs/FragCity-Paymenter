@@ -1,4 +1,9 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-invoice-detail-page" dir="rtl">
+    <x-navigation.breadcrumb />
+    <div class="fc-portal-heading">
+        <div><span class="fc-portal-kicker">FRAGCITY / INVOICE DETAILS</span><h1>فاکتور شماره {{ $invoice->number ?: $invoice->id }}</h1><p>جزئیات مبلغ، اقلام سفارش و وضعیت تراکنش این فاکتور.</p></div>
+        <a href="{{ route('invoices') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به فاکتورها</a>
+    </div>
     <div @if ($checkPayment) wire:poll.5s="checkPaymentStatus" @endif>
         @if ($this->pay || $showPayModal)
         @include('invoices.partials.payment-modal')
@@ -17,8 +22,8 @@
             </div>
         </div>
 
-        <div class="bg-background-secondary border border-neutral p-12 rounded-lg mt-2">
-            <h1 class="text-2xl font-bold sm:text-3xl">
+        <div class="fc-invoice-sheet bg-background-secondary border border-neutral p-12 rounded-lg mt-2">
+            <h2 class="text-2xl font-bold sm:text-3xl">
                 {{ !$invoice->number && config('settings.invoice_proforma', false) ? __('invoices.proforma_invoice', ['id'
             => $invoice->id]) : __('invoices.invoice', ['id' => $invoice->number]) }}
             </h1>

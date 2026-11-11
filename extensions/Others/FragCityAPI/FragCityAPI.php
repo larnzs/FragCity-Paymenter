@@ -28,13 +28,14 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Validator;
+use Livewire\Livewire;
 use RuntimeException;
 use Throwable;
 
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server VIP store, Paymenter wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.15.0',
+    version: '1.16.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -213,7 +214,18 @@ class FragCityAPI extends Extension
     public function boot(): void
     {
         View::share('fragcitySsoEnabled', $this->isSsoEnabled());
+
+        require_once __DIR__ . '/SsoTfa.php';
+        Livewire::component('fragcity-api.sso-tfa', SsoTfa::class);
+
         require __DIR__ . '/routes.php';
+    }
+
+    public function ssoTfaPage()
+    {
+        abort_unless($this->isSsoEnabled(), 404);
+
+        return view('auth.fragcity-sso-tfa');
     }
 
     public function ping(Request $request): JsonResponse
@@ -226,7 +238,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.15.0',
+            'version' => '1.16.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
@@ -4581,8 +4593,8 @@ class FragCityAPI extends Extension
         $returnTo = $this->safeSsoReturnPath($request->query('redirect', '/'));
 
         // Always prove the FragCity identity, even when a Paymenter session
-        // already exists. The callback accepts that session only when it is
-        // the exact same linked Paymenter user; a different account is rejected.
+        // already exists. The callback validates the signed identity and then aligns
+        // the Billing session with that exact linked Paymenter user.
         $state = bin2hex(random_bytes(32));
         Session::put('fragcity_sso_state', $state);
         Session::put('fragcity_sso_return_to', $returnTo);
@@ -4725,28 +4737,36 @@ class FragCityAPI extends Extension
 
         Session::forget('fragcity_sso_state');
 
-        if (Auth::check()) {
-            if ((int) Auth::id() !== (int) $user->id) {
-                return redirect()->route('login')->with('error', 'A different Billing account is already signed in. Sign out of Billing and try again.');
-            }
-
-            return redirect($returnTo);
+        // FragCity is the identity source of truth. A valid one-time ticket
+        // explicitly requests this linked identity, so replace any other
+        // existing Billing customer session instead of falling through the
+        // guest middleware and accidentally landing on /dashboard.
+        if (Auth::check() && (int) Auth::id() !== (int) $user->id) {
+            app(\App\Actions\Auth\Logout::class)->execute();
         }
 
-        // Respect Paymenter's native two-factor flow; SSO must never bypass it.
+        $destination = $returnTo === '/' ? route('home') : $returnTo;
+
+        if (Auth::check()) {
+            return redirect()->to($destination);
+        }
+
+        // Keep Paymenter's native TOTP verification and replay protection,
+        // while returning SSO users to the original requested Billing page.
         if ($user->tfa_secret) {
+            Session::put('fragcity_sso_2fa_return_to', $destination);
             Session::put('2fa', [
                 'user_id' => $user->id,
                 'remember' => $claims['remember'],
                 'expires' => now()->addMinutes(5),
             ]);
 
-            return redirect()->route('2fa');
+            return redirect()->route('extensions.fragcity-api.sso.2fa');
         }
 
         (new \App\Actions\Auth\Login)->execute($user, $claims['remember']);
 
-        return redirect($returnTo);
+        return redirect()->to($destination);
     }
 
     private function isSsoEnabled(): bool

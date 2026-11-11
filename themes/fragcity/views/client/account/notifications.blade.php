@@ -1,12 +1,14 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-account-page fc-account-notifications-page" dir="rtl">
     <x-navigation.breadcrumb />
 
-    <div class="px-2">
+    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / NOTIFICATIONS</span><h1>اعلان‌ها</h1><p>روش دریافت اعلان‌های ایمیلی و درون‌برنامه‌ای را کنترل کن.</p></div></div>
+
+    <div class="fc-account-content px-2">
         <!-- Configure push notifications -->
         @if($this->supportsPush())
         <div class="bg-background-secondary rounded-lg p-4 mb-6" x-data="pushNotifications">
-            <h2 class="text-lg font-medium text-primary mb-2">{{ __('account.push_notifications') }}</h2>
-            <p class="text-base/70 mb-4">{{ __('account.push_notifications_description') }}</p>
+            <h2 class="text-lg font-medium text-primary mb-2">اعلان‌های فوری</h2>
+            <p class="text-base/70 mb-4">برای دریافت به‌روزرسانی‌های مهم، اعلان‌های مرورگر را فعال کن.</p>
             <x-button.primary type="button" class="!w-fit" @click="subscribe"
                 x-bind:disabled="subscriptionStatus !== 'not_subscribed'">
                 <x-ri-notification-line class="size-5" />
@@ -101,7 +103,7 @@
                 <thead>
                     <tr class="border-b border-neutral/20">
                         <th class="text-left py-4 px-6 text-primary font-medium">
-                            {{ __('account.notification') }}
+                            نوع اعلان
                             <p class="text-sm text-base/70 font-normal mt-1">
                                 {{ __('account.notifications_description') }}
                             </p>
@@ -109,13 +111,13 @@
                         <th class="text-center py-4 px-4 text-primary font-medium">
                             <div class="flex items-center justify-center gap-2">
                                 <x-ri-mail-line class="size-4" />
-                                <span>{{ __('account.email_notifications') }}</span>
+                                <span>ایمیل</span>
                             </div>
                         </th>
                         <th class="text-center py-4 px-4 text-primary font-medium">
                             <div class="flex items-center justify-center gap-2">
                                 <x-ri-notification-line class="size-4" />
-                                <span>{{ __('account.in_app_notifications') }}</span>
+                                <span>داخل برنامه</span>
                             </div>
                         </th>
                     </tr>
@@ -147,7 +149,7 @@
         <x-button.primary wire:click="savePreferences" class="w-full mt-6" wire:loading.attr="disabled">
             <x-loading wire:loading wire:target="savePreferences" />
             <span wire:loading.remove wire:target="savePreferences">
-                {{ __('general.save') }}
+                ذخیره تغییرات
             </span>
         </x-button.primary>
     </div>

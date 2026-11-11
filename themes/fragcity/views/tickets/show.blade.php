@@ -1,12 +1,17 @@
-<div class="container mt-14">
-    <div class="bg-primary-800 p-6 rounded-lg mt-2">
-        <h1 class="text-2xl font-semibold">Ticket #{{ $ticket->id }} - {{ $ticket->subject }}</h1>
+<div class="container mt-14 fc-portal-page fc-ticket-detail-page" dir="rtl">
+    <x-navigation.breadcrumb />
+    <div class="fc-portal-heading">
+        <div><span class="fc-portal-kicker">FRAGCITY / SUPPORT TICKET #{{ $ticket->id }}</span><h1>{{ $ticket->subject }}</h1><p>گفت‌وگو با تیم پشتیبانی و پیگیری وضعیت درخواست.</p></div>
+        <a href="{{ route('tickets') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به تیکت‌ها</a>
+    </div>
+    <div class="fc-ticket-chat-shell bg-primary-800 p-6 rounded-lg mt-2">
+        <div class="fc-ticket-chat__id"><span class="fc-portal-status fc-portal-status--{{ $ticket->status }}">#{{ $ticket->id }}</span></div>
 
         <div class="md:grid grid-cols-4 flex flex-col gap-4">
             <div class="md:col-span-3">
                 <div class="flex flex-col gap-4 max-h-[60vh] overflow-y-auto pr-4" wire:poll.10s>
                     @foreach ($ticket->messages()->with('user')->get() as $index => $message)
-                    <div class="bg-background-secondary hover:bg-background-secondary/80 border border-neutral p-4 rounded-lg w-full max-w-[80%]  {{ $message->user_id === $ticket->user_id ? 'ml-auto' : 'mr-auto' }}"
+                    <div class="fc-ticket-message bg-background-secondary hover:bg-background-secondary/80 border border-neutral p-4 rounded-lg w-full max-w-[80%]  {{ $message->user_id === $ticket->user_id ? 'ml-auto' : 'mr-auto' }}"
                         @if ($loop->last) x-data x-init="$nextTick(() => $el.scrollIntoView({ block: 'end' }))" @endif>
                         <div class="flex items-center justify-between gap-4">
                             <div class="flex items-center gap-3">
@@ -166,10 +171,10 @@
                         <h4 class="h-fit">{{ __('ticket.subject') }}:</h4> {{ $ticket->subject }}
                     </div>
                     <div class="font-semibold flex md:flex-col justify-between bg-primary-800 p-2 px-4 rounded-md">
-                        <h4>{{ __('ticket.status') }}:</h4> {{ ucfirst($ticket->status) }}
+                        <h4>{{ __('ticket.status') }}:</h4> @if($ticket->status === 'open') باز @elseif($ticket->status === 'replied') پاسخ داده‌شده @elseif($ticket->status === 'closed') بسته @else {{ ucfirst($ticket->status) }} @endif
                     </div>
                     <div class="font-semibold flex md:flex-col justify-between bg-primary-800 p-2 px-4 rounded-md">
-                        <h4>{{ __('ticket.priority') }}:</h4> {{ ucfirst($ticket->priority) }}
+                        <h4>{{ __('ticket.priority') }}:</h4> @if($ticket->priority === 'low') کم @elseif($ticket->priority === 'medium') متوسط @elseif($ticket->priority === 'high') زیاد @else {{ ucfirst($ticket->priority) }} @endif
                     </div>
                     <div class="font-semibold flex md:flex-col justify-between bg-primary-800 p-2 px-4 rounded-md">
                         <h4>{{ __('ticket.created_at') }}:</h4> {{ $ticket->created_at->diffForHumans() }}

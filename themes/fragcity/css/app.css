@@ -8,6 +8,7 @@
 @import "./fragcity/site-footer.css";
 @import "./fragcity/storefront-marketplace.css";
 @import "./fragcity/storefront-product-pages.css";
+@import "./fragcity/customer-portal.css";
 
 @plugin '@tailwindcss/forms' { strategy: class; }
 @plugin '@tailwindcss/typography';

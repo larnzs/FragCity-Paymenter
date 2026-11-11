@@ -1,4 +1,9 @@
-<div class="container mt-14">
+<div class="container mt-14 fc-portal-page fc-service-detail-page" dir="rtl">
+    <x-navigation.breadcrumb />
+    <div class="fc-portal-heading">
+        <div><span class="fc-portal-kicker">FRAGCITY / SERVICE DETAILS</span><h1>{{ $service->label }}</h1><p>جزئیات سرویس، وضعیت اشتراک و عملیات قابل انجام را مدیریت کن.</p></div>
+        <a href="{{ route('services') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به سرویس‌ها</a>
+    </div>
     @if($invoice = $service->invoices()->where('status', 'pending')->first())
     <div class="w-full mb-4">
         <div class="bg-yellow-600/20 border-l-4 border-yellow-500 text-yellow-300 p-4 rounded-lg">
@@ -10,10 +15,8 @@
         </div>
     </div>
     @endif
-    <div class="bg-background-secondary border border-neutral p-6 rounded-lg mt-2">
-        <div class="flex flex-col md:flex-row justify-between">
-            <h1 class="text-2xl font-semibold">{{ __('services.services') }}</h1>
-        </div>
+    <div class="fc-service-sheet bg-background-secondary border border-neutral p-6 rounded-lg mt-2">
+        <div class="fc-service-sheet__meta"><span class="fc-portal-kicker">SERVICE / #{{ $service->id }}</span></div>
         <div class="grid md:grid-cols-2 gap-4 my-4">
             <div>
                 <h4 class="text-lg font-semibold">{{ __('services.product_details') }}:</h4>
