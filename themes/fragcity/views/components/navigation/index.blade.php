@@ -1,242 +1,199 @@
-<nav class="fc-site-navigation w-full px-4 lg:px-8 bg-background-secondary border-b border-neutral md:h-16 flex md:flex-row flex-col justify-between fixed top-0 z-20">
-    <div
-        x-data="{
-            slideOverOpen: false,
-            hasAside: !!document.getElementById('main-aside')
-        }"
-        x-init="$watch('slideOverOpen', value => { document.documentElement.style.overflow = value ? 'hidden' : '' })"
-        class="relative z-50 w-full h-auto">
-        <div
-            class="flex flex-row items-center justify-between h-16"
-            :class="hasAside ? 'w-full' : 'container'">
+@php
+    $fragcityMain = 'https://fragcity.ir';
+    $fragcityFallbackAvatar = $fragcityMain . '/img/logoresponsive.png';
+@endphp
 
-            <div class="flex flex-row items-center">
-                <a href="{{ route('home') }}" class="flex flex-row items-center h-10 gap-2" wire:navigate>
-                    <x-logo class="h-8" />
-                    @if(theme('logo_display', 'logo-and-name') != 'logo-only')
-                    <span class="text-xl font-bold leading-none flex items-center">{{ config('app.name') }}</span>
-                    @endif
-                </a>
-                <div class="md:flex hidden flex-row ml-6">
-                    @foreach (\App\Classes\Navigation::getLinks() as $nav)
-                    @if (isset($nav['children']) && count($nav['children']) > 0)
-                    <div class="relative">
-                        <x-dropdown>
-                            <x-slot:trigger>
-                                <div class="flex flex-col">
-                                    <span class="flex flex-row items-center p-3 text-sm font-semibold whitespace-nowrap text-base hover:text-base/80">
-                                        {{ $nav['name'] }}
-                                    </span>
-                                </div>
-                            </x-slot:trigger>
-                            <x-slot:content>
-                                @foreach ($nav['children'] as $child)
-                                <x-navigation.link
-                                    :href="$child['url']"
-                                    :spa="$child['spa'] ?? true">
-                                    {{ $child['name'] }}
-                                </x-navigation.link>
-                                @endforeach
-                            </x-slot:content>
-                        </x-dropdown>
-                    </div>
-                    @else
-                    <x-navigation.link
-                        :href="$nav['url']"
-                        :spa="isset($nav['spa']) ? $nav['spa'] : true"
-                        class="flex items-center p-3">
-                        {{ $nav['name'] }}
-                    </x-navigation.link>
-                    @endif
-                    {{-- @if($nav['separator'])
-                    <div class="h-px w-full bg-neutral"></div>
-                    @endif --}}
-                    @endforeach
-
-                </div>
-            </div>
-
-            <div class="flex flex-row items-center">
-                <livewire:components.cart />
-
-                <div class="items-center hidden md:flex mr-1">
-                    <livewire:components.locale-switch />
-                    <x-theme-toggle />
-                </div>
-
-                @if(auth()->check())
-                <livewire:components.notifications />
-                <div class="hidden lg:flex">
-                    <x-dropdown :showArrow="false">
-                        <x-slot:trigger>
-                            <img src="{{ auth()->user()->avatar }}" class="size-8 rounded-full border border-neutral bg-background" alt="avatar" />
-                        </x-slot:trigger>
-                        <x-slot:content>
-                            <div class="flex flex-col p-2">
-                                <span class="text-sm text-base break-words">{{ auth()->user()->name }}</span>
-                                <span class="text-sm text-base break-words">{{ auth()->user()->email }}</span>
-                            </div>
-                            @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
-                            <x-navigation.link :href="$nav['url']" :spa="isset($nav['spa']) ? $nav['spa'] : true">
-                                {{ $nav['name'] }}
-                            </x-navigation.link>
-                            @endforeach
-                            <livewire:auth.logout />
-                        </x-slot:content>
-                    </x-dropdown>
-                </div>
-                @else
-                <div class="hidden lg:flex flex-row gap-3">
-                    <a href="{{ route('login') }}" wire:navigate>
-                        <x-button.secondary>
-                            {{ __('navigation.login') }}
-                        </x-button.secondary>
-                    </a>
-                    @if(!config('settings.registration_disabled', false))
-                    <a href="{{ route('register') }}" wire:navigate>
-                        <x-button.primary>
-                            {{ __('navigation.register') }}
-                        </x-button.primary>
-                    </a>
-                    @endif
-                </div>
-                @endif
-                <button
-                    @click="slideOverOpen = !slideOverOpen"
-                    class="relative w-10 h-10 flex lg:hidden items-center justify-center rounded-lg hover:bg-neutral transition"
-                    aria-label="Toggle Menu">
-
-                    <span
-                        x-show="!slideOverOpen"
-                        x-transition:enter="transition duration-300"
-                        x-transition:enter-start="opacity-0 -rotate-90 scale-75"
-                        x-transition:enter-end="opacity-100 rotate-0 scale-100"
-                        x-transition:leave="transition duration-150"
-                        x-transition:leave-start="opacity-100 rotate-0 scale-100"
-                        x-transition:leave-end="opacity-0 rotate-90 scale-75"
-                        class="absolute inset-0 flex items-center justify-center"
-                        aria-hidden="true">
-                        <x-ri-menu-fill class="size-5" />
-                    </span>
-
-                    <span
-                        x-show="slideOverOpen"
-                        x-transition:enter="transition duration-300"
-                        x-transition:enter-start="opacity-0 rotate-90 scale-75"
-                        x-transition:enter-end="opacity-100 rotate-0 scale-100"
-                        x-transition:leave="transition duration-150"
-                        x-transition:leave-start="opacity-100 rotate-0 scale-100"
-                        x-transition:leave-end="opacity-0 -rotate-90 scale-75"
-                        class="absolute inset-0 flex items-center justify-center"
-                        aria-hidden="true">
-                        <x-ri-close-fill class="size-5" />
-                    </span>
-
-                </button>
-            </div>
+<header class="shock-header" id="siteHeader">
+    <div class="shock-container">
+        <div class="shock-brand">
+            <a href="{{ $fragcityMain }}/support/" class="fc-support-toggle" aria-label="پشتیبانی" title="پشتیبانی">
+                <i class="fa-solid fa-headset" aria-hidden="true"></i>
+                <span class="fc-support-toggle__label">پشتیبانی</span>
+            </a>
+            <a href="{{ $fragcityMain }}/" class="shock-logo-link" aria-label="صفحه اصلی FragCity">
+                <img src="{{ $fragcityMain }}/img/webp/newlogo.webp?v=20261102-2"
+                     onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';"
+                     alt="FragCity" class="shock-logo-img">
+            </a>
         </div>
-        <template x-teleport="body">
-            <div
-                x-show="slideOverOpen"
-                @keydown.window.escape="slideOverOpen=false"
-                x-cloak
-                class="fixed left-0 right-0 top-16 w-full z-[99]"
-                style="height:calc(100dvh - 4rem);"
-                aria-modal="true"
-                tabindex="-1">
-                <div
-                    x-show="slideOverOpen"
-                    @click.away="slideOverOpen = false"
-                    x-transition.opacity.duration.300ms
-                    class="absolute inset-0 bg-background-secondary border-t border-neutral shadow-lg overflow-y-auto flex flex-col">
 
-                    <div class="flex flex-col h-full p-4">
-                        <div class="flex-1 min-h-0 overflow-y-auto">
-                            <x-navigation.sidebar-links />
-                        </div>
-                        <div class="mt-5">
-                            @if(auth()->check())
+        <nav class="shock-nav" aria-label="منوی اصلی">
+            <a href="{{ $fragcityMain }}/servers/" class="shock-nav-item">
+                <i class="fa-solid fa-server" aria-hidden="true"></i><span>لیست سرورها</span>
+            </a>
+            <a href="{{ $fragcityMain }}/skins/" class="shock-nav-item">
+                <i class="fa-solid fa-palette" aria-hidden="true"></i><span>انتخاب اسکین</span>
+            </a>
+            <a href="{{ route('home') }}" class="shock-nav-item active" aria-current="page">
+                <i class="fa-solid fa-store" aria-hidden="true"></i><span>فروشگاه</span>
+            </a>
+            <a href="{{ $fragcityMain }}/leaderboard/" class="shock-nav-item">
+                <i class="fa-solid fa-trophy" aria-hidden="true"></i><span>لیدربورد</span>
+            </a>
+            <a href="{{ $fragcityMain }}/banlist/" class="shock-nav-item">
+                <i class="fa-solid fa-gavel" aria-hidden="true"></i><span>لیست محرومیت‌ها</span>
+            </a>
+            <a href="{{ $fragcityMain }}/vip/" class="shock-nav-item shock-nav-item--vip">
+                <i class="fa-solid fa-crown" aria-hidden="true"></i><span>VIP</span>
+            </a>
 
-                            <div
-                                x-data="{ userPanelOpen: false }"
-                                @keydown.escape.window="userPanelOpen = false"
-                                x-cloak
-                                class="relative">
+            <div class="frag-dropdown" id="shockMoreDropdown">
+                <button type="button" class="shock-nav-item" id="shockMoreButton"
+                        aria-label="بیشتر" title="بیشتر" aria-expanded="false" aria-controls="shockMoreMenu">
+                    <i class="fa-solid fa-ellipsis" aria-hidden="true"></i>
+                    <span>بیشتر</span>
+                    <i class="fa-solid fa-chevron-down frag-arrow" aria-hidden="true"></i>
+                </button>
+                <div class="frag-dropdown-menu" id="shockMoreMenu">
+                    <a href="{{ $fragcityMain }}/serverguide/" class="frag-drop-link">
+                        <i class="fa-solid fa-book-open" aria-hidden="true"></i><span>راهنمای سرور</span>
+                    </a>
+                    <a href="{{ $fragcityMain }}/launcher/" class="frag-drop-link">
+                        <i class="fa-solid fa-download" aria-hidden="true"></i><span>دانلود لانچر</span>
+                    </a>
+                    <a href="{{ $fragcityMain }}/status/" class="frag-drop-link">
+                        <i class="fa-solid fa-heart-pulse" aria-hidden="true"></i><span>وضعیت سرویس‌ها</span>
+                    </a>
+                    <a href="{{ $fragcityMain }}/about/" class="frag-drop-link">
+                        <i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>درباره FragCity</span>
+                    </a>
+                </div>
+            </div>
+        </nav>
 
-                                <button @click="userPanelOpen = true" aria-label="Open user menu" class="flex gap-4 items-center justify-start">
-                                    <img src="{{ auth()->user()->avatar }}" class="size-10 rounded-full border border-neutral bg-background" alt="avatar" />
-                                    <div class="flex flex-col items-start gap-0.5">
-                                        <span class="font-bold text-md">{{ auth()->user()->name }}</span>
-                                        <span class="text-sm text-base/70">{{ auth()->user()->email }}</span>
-                                    </div>
-                                </button>
+        <div class="shock-user-area-wrapper">
+            <button type="button" class="fc-motion-toggle" aria-label="Performance Mode"
+                    data-motion-toggle aria-pressed="false" title="حالت بدون انیمیشن">
+                <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+                <span class="fc-motion-toggle__label">Performance Mode</span>
+            </button>
 
-                                <div
-                                    x-show="userPanelOpen"
-                                    x-transition:enter="transition-opacity ease-out duration-300"
-                                    x-transition:enter-start="opacity-0"
-                                    x-transition:enter-end="opacity-60"
-                                    x-transition:leave="transition-opacity ease-in duration-200"
-                                    x-transition:leave-start="opacity-60"
-                                    x-transition:leave-end="opacity-0"
-                                    @click="userPanelOpen=false"
-                                    class="fixed inset-0 bg-primary/5 backdrop-blur-xs z-40"
-                                    style="pointer-events: auto"></div>
+            @auth
+                <div class="frag-user-area">
+                    <div class="frag-dropdown" id="shockUserDropdown">
+                        <button type="button" class="frag-user-trigger" id="shockUserButton"
+                                aria-expanded="false" aria-controls="shockUserMenu">
+                            <img src="{{ auth()->user()->avatar ?: $fragcityFallbackAvatar }}"
+                                 class="frag-avatar" alt="آواتار {{ auth()->user()->name }}"
+                                 onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';">
+                            <span class="frag-username">{{ auth()->user()->name }}</span>
+                            <i class="fa-solid fa-chevron-down frag-arrow" aria-hidden="true"></i>
+                        </button>
 
-                                <div
-                                    x-show="userPanelOpen"
-                                    x-transition:enter="transition transform ease-out duration-300"
-                                    x-transition:enter-start="translate-y-full opacity-0"
-                                    x-transition:enter-end="translate-y-0 opacity-100"
-                                    x-transition:leave="transition transform ease-in duration-200"
-                                    x-transition:leave-start="translate-y-0 opacity-100"
-                                    x-transition:leave-end="translate-y-full opacity-0"
-                                    class="fixed bottom-0 left-0 right-0 z-50 mx-auto w-full"
-                                    style="pointer-events: auto"
-                                    @click.away="userPanelOpen = false"
-                                    tabindex="-1"
-                                    aria-modal="true">
-                                    <div class="bg-background-secondary shadow-lg rounded-t-2xl border border-neutral p-6">
-                                        <div class="flex gap-4 items-center justify-start">
-                                            <img src="{{ auth()->user()->avatar }}" class="size-12 rounded-full border border-neutral bg-background" alt="avatar" />
-                                            <div class="flex flex-col gap-0.5">
-                                                <span class="font-bold text-lg">{{ auth()->user()->name }}</span>
-                                                <span class="text-sm text-base/70">{{ auth()->user()->email }}</span>
-                                            </div>
-                                        </div>
-                                        <div class="h-px w-full bg-neutral my-6"></div>
-                                        <div class="mt-4 flex flex-col gap-2 w-full">
-                                            @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
-                                            <x-navigation.link :href="$nav['url']" :spa="isset($nav['spa']) ? $nav['spa'] : true">
-                                                {{ $nav['name'] }}
-                                            </x-navigation.link>
-                                            @endforeach
-                                            <livewire:auth.logout />
-                                        </div>
-                                    </div>
+                        <div class="frag-dropdown-menu" id="shockUserMenu">
+                            <div class="frag-drop-header frag-drop-header--profile">
+                                <span class="frag-drop-avatar-frame">
+                                    <img src="{{ auth()->user()->avatar ?: $fragcityFallbackAvatar }}"
+                                         class="frag-drop-avatar" alt=""
+                                         onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';">
+                                </span>
+                                <div class="frag-drop-info">
+                                    <span class="frag-drop-eyebrow">حساب کاربری FragCity</span>
+                                    <span class="frag-drop-name">{{ auth()->user()->name }}</span>
+                                    <span class="frag-drop-steam">{{ auth()->user()->email }}</span>
                                 </div>
                             </div>
-
-                            @else
-                            <div class="flex flex-col gap-3 mb-3">
-                                @if(!config('settings.registration_disabled', false))
-                                <a href="{{ route('register') }}" wire:navigate>
-                                    <x-button.primary>
-                                        {{ __('navigation.register') }}
-                                    </x-button.primary>
-                                </a>
-                                @endif
-                                <a href="{{ route('login') }}" wire:navigate>
-                                    <x-button.secondary>
-                                        {{ __('navigation.login') }}
-                                    </x-button.secondary>
-                                </a>
+                            <div class="frag-drop-divider"></div>
+                            <div class="frag-drop-actions">
+                                @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
+                                    <a href="{{ $nav['url'] }}" class="frag-drop-link"
+                                       @if(isset($nav['spa']) && $nav['spa']) wire:navigate @endif>
+                                        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
+                                        <span>{{ $nav['name'] }}</span>
+                                    </a>
+                                @endforeach
                             </div>
-                            @endif
+                            <div class="frag-drop-divider"></div>
+                            <div class="frag-drop-logout">
+                                <livewire:auth.logout />
+                            </div>
                         </div>
                     </div>
                 </div>
+            @else
+                <div class="shock-auth-actions">
+                    <a href="{{ route('login') }}" class="frag-login-btn">
+                        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>ورود</span>
+                    </a>
+                    @if (!config('settings.registration_disabled', false))
+                        <a href="{{ route('register') }}" class="shock-register-btn">
+                            <i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>ثبت‌نام</span>
+                        </a>
+                    @endif
+                </div>
+            @endauth
+
+            <button type="button" class="shock-mobile-toggle" id="mobileNavOpen"
+                    aria-label="باز کردن منو" aria-expanded="false" aria-controls="mobileNav">
+                <i class="fa-solid fa-bars" aria-hidden="true"></i>
+            </button>
+        </div>
+    </div>
+</header>
+
+<div class="mobile-overlay" id="mobileOverlay" aria-hidden="true"></div>
+
+<nav class="mobile-nav" id="mobileNav" aria-label="منوی موبایل" aria-hidden="true">
+    <div class="mobile-nav-header">
+        <a href="{{ $fragcityMain }}/" class="mobile-nav-logo" aria-label="صفحه اصلی FragCity">
+            <img src="{{ $fragcityMain }}/img/webp/newlogo.webp?v=20261102-2"
+                 onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';" alt="FragCity">
+            <span>FRAGCITY</span>
+        </a>
+        <button type="button" class="mobile-nav-close" id="mobileNavClose" aria-label="بستن منو">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+        </button>
+    </div>
+
+    <div class="mobile-nav-links">
+        <button type="button" class="mobile-nav-link fc-motion-toggle-mobile"
+                aria-label="Performance Mode" data-motion-toggle aria-pressed="false">
+            <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
+            <span class="fc-motion-toggle__label">Performance Mode</span>
+            <span class="fc-motion-toggle__state" aria-hidden="true"></span>
+        </button>
+
+        <a href="{{ $fragcityMain }}/servers/" class="mobile-nav-link"><i class="fa-solid fa-server" aria-hidden="true"></i><span>لیست سرورها</span></a>
+        <a href="{{ $fragcityMain }}/skins/" class="mobile-nav-link"><i class="fa-solid fa-palette" aria-hidden="true"></i><span>انتخاب اسکین</span></a>
+        <a href="{{ route('home') }}" class="mobile-nav-link active" aria-current="page"><i class="fa-solid fa-store" aria-hidden="true"></i><span>فروشگاه</span></a>
+        <a href="{{ $fragcityMain }}/leaderboard/" class="mobile-nav-link"><i class="fa-solid fa-trophy" aria-hidden="true"></i><span>لیدربورد</span></a>
+        <a href="{{ $fragcityMain }}/banlist/" class="mobile-nav-link"><i class="fa-solid fa-gavel" aria-hidden="true"></i><span>لیست محرومیت‌ها</span></a>
+        <a href="{{ $fragcityMain }}/vip/" class="mobile-nav-link mobile-nav-link--vip"><i class="fa-solid fa-crown" aria-hidden="true"></i><span>VIP</span></a>
+
+        <details class="mobile-nav-more">
+            <summary class="mobile-nav-link mobile-nav-more-toggle">
+                <i class="fa-solid fa-ellipsis" aria-hidden="true"></i><span>بیشتر</span>
+                <i class="fa-solid fa-chevron-down mobile-nav-more-arrow" aria-hidden="true"></i>
+            </summary>
+            <div class="mobile-nav-more-menu">
+                <a href="{{ $fragcityMain }}/serverguide/" class="mobile-nav-link"><i class="fa-solid fa-book-open" aria-hidden="true"></i><span>راهنمای سرور</span></a>
+                <a href="{{ $fragcityMain }}/launcher/" class="mobile-nav-link"><i class="fa-solid fa-download" aria-hidden="true"></i><span>دانلود لانچر</span></a>
+                <a href="{{ $fragcityMain }}/status/" class="mobile-nav-link"><i class="fa-solid fa-heart-pulse" aria-hidden="true"></i><span>وضعیت سرویس‌ها</span></a>
+                <a href="{{ $fragcityMain }}/about/" class="mobile-nav-link"><i class="fa-solid fa-circle-info" aria-hidden="true"></i><span>درباره FragCity</span></a>
             </div>
-        </template>
+        </details>
+
+        @auth
+            <div class="mobile-nav-profile">
+                <img src="{{ auth()->user()->avatar ?: $fragcityFallbackAvatar }}" alt=""
+                     onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';">
+                <div>
+                    <strong>{{ auth()->user()->name }}</strong>
+                    <span>{{ auth()->user()->email }}</span>
+                </div>
+            </div>
+            @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
+                <a href="{{ $nav['url'] }}" class="mobile-nav-link"
+                   @if(isset($nav['spa']) && $nav['spa']) wire:navigate @endif>
+                    <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i><span>{{ $nav['name'] }}</span>
+                </a>
+            @endforeach
+            <div class="mobile-nav-logout"><livewire:auth.logout /></div>
+        @else
+            <a href="{{ route('login') }}" class="mobile-nav-link"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>ورود به حساب</span></a>
+            @if (!config('settings.registration_disabled', false))
+                <a href="{{ route('register') }}" class="mobile-nav-link"><i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>ساخت حساب کاربری</span></a>
+            @endif
+        @endauth
     </div>
 </nav>
