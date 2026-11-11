@@ -79,3 +79,12 @@ Route::post('/api/v1/fragcity/bridge/orders/vip/revoke', [FragCityAPI::class, 'r
     ->middleware('throttle:10,1')
     ->withoutMiddleware([VerifyCsrfToken::class])
     ->name('extensions.fragcity-api.orders.vip.revoke');
+
+Route::get('/auth/fragcity/sso/start', [FragCityAPI::class, 'startSso'])
+    ->middleware('web')
+    ->name('extensions.fragcity-api.sso.start');
+
+Route::post('/auth/fragcity/sso/callback', [FragCityAPI::class, 'completeSso'])
+    ->middleware(['web', 'throttle:20,1'])
+    ->withoutMiddleware([VerifyCsrfToken::class])
+    ->name('extensions.fragcity-api.sso.callback');
