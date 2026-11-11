@@ -30,8 +30,8 @@
         </a>
         @empty
         <div class="fc-portal-empty">
-            <span><x-ri-server-line class="size-8" /></span>
-            <strong>{{ __('services.no_services') }}</strong>
+            <span><x-ri-instance-line class="size-8" /></span>
+            <strong>هنوز سرویسی برای حساب شما ثبت نشده است.</strong>
             <p>بعد از ثبت سفارش، سرویس‌های تو در همین بخش نمایش داده می‌شوند.</p>
             <a href="{{ route('home') }}" wire:navigate class="fc-portal-button">رفتن به فروشگاه</a>
         </div>
