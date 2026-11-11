@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.7.1',
+    version: '1.7.2',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -158,7 +158,146 @@ class FragCityCS2 extends PterodactylExtension
         $properties = $this->applyResourceLimitsFromConfigOptions($service, $properties);
         $properties = $this->applyNativeConfigOptions($service, $properties);
 
-        return parent::upgradeServer($service, $settings, $properties);
+        // Paymenter's stock Pterodactyl updater preserves already-populated
+        // Egg environment values, even when a native Service Config Option has
+        // changed. Let it apply resource/feature limits first, then explicitly
+        // persist only the manifest-declared native Egg option changes.
+        $result = parent::upgradeServer($service, $settings, $properties);
+        $this->applyNativeEggConfigOptionsToPterodactyl($service, $settings, $properties);
+
+        return $result;
+    }
+
+    /**
+     * Reapply changed native Egg Config Options after Paymenter's inherited
+     * Pterodactyl updater. The parent updater intentionally keeps existing
+     * environment values, which otherwise prevents Player Slots and Tickrate
+     * upgrades from reaching Pterodactyl.
+     *
+     * Only manifest-declared options with target "egg" are overlaid. The
+     * existing environment, startup command, Egg, Docker image and
+     * skip-scripts setting are read back and preserved. This changes the
+     * saved startup configuration; a running game process still needs a
+     * restart before it consumes new command-line/environment values.
+     *
+     * @param array<string,mixed> $settings
+     * @param array<string,mixed> $properties
+     */
+    private function applyNativeEggConfigOptionsToPterodactyl(
+        Service $service,
+        array $settings,
+        array $properties
+    ): void {
+        $definitions = $this->loadManifest()['paymenter']['config_options'] ?? [];
+        $overrides = [];
+
+        foreach ($definitions as $definition) {
+            if ((string) ($definition['target'] ?? 'egg') !== 'egg') {
+                continue;
+            }
+
+            $envVariable = trim((string) ($definition['env_variable'] ?? ''));
+            if ($envVariable === '' || !array_key_exists($envVariable, $properties)) {
+                continue;
+            }
+
+            $value = $properties[$envVariable];
+            if (!is_scalar($value)) {
+                throw new RuntimeException(
+                    "FragCity CS2 upgrade value for {$envVariable} must be scalar."
+                );
+            }
+
+            $overrides[$envVariable] = (string) $value;
+        }
+
+        if ($overrides === []) {
+            return;
+        }
+
+        $serverResponse = $this->request(
+            '/api/application/servers/external/' . (int) $service->id,
+            'get'
+        );
+        $attributes = $serverResponse['attributes'] ?? null;
+
+        if (!is_array($attributes)) {
+            throw new RuntimeException(
+                'Pterodactyl did not return the server after the resource upgrade.'
+            );
+        }
+
+        $serverId = (int) ($attributes['id'] ?? 0);
+        $container = is_array($attributes['container'] ?? null)
+            ? $attributes['container']
+            : [];
+        $environment = $container['environment'] ?? null;
+
+        if ($serverId < 1 || !is_array($environment)) {
+            throw new RuntimeException(
+                'Pterodactyl returned incomplete startup configuration during the CS2 upgrade.'
+            );
+        }
+
+        foreach ($overrides as $envVariable => $value) {
+            $environment[$envVariable] = $value;
+        }
+
+        $eggId = (int) ($attributes['egg'] ?? ($settings['egg_id'] ?? 0));
+        $image = trim((string) ($container['image'] ?? ($settings['docker_image'] ?? '')));
+        $startup = trim((string) ($container['startup_command'] ?? ($settings['startup'] ?? '')));
+
+        if ($eggId < 1 || $image === '' || $startup === '') {
+            throw new RuntimeException(
+                'Pterodactyl returned incomplete Egg, image or startup data during the CS2 upgrade.'
+            );
+        }
+
+        $this->request(
+            '/api/application/servers/' . $serverId . '/startup',
+            'patch',
+            [
+                'startup' => $startup,
+                'environment' => $environment,
+                'egg' => $eggId,
+                'image' => $image,
+                'skip_scripts' => (bool) ($container['skip_scripts'] ?? ($settings['skip_scripts'] ?? false)),
+            ]
+        );
+
+        // Read back the persisted values instead of treating an HTTP 2xx
+        // response alone as proof that the desired selections were stored.
+        $verifiedResponse = $this->request(
+            '/api/application/servers/external/' . (int) $service->id,
+            'get'
+        );
+        $verifiedAttributes = $verifiedResponse['attributes'] ?? null;
+        $verifiedEnvironment = is_array($verifiedAttributes)
+            ? ($verifiedAttributes['container']['environment'] ?? null)
+            : null;
+
+        if (!is_array($verifiedEnvironment)) {
+            throw new RuntimeException(
+                'Pterodactyl could not verify the updated CS2 startup environment.'
+            );
+        }
+
+        foreach ($overrides as $envVariable => $value) {
+            if (
+                !array_key_exists($envVariable, $verifiedEnvironment)
+                || (string) $verifiedEnvironment[$envVariable] !== $value
+            ) {
+                throw new RuntimeException(
+                    "Pterodactyl did not persist the requested CS2 startup variable {$envVariable}."
+                );
+            }
+        }
+
+        Log::info('FragCity CS2 native Egg Config Options were applied during server upgrade.', [
+            'service_id' => (int) $service->id,
+            'pterodactyl_server_id' => $serverId,
+            'environment_variables' => array_keys($overrides),
+        ]);
     }
 
     /**
