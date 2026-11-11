@@ -52,7 +52,7 @@
                         <small>FRAGCITY / STORE</small>
                         <strong>همه‌چیز برای شروع سفارش</strong>
                     </span>
-                    <span class="fc-marketplace__overview-live"><i aria-hidden="true"></i> ONLINE</span>
+                    <span class="fc-marketplace__overview-tag">STORE FRONT</span>
                 </div>
 
                 <div class="fc-marketplace__overview-stats">
