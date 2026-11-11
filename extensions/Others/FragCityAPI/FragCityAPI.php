@@ -4579,10 +4579,10 @@ class FragCityAPI extends Extension
         abort_if($websiteOrigin === null, 503, 'FragCity SSO is not configured.');
 
         $returnTo = $this->safeSsoReturnPath($request->query('redirect', '/'));
-        if (Auth::check()) {
-            return redirect($returnTo);
-        }
 
+        // Always prove the FragCity identity, even when a Paymenter session
+        // already exists. The callback accepts that session only when it is
+        // the exact same linked Paymenter user; a different account is rejected.
         $state = bin2hex(random_bytes(32));
         Session::put('fragcity_sso_state', $state);
         Session::put('fragcity_sso_return_to', $returnTo);
