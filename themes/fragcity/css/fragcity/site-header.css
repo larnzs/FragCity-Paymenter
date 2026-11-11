@@ -1,0 +1,4348 @@
+/* =========================================
+   FragCity Header Component
+   Loaded after css/style.css
+   Manual-style redesign + sticky top header
+========================================= */
+
+:root {
+    --header-bg: rgba(13, 13, 13, 0.90);
+    --header-bg-2: rgba(23, 23, 23, 0.98);
+    --header-border: rgba(249, 115, 22, 0.22);
+    --header-border-soft: rgba(255, 255, 255, 0.10);
+    --header-shadow: 0 16px 40px rgba(0, 0, 0, 0.30);
+    --header-text: #fafafa;
+    --header-muted: #a3a3a3;
+    --header-orange: #F97316;
+    --header-orange-2: #FFB347;
+    --header-orange-soft: rgba(249, 115, 22, 0.12);
+    --header-orange-soft-2: rgba(255, 179, 71, 0.07);
+    --header-red: #fb7185;
+}
+
+body.mobile-menu-open {
+    overflow: hidden;
+}
+
+/* =========================================
+   User Area / Profile Dropdown
+========================================= */
+
+.frag-user-area {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+}
+
+.frag-dropdown {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.frag-user-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: 42px;
+    padding: 0.35rem 0.45rem 0.35rem 1rem;
+    border-radius: 999px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background:
+        linear-gradient(180deg, rgba(23, 23, 23, 0.96), rgba(13, 13, 13, 0.96));
+    color: var(--header-text);
+    cursor: pointer;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+    font: inherit;
+}
+
+.frag-user-trigger:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, 0.32);
+    background:
+        linear-gradient(180deg, rgba(23, 23, 23, 1), rgba(13, 13, 13, 1));
+    box-shadow: 0 14px 30px rgba(0, 0, 0, 0.24);
+}
+
+.frag-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex: 0 0 32px;
+    border: 2px solid rgba(249, 115, 22, 0.24);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.08);
+}
+
+.frag-username {
+    color: var(--header-text);
+    font-size: 0.88rem;
+    font-weight: 700;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.frag-arrow {
+    color: var(--header-muted);
+    font-size: 0.75rem;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.frag-dropdown.open .frag-arrow {
+    transform: rotate(180deg);
+    color: var(--header-text);
+}
+
+.frag-dropdown-menu {
+    position: absolute;
+    top: calc(100% + 12px);
+    right: 0;
+    min-width: 275px;
+    padding: 8px 0;
+    border-radius: 18px;
+    border: 1px solid rgba(249, 115, 22, 0.16);
+    background:
+        linear-gradient(180deg, rgba(13, 13, 13, 0.98), rgba(23, 23, 23, 0.98));
+    box-shadow:
+        0 18px 45px rgba(0, 0, 0, 0.45),
+        inset 0 1px 0 rgba(255, 255, 255, 0.02);
+    opacity: 0;
+    visibility: hidden;
+    transform: translateY(-10px) scale(0.98);
+    transform-origin: top right;
+    transition:
+        opacity 0.18s ease,
+        visibility 0.18s ease,
+        transform 0.18s ease;
+    z-index: 1200;
+    overflow: hidden;
+}
+
+.frag-dropdown.open .frag-dropdown-menu {
+    opacity: 1;
+    visibility: visible;
+    transform: translateY(0) scale(1);
+}
+
+.frag-drop-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+}
+
+.frag-drop-avatar {
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(249, 115, 22, 0.65);
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.10);
+}
+
+.frag-drop-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: right;
+    min-width: 0;
+}
+
+.frag-drop-name {
+    color: var(--header-text);
+    font-weight: 800;
+    font-size: 0.96rem;
+    line-height: 1.4;
+}
+
+.frag-drop-steam {
+    color: var(--header-muted);
+    font-size: 0.75rem;
+    direction: ltr;
+    background: rgba(0, 0, 0, 0.28);
+    padding: 3px 8px;
+    border-radius: 999px;
+    display: inline-block;
+    text-align: center;
+}
+
+.frag-drop-divider {
+    height: 1px;
+    margin: 8px 0;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(255, 255, 255, 0.16),
+        transparent
+    );
+}
+
+.frag-drop-link {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 11px 18px;
+    color: #e5e5e5;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition:
+        background 0.18s ease,
+        color 0.18s ease,
+        padding-right 0.18s ease,
+        transform 0.18s ease;
+    direction: rtl;
+}
+
+.frag-drop-link i {
+    width: 20px;
+    text-align: center;
+    color: var(--header-muted);
+    transition: color 0.18s ease;
+}
+
+.frag-drop-link:hover {
+    background:
+        linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(255, 179, 71, 0.04));
+    color: var(--header-text);
+    padding-right: 22px;
+    transform: translateX(-1px);
+}
+
+.frag-drop-link:hover i {
+    color: var(--header-orange);
+}
+
+.frag-drop-link.logout:hover {
+    background: rgba(248, 113, 113, 0.10);
+    color: #fecaca;
+}
+
+.frag-drop-link.logout:hover i {
+    color: var(--header-red);
+}
+
+
+
+@media (max-width: 1300px) {
+    /* Keep the navigation compact before it collapses to the mobile menu. */
+}
+
+.frag-login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0.45rem 1.15rem;
+    border-radius: 999px;
+    text-decoration: none;
+    font-weight: 800;
+    font-size: 0.9rem;
+    color: #0d0d0d;
+    background: linear-gradient(135deg, var(--header-orange), var(--header-orange-2));
+    box-shadow: 0 14px 28px rgba(249, 115, 22, 0.24);
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        filter 0.18s ease;
+}
+
+.frag-login-btn:hover {
+    transform: translateY(-2px);
+    filter: brightness(1.03);
+    box-shadow: 0 18px 34px rgba(249, 115, 22, 0.30);
+}
+
+.frag-login-btn i {
+    color: inherit;
+}
+
+/* =========================================
+   Main Desktop Header
+========================================= */
+
+.shock-header {
+    position: sticky;
+    top: 0;
+    z-index: 1050;
+    width: 100%;
+    isolation: isolate;
+    background: rgba(13, 13, 13, 0.86);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    box-shadow: none;
+    transition:
+        background-color 0.18s ease,
+        border-color 0.18s ease,
+        box-shadow 0.18s ease;
+}
+
+.shock-header.is-scrolled {
+    background: rgba(13, 13, 13, 0.98);
+    border-bottom-color: rgba(249, 115, 22, 0.20);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.38);
+}
+
+.shock-header::before {
+    content: "";
+    position: absolute;
+    inset: auto 0 0 0;
+    height: 1px;
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(249, 115, 22, 0.38),
+        rgba(255, 179, 71, 0.28),
+        transparent
+    );
+    pointer-events: none;
+}
+
+.shock-container {
+    width: min(100%, 1600px);
+    min-height: 72px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: grid;
+    grid-template-columns: minmax(190px, 1fr) auto minmax(190px, 1fr);
+    align-items: center;
+    gap: 24px;
+    direction: ltr;
+}
+
+.shock-brand {
+    min-width: 0;
+    justify-self: start;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    direction: ltr;
+}
+
+.shock-logo-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--header-text);
+    text-decoration: none;
+    font-size: 1.05rem;
+    font-weight: 900;
+    letter-spacing: 0.7px;
+    white-space: nowrap;
+}
+
+.shock-logo-link:hover {
+    text-decoration: none;
+}
+
+.shock-logo-img {
+    display: block;
+    width: auto;
+    height: 38px;
+    max-width: 160px;
+    object-fit: contain;
+    filter: drop-shadow(0 8px 16px rgba(249, 115, 22, 0.12));
+}
+
+.shock-nav {
+    justify-self: center;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    direction: rtl;
+}
+
+.shock-nav-item {
+    min-height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    background: transparent;
+    color: var(--header-muted);
+    text-decoration: none;
+    font: inherit;
+    font-size: 0.92rem;
+    font-weight: 700;
+    white-space: nowrap;
+    cursor: pointer;
+    transition:
+        color 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.shock-nav-item:hover,
+.shock-nav-item.active,
+.frag-dropdown.open > .shock-nav-item {
+    color: var(--header-orange-2);
+    background: transparent;
+    border-color: transparent;
+    transform: none;
+}
+
+.shock-nav-item.active {
+    text-shadow: 0 0 18px rgba(249, 115, 22, 0.16);
+    box-shadow: none;
+}
+
+.shock-nav-item i {
+    color: var(--header-orange);
+}
+
+.shock-nav-item--icon-only {
+    width: 42px;
+    min-width: 42px;
+    padding-right: 8px;
+    padding-left: 8px;
+}
+
+.shock-user-area-wrapper {
+    min-width: 0;
+    justify-self: end;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    direction: rtl;
+}
+
+.shock-user-area-wrapper .action-icon-btn {
+    flex: 0 0 auto;
+    text-decoration: none;
+}
+
+.action-icon-btn {
+    width: 42px;
+    height: 42px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    background:
+        linear-gradient(180deg, rgba(23, 23, 23, 0.96), rgba(13, 13, 13, 0.96));
+    color: var(--header-text);
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease,
+        box-shadow 0.18s ease;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.14);
+}
+
+.action-icon-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, 0.30);
+    background:
+        linear-gradient(180deg, rgba(23, 23, 23, 1), rgba(13, 13, 13, 1));
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
+}
+
+.action-icon-btn i {
+    font-size: 1rem;
+}
+
+.shock-mobile-toggle {
+    display: none;
+    width: 42px;
+    height: 42px;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    background:
+        linear-gradient(180deg, rgba(23, 23, 23, 0.96), rgba(13, 13, 13, 0.96));
+    color: var(--header-text);
+    font: inherit;
+    cursor: pointer;
+    transition:
+        transform 0.18s ease,
+        border-color 0.18s ease,
+        background 0.18s ease;
+}
+
+.shock-mobile-toggle:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, 0.30);
+    background:
+        linear-gradient(180deg, rgba(23, 23, 23, 1), rgba(13, 13, 13, 1));
+}
+
+/* Dropdown refinements for the site header */
+.shock-header .frag-dropdown-menu {
+    direction: rtl;
+    z-index: 1070;
+}
+
+.shock-header .shock-nav .frag-dropdown-menu {
+    right: 0;
+    left: auto;
+    min-width: 220px;
+}
+
+.shock-header .frag-user-trigger {
+    min-height: 42px;
+    font: inherit;
+    color: var(--header-text);
+}
+
+.shock-header .frag-login-btn {
+    min-height: 42px;
+}
+
+/* =========================================
+   Mobile Navigation Drawer
+========================================= */
+
+.mobile-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1090;
+    background: rgba(0, 0, 0, 0.72);
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.22s ease, visibility 0.22s ease;
+}
+
+.mobile-overlay.show {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.mobile-nav {
+    position: fixed;
+    top: 0;
+    right: 0;
+    z-index: 1100;
+    width: min(340px, 88vw);
+    height: 100vh;
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    background:
+        linear-gradient(180deg, rgba(13, 13, 13, 0.98), rgba(23, 23, 23, 0.98));
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: -24px 0 60px rgba(0, 0, 0, 0.45);
+    direction: rtl;
+    transform: translateX(105%);
+    visibility: hidden;
+    transition: transform 0.24s ease, visibility 0.24s ease;
+}
+
+.mobile-nav.open {
+    transform: translateX(0);
+    visibility: visible;
+}
+
+.mobile-nav-header {
+    min-height: 74px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    flex: 0 0 auto;
+    padding: 14px 18px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.10);
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.mobile-nav-logo {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    color: var(--header-text);
+    text-decoration: none;
+    font-weight: 900;
+    letter-spacing: 0.6px;
+}
+
+.mobile-nav-logo img {
+    display: block;
+    width: auto;
+    height: 34px;
+    max-width: 145px;
+    object-fit: contain;
+}
+
+.mobile-nav-close {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: 12px;
+    background:
+        linear-gradient(180deg, rgba(23, 23, 23, 0.96), rgba(13, 13, 13, 0.96));
+    color: var(--header-text);
+    font: inherit;
+    cursor: pointer;
+}
+
+.mobile-nav-links {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 14px;
+}
+
+.mobile-nav-link {
+    min-height: 46px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 13px;
+    border: 1px solid transparent;
+    border-radius: 12px;
+    color: #e5e5e5;
+    text-decoration: none;
+    font-size: 0.93rem;
+    font-weight: 600;
+    transition:
+        color 0.18s ease,
+        background 0.18s ease,
+        border-color 0.18s ease,
+        transform 0.18s ease;
+}
+
+.mobile-nav-link i {
+    width: 22px;
+    flex: 0 0 22px;
+    text-align: center;
+    color: var(--header-orange);
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link.active {
+    color: var(--header-text);
+    background: rgba(249, 115, 22, 0.10);
+    border-color: rgba(249, 115, 22, 0.16);
+    transform: translateX(-1px);
+}
+
+.mobile-nav-link.active {
+    box-shadow: inset -3px 0 0 var(--header-orange);
+}
+
+.mobile-nav-link.logout-link:hover {
+    color: #fecaca;
+    background: rgba(248, 113, 113, 0.10);
+    border-color: rgba(248, 113, 113, 0.14);
+}
+
+.mobile-nav-link.logout-link i {
+    color: var(--header-red);
+}
+
+/* =========================================
+   Responsive
+========================================= */
+
+@media (max-width: 1280px) {
+    .shock-container {
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 16px;
+        padding: 0 20px;
+    }
+
+    .shock-nav {
+        display: none;
+    }
+
+    .shock-user-area-wrapper {
+        grid-column: 2;
+    }
+
+    .shock-mobile-toggle {
+        display: inline-flex;
+    }
+}
+
+@media (max-width: 700px) {
+    .shock-container {
+        min-height: 64px;
+        padding: 0 14px;
+    }
+
+    .shock-logo-img {
+        height: 32px;
+    }
+
+    .frag-username {
+        display: none;
+    }
+
+    .shock-header .frag-user-trigger {
+        padding-left: 0.35rem;
+    }
+
+    .shock-user-area-wrapper {
+        gap: 8px;
+    }
+
+    .action-icon-btn {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+    }
+
+    .shock-mobile-toggle {
+        width: 38px;
+        height: 38px;
+        border-radius: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .shock-logo-link span {
+        display: none;
+    }
+
+    .shock-user-area-wrapper {
+        gap: 7px;
+    }
+
+    .shock-header .frag-login-btn {
+        width: 40px;
+        padding: 0;
+        justify-content: center;
+    }
+
+    .shock-header .frag-login-btn span {
+        display: none;
+    }
+
+    .shock-header .action-icon-btn {
+        width: 36px;
+        height: 36px;
+    }
+
+    .shock-mobile-toggle {
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mobile-overlay,
+    .mobile-nav,
+    .shock-nav-item,
+    .mobile-nav-link,
+    .frag-user-trigger,
+    .frag-dropdown-menu,
+    .frag-login-btn,
+    .action-icon-btn,
+    .shock-mobile-toggle {
+        transition: none !important;
+    }
+}
+
+/* Steam-card inspired account menu */
+#shockUserDropdown .frag-user-trigger {
+    position: relative;
+    border: 1px solid rgba(249, 115, 22, 0.24);
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.09), transparent 58%),
+        linear-gradient(145deg, #1B1B1B, #101010);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+#shockUserDropdown .frag-user-trigger:hover,
+#shockUserDropdown .frag-user-trigger:focus-visible,
+#shockUserDropdown.open .frag-user-trigger {
+    border-color: rgba(249, 115, 22, 0.52);
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.16), transparent 60%),
+        linear-gradient(145deg, #202020, #111111);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3), 0 0 22px rgba(249, 115, 22, 0.07);
+}
+
+#shockUserDropdown .frag-avatar {
+    border-color: rgba(255, 179, 71, 0.62);
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1), 0 0 18px rgba(249, 115, 22, 0.12);
+}
+
+#shockUserDropdown .frag-dropdown-menu {
+    width: 330px;
+    max-width: calc(100vw - 24px);
+    min-width: min(285px, calc(100vw - 24px));
+    padding: 9px;
+    border-color: rgba(249, 115, 22, 0.28);
+    border-radius: 20px;
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.08), transparent 48%),
+        linear-gradient(155deg, rgba(24, 24, 24, 0.99), rgba(11, 11, 11, 0.99));
+    box-shadow: 0 24px 64px rgba(0, 0, 0, 0.54), 0 0 30px rgba(249, 115, 22, 0.055), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+    backdrop-filter: blur(18px);
+}
+
+#shockUserDropdown .frag-dropdown-menu::before {
+    content: "";
+    display: block;
+    height: 2px;
+    margin: -9px -9px 9px;
+    background: linear-gradient(90deg, transparent, #F97316 35%, #FFB347 66%, transparent);
+}
+
+#shockUserDropdown .frag-drop-header--profile {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    margin: 0;
+    padding: 14px 12px;
+    overflow: hidden;
+    border: 1px solid rgba(249, 115, 22, 0.2);
+    border-radius: 15px;
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.12), transparent 55%),
+        linear-gradient(145deg, #1D1D1D, #111111);
+}
+
+#shockUserDropdown .frag-drop-header--profile::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(255, 179, 71, 0.55), transparent);
+}
+
+#shockUserDropdown .frag-drop-avatar-frame {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: 0 0 50px;
+    width: 50px;
+    height: 50px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #F97316, #FFB347);
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, 0.08), 0 8px 20px rgba(0, 0, 0, 0.28);
+}
+
+#shockUserDropdown .frag-drop-avatar {
+    width: 46px;
+    height: 46px;
+    border: 2px solid #171717;
+    border-radius: 14px;
+    box-shadow: none;
+}
+
+#shockUserDropdown .frag-drop-info {
+    flex: 1 1 auto;
+    gap: 3px;
+    min-width: 0;
+}
+
+#shockUserDropdown .frag-drop-eyebrow {
+    color: #F97316;
+    font-size: 0.59rem;
+    font-weight: 900;
+    letter-spacing: 0.13em;
+    line-height: 1.4;
+}
+
+#shockUserDropdown .frag-drop-name {
+    max-width: 100%;
+    overflow: hidden;
+    color: #FAFAFA;
+    font-size: 0.92rem;
+    font-weight: 850;
+    line-height: 1.5;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#shockUserDropdown .frag-drop-steam {
+    align-self: flex-start;
+    padding: 3px 7px;
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    background: rgba(0, 0, 0, 0.24);
+    color: #A3A3A3;
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.63rem;
+    letter-spacing: 0.03em;
+}
+
+#shockUserDropdown .frag-drop-profile-mark {
+    display: grid;
+    place-items: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255, 179, 71, 0.2);
+    border-radius: 11px;
+    background: rgba(255, 179, 71, 0.06);
+    color: #FFB347;
+    font-size: 0.88rem;
+}
+
+#shockUserDropdown .frag-drop-divider {
+    margin: 8px 4px;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.11), transparent);
+}
+
+#shockUserDropdown .frag-drop-link {
+    margin: 3px 0;
+    padding: 11px 13px;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    color: #D4D4D4;
+    transition: background 0.18s ease, border-color 0.18s ease, color 0.18s ease, transform 0.18s ease;
+}
+
+#shockUserDropdown .frag-drop-link:hover,
+#shockUserDropdown .frag-drop-link:focus-visible {
+    padding-right: 15px;
+    border-color: rgba(249, 115, 22, 0.14);
+    background: linear-gradient(90deg, rgba(249, 115, 22, 0.12), rgba(255, 179, 71, 0.035));
+    color: #FAFAFA;
+    transform: translateX(-1px);
+}
+
+#shockUserDropdown .frag-drop-link > i {
+    display: grid;
+    place-items: center;
+    flex: 0 0 28px;
+    width: 28px;
+    height: 28px;
+    border: 1px solid rgba(249, 115, 22, 0.16);
+    border-radius: 9px;
+    background: rgba(249, 115, 22, 0.07);
+    color: #FFB347;
+}
+
+#shockUserDropdown .frag-drop-link.logout:hover {
+    border-color: rgba(248, 113, 113, 0.16);
+    background: rgba(248, 113, 113, 0.08);
+    color: #FECACA;
+}
+
+#shockUserDropdown .frag-drop-link.logout:hover > i {
+    border-color: rgba(248, 113, 113, 0.2);
+    background: rgba(248, 113, 113, 0.08);
+    color: #FCA5A5;
+}
+
+#shockUserDropdown .frag-user-trigger:focus-visible,
+#shockUserDropdown .frag-drop-link:focus-visible {
+    outline: 2px solid #FFB347;
+    outline-offset: 3px;
+}
+
+@media (max-width: 520px) {
+    #shockUserDropdown .frag-dropdown-menu {
+        right: auto;
+        left: 0;
+        width: min(330px, calc(100vw - 24px));
+    }
+
+    #shockUserDropdown .frag-drop-header--profile {
+        gap: 9px;
+        padding: 12px 9px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #shockUserDropdown .frag-user-trigger,
+    #shockUserDropdown .frag-drop-link {
+        transition: none;
+    }
+}
+
+
+/* =========================================
+   Header refresh — graphite surfaces + ember accents
+========================================= */
+.shock-header {
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(249, 115, 22, 0.045), transparent 48%),
+        linear-gradient(180deg, rgba(23, 23, 23, 0.96), rgba(13, 13, 13, 0.94));
+    border-bottom-color: rgba(249, 115, 22, 0.15);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+}
+
+.shock-header.is-scrolled {
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(249, 115, 22, 0.06), transparent 48%),
+        rgba(13, 13, 13, 0.97);
+    border-bottom-color: rgba(249, 115, 22, 0.25);
+    box-shadow: 0 16px 38px rgba(0, 0, 0, 0.4);
+}
+
+.shock-header::before {
+    height: 2px;
+    background: linear-gradient(90deg, transparent, rgba(249, 115, 22, 0.6) 32%, rgba(255, 179, 71, 0.42) 66%, transparent);
+    opacity: 0.9;
+}
+
+.shock-container {
+    min-height: 76px;
+    gap: 18px;
+}
+
+.shock-logo-link {
+    padding: 7px 10px;
+    margin-inline-start: -10px;
+    border: 1px solid transparent;
+    border-radius: 14px;
+    transition: border-color 0.18s ease, background 0.18s ease, filter 0.18s ease;
+}
+
+.shock-logo-link:hover {
+    border-color: rgba(249, 115, 22, 0.15);
+    background: linear-gradient(145deg, rgba(249, 115, 22, 0.055), rgba(255, 255, 255, 0.012));
+    filter: brightness(1.05);
+}
+
+.shock-logo-img {
+    filter: drop-shadow(0 6px 16px rgba(249, 115, 22, 0.18));
+}
+
+.shock-nav {
+    gap: 5px;
+    padding: 5px;
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    border-radius: 17px;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(249, 115, 22, 0.055), transparent 62%),
+        linear-gradient(145deg, rgba(26, 26, 26, 0.9), rgba(14, 14, 14, 0.9));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025), 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+
+.shock-nav-item {
+    position: relative;
+    min-height: 39px;
+    padding: 8px 13px;
+    border-color: transparent;
+    border-radius: 11px;
+    color: #A3A3A3;
+    transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
+}
+
+.shock-nav-item:hover,
+.shock-nav-item.active,
+.frag-dropdown.open > .shock-nav-item {
+    border-color: rgba(249, 115, 22, 0.16);
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(249, 115, 22, 0.10), transparent 75%),
+        linear-gradient(145deg, rgba(249, 115, 22, 0.085), rgba(255, 179, 71, 0.025));
+    color: #FFB347;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025), 0 5px 16px rgba(0, 0, 0, 0.12);
+}
+
+.shock-nav-item:hover {
+    transform: translateY(-1px);
+}
+
+.shock-nav-item.active {
+    text-shadow: 0 0 18px rgba(249, 115, 22, 0.19);
+}
+
+.shock-nav-item i {
+    color: #F97316;
+    transition: color 0.18s ease;
+}
+
+.shock-nav-item:hover i,
+.shock-nav-item.active i {
+    color: #FFB347;
+}
+
+.shock-user-area-wrapper {
+    gap: 9px;
+}
+
+.action-icon-btn,
+.shock-mobile-toggle {
+    position: relative;
+    overflow: hidden;
+    border-color: rgba(255, 255, 255, 0.09);
+    border-radius: 13px;
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.08), transparent 62%),
+        linear-gradient(145deg, #1C1C1C, #101010);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.action-icon-btn:hover,
+.shock-mobile-toggle:hover {
+    border-color: rgba(249, 115, 22, 0.42);
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.16), transparent 68%),
+        linear-gradient(145deg, #222222, #121212);
+    color: #FFB347;
+    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.3), 0 0 19px rgba(249, 115, 22, 0.07);
+}
+
+.action-icon-btn:focus-visible,
+.shock-mobile-toggle:focus-visible,
+.shock-nav-item:focus-visible,
+.shock-logo-link:focus-visible,
+.frag-login-btn:focus-visible {
+    outline: 2px solid #FFB347;
+    outline-offset: 3px;
+}
+
+.frag-login-btn {
+    border: 1px solid rgba(255, 179, 71, 0.28);
+    background: linear-gradient(135deg, #F97316, #FFB347);
+    box-shadow: 0 8px 24px rgba(249, 115, 22, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.28);
+}
+
+.frag-login-btn:hover {
+    box-shadow: 0 14px 30px rgba(249, 115, 22, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
+.mobile-nav {
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.09), transparent 45%),
+        linear-gradient(160deg, #171717, #0D0D0D 72%);
+    border-left-color: rgba(249, 115, 22, 0.2);
+    box-shadow: -24px 0 70px rgba(0, 0, 0, 0.56);
+}
+
+.mobile-nav-header {
+    background: linear-gradient(145deg, rgba(249, 115, 22, 0.07), rgba(255, 255, 255, 0.01));
+    border-bottom: 1px solid rgba(255, 255, 255, 0.065);
+}
+
+.mobile-nav-link {
+    border-color: rgba(255, 255, 255, 0.035);
+    background: linear-gradient(145deg, rgba(255, 255, 255, 0.018), rgba(255, 255, 255, 0.005));
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link.active {
+    border-color: rgba(249, 115, 22, 0.2);
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.09), transparent 62%),
+        linear-gradient(90deg, rgba(249, 115, 22, 0.09), rgba(255, 179, 71, 0.025));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.02);
+}
+
+.shock-header .shock-nav .frag-dropdown-menu {
+    margin-top: 1px;
+    border-color: rgba(249, 115, 22, 0.22);
+    box-shadow: 0 22px 52px rgba(0, 0, 0, 0.48), 0 0 24px rgba(249, 115, 22, 0.045);
+}
+
+/* Complete Steam detail panel inside the account dropdown. */
+#shockUserDropdown .frag-dropdown-menu {
+    width: 370px;
+    min-width: min(350px, calc(100vw - 24px));
+    padding: 10px;
+}
+
+#shockUserDropdown .frag-drop-header--profile {
+    gap: 10px;
+    padding: 13px 11px;
+}
+
+#shockUserDropdown .frag-drop-avatar-frame {
+    flex-basis: 48px;
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+}
+
+#shockUserDropdown .frag-drop-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 13px;
+}
+
+#shockUserDropdown .frag-drop-eyebrow {
+    font-family: inherit;
+    font-size: 0.7rem;
+    letter-spacing: 0;
+}
+
+#shockUserDropdown .frag-drop-name {
+    font-size: 0.91rem;
+}
+
+#shockUserDropdown .frag-drop-steam {
+    display: block;
+    max-width: 100%;
+    overflow-wrap: anywhere;
+    white-space: normal;
+    text-align: right;
+    direction: ltr;
+    unicode-bidi: plaintext;
+    font-size: 0.62rem;
+    letter-spacing: 0;
+}
+
+#shockUserDropdown .frag-drop-steam-details {
+    margin: 8px 1px 2px;
+    padding: 0 2px;
+}
+
+#shockUserDropdown .frag-drop-status {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-height: 34px;
+    padding: 7px 10px;
+    border: 1px solid rgba(255, 255, 255, 0.075);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.025);
+    color: #D4D4D4;
+    font-size: 0.75rem;
+}
+
+#shockUserDropdown .frag-drop-status-dot {
+    width: 7px;
+    height: 7px;
+    flex: 0 0 7px;
+    border-radius: 50%;
+    background: #737373;
+}
+
+#shockUserDropdown .frag-drop-status[data-state="1"] {
+    border-color: rgba(74, 222, 128, 0.2);
+    background: rgba(34, 197, 94, 0.055);
+    color: #BBF7D0;
+}
+
+#shockUserDropdown .frag-drop-status[data-state="1"] .frag-drop-status-dot {
+    background: #4ADE80;
+    box-shadow: 0 0 10px rgba(74, 222, 128, 0.34);
+}
+
+#shockUserDropdown .frag-drop-status[data-state="2"],
+#shockUserDropdown .frag-drop-status[data-state="3"],
+#shockUserDropdown .frag-drop-status[data-state="4"],
+#shockUserDropdown .frag-drop-status[data-state="5"],
+#shockUserDropdown .frag-drop-status[data-state="6"] {
+    border-color: rgba(255, 179, 71, 0.18);
+    color: #FFB347;
+}
+
+#shockUserDropdown .frag-drop-status[data-state="2"] .frag-drop-status-dot,
+#shockUserDropdown .frag-drop-status[data-state="3"] .frag-drop-status-dot,
+#shockUserDropdown .frag-drop-status[data-state="4"] .frag-drop-status-dot,
+#shockUserDropdown .frag-drop-status[data-state="5"] .frag-drop-status-dot,
+#shockUserDropdown .frag-drop-status[data-state="6"] .frag-drop-status-dot {
+    background: #FFB347;
+}
+
+#shockUserDropdown .frag-drop-playing {
+    width: 100%;
+    color: #FFB347;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
+#shockUserDropdown .frag-drop-detail-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    margin-top: 7px;
+}
+
+#shockUserDropdown .frag-drop-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    padding: 8px 9px;
+    border: 1px solid rgba(255, 255, 255, 0.055);
+    border-radius: 9px;
+    background:
+        radial-gradient(ellipse at 100% 0%, rgba(249, 115, 22, 0.04), transparent 70%),
+        rgba(255, 255, 255, 0.018);
+}
+
+#shockUserDropdown .frag-drop-detail span {
+    color: #929292;
+    font-size: 0.66rem;
+}
+
+#shockUserDropdown .frag-drop-detail strong {
+    color: #E5E5E5;
+    font-size: 0.73rem;
+    font-weight: 800;
+    line-height: 1.5;
+    overflow-wrap: anywhere;
+}
+
+#shockUserDropdown .frag-drop-steam-profile-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 7px;
+    padding: 9px 10px;
+    border: 1px solid rgba(249, 115, 22, 0.18);
+    border-radius: 10px;
+    background: linear-gradient(100deg, rgba(249, 115, 22, 0.085), rgba(255, 179, 71, 0.025));
+    color: #FFB347;
+    text-decoration: none;
+    font-size: 0.73rem;
+    font-weight: 800;
+    transition: background 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+#shockUserDropdown .frag-drop-steam-profile-link i:last-child {
+    margin-right: auto;
+    font-size: 0.68rem;
+}
+
+#shockUserDropdown .frag-drop-steam-profile-link:hover {
+    border-color: rgba(249, 115, 22, 0.42);
+    background: linear-gradient(100deg, rgba(249, 115, 22, 0.15), rgba(255, 179, 71, 0.055));
+    color: #FFF0D8;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 1100px) {
+    .shock-container {
+        gap: 12px;
+    }
+
+    .shock-nav {
+        border: 0;
+        background: transparent;
+        box-shadow: none;
+    }
+
+    .shock-header .shock-mobile-toggle {
+        border-color: rgba(249, 115, 22, 0.2);
+    }
+}
+
+@media (max-width: 700px) {
+    .shock-container {
+        min-height: 66px;
+    }
+
+    .shock-nav {
+        padding: 0;
+    }
+
+    #shockUserDropdown .frag-dropdown-menu {
+        width: min(370px, calc(100vw - 24px));
+        min-width: 0;
+    }
+}
+
+@media (max-width: 380px) {
+    #shockUserDropdown .frag-drop-detail-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-logo-link,
+    .shock-nav-item,
+    .action-icon-btn,
+    .shock-mobile-toggle,
+    #shockUserDropdown .frag-drop-steam-profile-link {
+        transition: none;
+    }
+}
+
+
+/* =========================================
+   Minimal graphite base — keep inventory/profile cards untouched
+   Flat navigation and controls; profile/loadout card styles remain in
+   css/profile.css and css/weaponpaints.css.
+========================================= */
+:root {
+    --header-bg: #0D0D0D;
+    --header-bg-2: #111111;
+    --header-border: rgba(255, 255, 255, 0.08);
+    --header-border-soft: rgba(255, 255, 255, 0.08);
+    --header-shadow: none;
+    --header-orange: #F97316;
+    --header-orange-2: #FB923C;
+    --header-red: #EF4444;
+    --header-green: #22C55E;
+}
+
+.shock-header,
+.shock-header.is-scrolled {
+    background: #0D0D0D;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+.shock-header::before {
+    display: none;
+}
+
+.shock-container {
+    min-height: 72px;
+}
+
+.shock-logo-link,
+.shock-logo-link:hover {
+    border-color: transparent;
+    background: transparent;
+    filter: none;
+}
+
+.shock-logo-img {
+    filter: none;
+}
+
+.shock-nav {
+    gap: 4px;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.shock-nav-item {
+    min-height: 38px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #A3A3A3;
+    box-shadow: none;
+    text-shadow: none;
+    transform: none;
+    transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.shock-nav-item:hover,
+.shock-nav-item.active,
+.frag-dropdown.open > .shock-nav-item {
+    border-color: rgba(249, 115, 22, 0.14);
+    background: rgba(249, 115, 22, 0.075);
+    color: #F97316;
+    box-shadow: none;
+    text-shadow: none;
+    transform: none;
+}
+
+.shock-nav-item i,
+.shock-nav-item:hover i,
+.shock-nav-item.active i {
+    color: #F97316;
+}
+
+.action-icon-btn,
+.shock-mobile-toggle {
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 10px;
+    background: #171717;
+    box-shadow: none;
+    overflow: visible;
+}
+
+.action-icon-btn:hover,
+.shock-mobile-toggle:hover {
+    border-color: rgba(249, 115, 22, 0.38);
+    background: #202020;
+    color: #FB923C;
+    box-shadow: none;
+}
+
+.frag-login-btn {
+    border: 1px solid #F97316;
+    border-radius: 9px;
+    background: #F97316;
+    color: #111111;
+    box-shadow: none;
+    transition: background-color 140ms ease, border-color 140ms ease, color 140ms ease;
+}
+
+.frag-login-btn:hover {
+    border-color: #EA580C;
+    background: #EA580C;
+    box-shadow: none;
+}
+
+.mobile-nav {
+    border-left: 1px solid rgba(255, 255, 255, 0.08);
+    background: #0D0D0D;
+    box-shadow: -16px 0 36px rgba(0, 0, 0, 0.28);
+}
+
+.mobile-nav-header {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: #111111;
+}
+
+.mobile-nav-link {
+    border-color: transparent;
+    border-radius: 8px;
+    background: transparent;
+    box-shadow: none;
+}
+
+.mobile-nav-link:hover,
+.mobile-nav-link.active {
+    border-color: rgba(249, 115, 22, 0.14);
+    background: rgba(249, 115, 22, 0.075);
+    box-shadow: none;
+}
+
+#shockUserDropdown .frag-user-trigger,
+#shockUserDropdown .frag-user-trigger:hover,
+#shockUserDropdown .frag-user-trigger:focus-visible,
+#shockUserDropdown.open .frag-user-trigger {
+    border: 1px solid rgba(255, 255, 255, 0.10);
+    border-radius: 10px;
+    background: #171717;
+    box-shadow: none;
+}
+
+#shockUserDropdown .frag-user-trigger:hover,
+#shockUserDropdown .frag-user-trigger:focus-visible,
+#shockUserDropdown.open .frag-user-trigger {
+    border-color: rgba(249, 115, 22, 0.42);
+    background: #1C1C1C;
+}
+
+#shockUserDropdown .frag-avatar {
+    box-shadow: none;
+    border-color: rgba(249, 115, 22, 0.42);
+}
+
+#shockUserDropdown .frag-dropdown-menu {
+    border-color: rgba(255, 255, 255, 0.10);
+    border-radius: 16px;
+    background: #111111;
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+}
+
+#shockUserDropdown .frag-dropdown-menu::before {
+    display: none;
+}
+
+.shock-header .shock-nav .frag-dropdown-menu {
+    border-color: rgba(255, 255, 255, 0.10);
+    box-shadow: 0 18px 42px rgba(0, 0, 0, 0.36);
+}
+
+#shockUserDropdown .frag-drop-link:hover,
+#shockUserDropdown .frag-drop-link:focus-visible {
+    border-color: rgba(249, 115, 22, 0.12);
+    background: rgba(249, 115, 22, 0.07);
+    box-shadow: none;
+    transform: none;
+}
+
+#shockUserDropdown .frag-drop-steam-profile-link {
+    background: rgba(249, 115, 22, 0.075);
+    box-shadow: none;
+}
+
+#shockUserDropdown .frag-drop-steam-profile-link:hover {
+    background: rgba(249, 115, 22, 0.12);
+    box-shadow: none;
+    transform: none;
+}
+
+@media (max-width: 1100px) {
+    .shock-nav {
+        gap: 4px;
+        padding: 0;
+    }
+}
+
+@media (max-width: 700px) {
+    .shock-container {
+        min-height: 66px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-nav-item,
+    .frag-login-btn,
+    #shockUserDropdown .frag-drop-steam-profile-link {
+        transition: none !important;
+    }
+}
+
+
+/* Wallet action: icon-only at rest, accent only on hover/focus. */
+.shock-user-area-wrapper {
+    gap: 16px;
+}
+
+.shock-user-area-wrapper .action-icon-btn {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #A3A3A3;
+    box-shadow: none;
+    transform: none;
+    transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.shock-user-area-wrapper .action-icon-btn:hover,
+.shock-user-area-wrapper .action-icon-btn:active {
+    border-color: rgba(249, 115, 22, 0.16);
+    background: rgba(249, 115, 22, 0.08);
+    color: #F97316;
+    box-shadow: none;
+    transform: none;
+}
+
+.shock-user-area-wrapper .action-icon-btn:focus-visible {
+    border-color: rgba(249, 115, 22, 0.35);
+    outline: 2px solid rgba(249, 115, 22, 0.45);
+    outline-offset: 2px;
+    background: rgba(249, 115, 22, 0.06);
+    color: #FB923C;
+    box-shadow: none;
+}
+
+.shock-user-area-wrapper .action-icon-btn.active {
+    border-color: transparent;
+    background: transparent;
+    color: #A3A3A3;
+    box-shadow: none;
+}
+
+.shock-user-area-wrapper .action-icon-btn.active:hover,
+.shock-user-area-wrapper .action-icon-btn.active:focus-visible {
+    border-color: rgba(249, 115, 22, 0.16);
+    background: rgba(249, 115, 22, 0.08);
+    color: #F97316;
+}
+
+.shock-user-area-wrapper .action-icon-btn i {
+    font-size: 1rem;
+}
+
+@media (max-width: 700px) {
+    .shock-user-area-wrapper {
+        gap: 10px;
+    }
+
+    .shock-user-area-wrapper .action-icon-btn {
+        flex-basis: 36px;
+        width: 36px;
+        height: 36px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-user-area-wrapper .action-icon-btn {
+        transition: none !important;
+    }
+}
+
+/* Scroll-direction header behavior: clear at top/up, 85% opaque black while moving down. */
+.shock-header,
+.shock-header.is-scrolled {
+    background: transparent;
+    border-bottom-color: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    transition: background-color 180ms ease, border-color 180ms ease;
+}
+
+.shock-header.is-scroll-down {
+    background: rgba(13, 13, 13, 0.85);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Logged-in account trigger blends into the header instead of looking like a card. */
+.shock-header #shockUserDropdown .frag-user-trigger,
+.shock-header #shockUserDropdown .frag-user-trigger:hover,
+.shock-header #shockUserDropdown .frag-user-trigger:focus-visible,
+.shock-header #shockUserDropdown.open .frag-user-trigger {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+}
+
+.shock-header #shockUserDropdown .frag-user-trigger:hover,
+.shock-header #shockUserDropdown.open .frag-user-trigger {
+    background: rgba(249, 115, 22, 0.055);
+}
+
+.shock-header #shockUserDropdown .frag-user-trigger:focus-visible {
+    outline: 2px solid rgba(249, 115, 22, 0.7);
+    outline-offset: 2px;
+}
+
+.shock-header #shockUserDropdown .frag-avatar {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border: 1px solid rgba(249, 115, 22, 0.34);
+    box-shadow: none;
+}
+
+.shock-header #shockUserDropdown .frag-user-trigger {
+    min-height: 48px;
+    padding: 0.25rem 0.45rem 0.25rem 0.85rem;
+}
+
+@media (max-width: 700px) {
+    .shock-header #shockUserDropdown .frag-avatar {
+        width: 36px;
+        height: 36px;
+        flex-basis: 36px;
+    }
+
+    .shock-header #shockUserDropdown .frag-user-trigger {
+        min-height: 44px;
+        padding: 0.2rem 0.35rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header,
+    .shock-header.is-scrolled {
+        transition: none;
+    }
+}
+
+
+
+/* Mobile header refinements: keep the profile dropdown inside the viewport. */
+@media (max-width: 520px) {
+    .shock-container {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px;
+        padding-inline: 12px;
+    }
+
+    .shock-brand,
+    .shock-logo-link,
+    .shock-user-area-wrapper,
+    .frag-user-area,
+    #shockUserDropdown {
+        min-width: 0;
+    }
+
+    .shock-user-area-wrapper {
+        max-width: 100%;
+        gap: 6px;
+    }
+
+    /* The profile trigger sits on the right in RTL; pin the menu to that edge. */
+    #shockUserDropdown .frag-dropdown-menu {
+        position: absolute;
+        top: calc(100% + 9px);
+        right: 0;
+        left: auto;
+        width: min(370px, calc(100vw - 24px));
+        min-width: 0;
+        max-width: calc(100vw - 24px);
+        box-sizing: border-box;
+        transform-origin: top right;
+    }
+
+    #shockUserDropdown .frag-drop-header--profile {
+        width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+/* Keep the hamburger visually light and transparent over the clear header. */
+.shock-header .shock-mobile-toggle {
+    border-color: transparent;
+    background: transparent;
+    color: #E5E5E5;
+    box-shadow: none;
+}
+
+.shock-header .shock-mobile-toggle:hover,
+.shock-header .shock-mobile-toggle:active {
+    border-color: rgba(249, 115, 22, 0.18);
+    background: rgba(249, 115, 22, 0.075);
+    color: #FFB347;
+    box-shadow: none;
+    transform: none;
+}
+
+.shock-header .shock-mobile-toggle:focus-visible {
+    border-color: rgba(249, 115, 22, 0.36);
+    outline: 2px solid rgba(255, 179, 71, 0.7);
+    outline-offset: 2px;
+    background: rgba(249, 115, 22, 0.07);
+}
+
+.shock-header.is-scroll-down {
+    background: rgba(13, 13, 13, 0.58);
+    border-bottom-color: rgba(255, 255, 255, 0.075);
+    box-shadow: 0 9px 26px rgba(0, 0, 0, 0.28);
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+}
+
+.shock-header.is-scroll-down .shock-mobile-toggle {
+    border-color: rgba(255, 255, 255, 0.09);
+    background: rgba(13, 13, 13, 0.28);
+}
+
+@media (max-width: 380px) {
+    .shock-container {
+        gap: 7px;
+        padding-inline: 9px;
+    }
+
+    .shock-logo-img {
+        max-width: 124px;
+    }
+
+    .shock-user-area-wrapper {
+        gap: 5px;
+    }
+
+    .shock-header #shockUserDropdown .frag-user-trigger {
+        padding-inline: 4px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header.is-scroll-down {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+
+
+
+/* Mobile order: hamburger on the far right, profile immediately to its left. */
+@media (max-width: 1100px) {
+    .shock-user-area-wrapper {
+        flex-direction: row-reverse !important;
+        direction: rtl;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .shock-mobile-toggle {
+        order: 2;
+        flex: 0 0 auto;
+    }
+
+    .shock-user-area-wrapper > .frag-user-area,
+    .shock-user-area-wrapper > .frag-login-btn {
+        order: 1;
+    }
+}
+
+/* Give the scroll-down state a clearly deeper, near-black surface. */
+.shock-header.is-scroll-down {
+    background: rgba(7, 7, 7, .97) !important;
+    border-bottom-color: rgba(255, 255, 255, .085) !important;
+    box-shadow: 0 12px 34px rgba(0, 0, 0, .48) !important;
+    -webkit-backdrop-filter: blur(18px);
+    backdrop-filter: blur(18px);
+}
+
+.shock-header.is-scroll-down .shock-mobile-toggle {
+    border-color: rgba(255, 255, 255, .11);
+    background: rgba(20, 20, 20, .82);
+    color: #F5F5F5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header.is-scroll-down {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+}
+
+
+/* Match the supplied FragCity page background exactly while scrolled. */
+.shock-header.is-scrolled,
+.shock-header.is-scroll-down {
+    background: #0D0D0D !important;
+    border-bottom-color: rgba(255, 255, 255, .08) !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .28) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    transition: background-color 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.shock-header.is-scroll-down .shock-mobile-toggle {
+    border-color: rgba(255, 255, 255, .12);
+    background: rgba(38, 38, 38, .78);
+    color: #F5F5F5;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header.is-scrolled,
+    .shock-header.is-scroll-down {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+        transition: none;
+    }
+}
+
+
+/* The same current WebP wordmark is used at every breakpoint. */
+@media (max-width: 1100px) {
+    .shock-logo-img {
+        height: 32px;
+        max-width: 142px;
+    }
+}
+
+@media (max-width: 480px) {
+    .shock-logo-img {
+        height: 34px;
+        max-width: 124px;
+    }
+}
+
+
+/* Direction-aware sticky header:
+   top = transparent, scrolling down = translucent graphite,
+   scrolling up = clear again. */
+.shock-header:not(.is-scroll-down):not(.is-scroll-up) {
+    background: rgba(13, 13, 13, 0) !important;
+    border-bottom-color: transparent !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+.shock-header.is-scroll-down {
+    background: rgba(13, 13, 13, .52) !important;
+    border-bottom-color: rgba(255, 255, 255, .09) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .22) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    backdrop-filter: blur(16px) !important;
+}
+
+.shock-header.is-scroll-up {
+    background: rgba(13, 13, 13, 0) !important;
+    border-bottom-color: transparent !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+.shock-header,
+.shock-header.is-scroll-down,
+.shock-header.is-scroll-up {
+    transition:
+        background-color 220ms ease,
+        border-color 220ms ease,
+        box-shadow 220ms ease,
+        backdrop-filter 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header,
+    .shock-header.is-scroll-down,
+    .shock-header.is-scroll-up {
+        transition: none !important;
+    }
+}
+
+
+/*
+ * Persistent frosted-glass header:
+ * transparent only at the absolute top; both scroll directions retain
+ * the same translucent graphite surface and blur.
+ */
+.shock-header:not(.is-scroll-down):not(.is-scroll-up):not(.is-scrolled) {
+    background: rgba(13, 13, 13, 0) !important;
+    border-bottom-color: transparent !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+.shock-header.is-scrolled,
+.shock-header.is-scroll-down,
+.shock-header.is-scroll-up {
+    background: rgba(13, 13, 13, .58) !important;
+    border-bottom-color: rgba(255, 255, 255, .09) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .22) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(125%) !important;
+    backdrop-filter: blur(18px) saturate(125%) !important;
+}
+
+/* Header dropdowns use the same glass language as the sticky bar. */
+.shock-header .frag-dropdown-menu {
+    background:
+        linear-gradient(145deg, rgba(28, 29, 35, .88), rgba(13, 14, 18, .82)) !important;
+    border-color: rgba(255, 255, 255, .11) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(130%) !important;
+    backdrop-filter: blur(20px) saturate(130%) !important;
+}
+
+.shock-header,
+.shock-header.is-scrolled,
+.shock-header.is-scroll-down,
+.shock-header.is-scroll-up {
+    transition:
+        background-color 220ms ease,
+        border-color 220ms ease,
+        box-shadow 220ms ease,
+        -webkit-backdrop-filter 220ms ease,
+        backdrop-filter 220ms ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header,
+    .shock-header.is-scrolled,
+    .shock-header.is-scroll-down,
+    .shock-header.is-scroll-up {
+        transition: none !important;
+    }
+}
+
+
+/* ==========================================================================
+   Global authentication modal
+   Login floats above the current route; registration remains a full page.
+   ========================================================================== */
+
+body.fc-auth-modal-open {
+    overflow: hidden;
+}
+
+.fc-auth-modal[hidden] {
+    display: none !important;
+}
+
+.fc-auth-modal {
+    position: fixed;
+    z-index: 12000;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    isolation: isolate;
+}
+
+.fc-auth-modal__backdrop {
+    position: absolute;
+    z-index: -1;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.76);
+    -webkit-backdrop-filter: blur(9px) saturate(110%);
+    backdrop-filter: blur(9px) saturate(110%);
+    animation: fc-auth-backdrop-in 180ms ease both;
+}
+
+.fc-auth-modal__dialog {
+    position: relative;
+    width: min(100%, 420px);
+    max-height: min(90vh, 780px);
+    max-height: min(90dvh, 780px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 19px;
+    background:
+        radial-gradient(ellipse at 50% 0%, rgba(249, 115, 22, 0.08), transparent 52%),
+        rgba(13, 13, 13, 0.94);
+    box-shadow:
+        0 32px 100px rgba(0, 0, 0, 0.58),
+        0 0 55px rgba(249, 115, 22, 0.075),
+        inset 0 1px 0 rgba(255, 255, 255, 0.045);
+    -webkit-backdrop-filter: blur(24px) saturate(125%);
+    backdrop-filter: blur(24px) saturate(125%);
+    animation: fc-auth-dialog-in 260ms cubic-bezier(0.2, 0.75, 0.25, 1) both;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(249, 115, 22, 0.35) transparent;
+}
+
+.fc-auth-modal__close {
+    position: absolute;
+    z-index: 5;
+    top: 11px;
+    left: 11px;
+    display: grid;
+    width: 34px;
+    height: 34px;
+    place-items: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 9px;
+    background: rgba(255, 255, 255, 0.035);
+    color: #A3A3A3;
+    cursor: pointer;
+    transition:
+        color 160ms ease,
+        border-color 160ms ease,
+        background-color 160ms ease,
+        transform 160ms ease;
+}
+
+.fc-auth-modal__close:hover,
+.fc-auth-modal__close:focus-visible {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, 0.3);
+    outline: none;
+    background: rgba(249, 115, 22, 0.09);
+    color: #FDBA74;
+}
+
+.fc-auth-modal__content {
+    min-width: 0;
+}
+
+.fc-auth-modal__loading {
+    display: flex;
+    min-height: 260px;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    color: #A3A3A3;
+    font-size: 0.82rem;
+}
+
+.fc-auth-modal__spinner {
+    width: 25px;
+    height: 25px;
+    border: 2px solid rgba(255, 255, 255, 0.12);
+    border-top-color: #F97316;
+    border-radius: 50%;
+    animation: fc-auth-spinner 750ms linear infinite;
+}
+
+.fc-auth-modal__content .auth-page.auth-page--modal {
+    display: block;
+    width: 100%;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+}
+
+.fc-auth-modal__content .auth-page.auth-page--modal::before,
+.fc-auth-modal__content .auth-page.auth-page--modal::after {
+    display: none;
+    content: none;
+}
+
+.fc-auth-modal__content .auth-page--modal .auth-container {
+    width: 100%;
+    max-width: none;
+    margin: 0;
+    padding: 27px 27px 24px;
+    border: 0;
+    border-radius: 18px;
+    background: transparent;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    animation: none;
+}
+
+.fc-auth-modal__content .auth-page--modal .auth-logo {
+    margin-bottom: 10px;
+}
+
+.fc-auth-modal__content .auth-page--modal .auth-logo img {
+    width: auto;
+    height: 40px;
+    max-width: 160px;
+    object-fit: contain;
+}
+
+.fc-auth-modal__content .auth-page--modal h2 {
+    padding-inline: 24px;
+    font-size: 1.42rem;
+}
+
+.fc-auth-modal__content .auth-page--modal .auth-subtitle {
+    margin: 5px 0 19px;
+    font-size: 0.82rem;
+}
+
+.fc-auth-modal__content .auth-page--modal .form-group {
+    margin-bottom: 14px;
+}
+
+.fc-auth-modal__content .auth-page--modal .form-group input {
+    height: 47px;
+}
+
+.fc-auth-modal__content .auth-page--modal .btn-auth-submit,
+.fc-auth-modal__content .auth-page--modal .btn-steam-login {
+    min-height: 47px;
+}
+
+.fc-auth-modal__content .auth-page--modal .auth-separator {
+    margin: 18px 0;
+}
+
+.fc-auth-modal__content .auth-page--modal .auth-switch {
+    margin-top: 17px;
+    font-size: 0.8rem;
+}
+
+@keyframes fc-auth-backdrop-in {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fc-auth-dialog-in {
+    from { opacity: 0; transform: translate3d(0, 14px, 0) scale(0.985); }
+    to { opacity: 1; transform: translate3d(0, 0, 0) scale(1); }
+}
+
+@keyframes fc-auth-spinner {
+    to { transform: rotate(360deg); }
+}
+
+@media (max-width: 520px) {
+    .fc-auth-modal {
+        align-items: center;
+        padding: 12px;
+    }
+
+    .fc-auth-modal__dialog {
+        width: min(100%, 420px);
+        max-height: 92vh;
+        max-height: 92dvh;
+        border-radius: 16px;
+    }
+
+    .fc-auth-modal__content .auth-page--modal .auth-container {
+        padding: 24px 19px 20px;
+    }
+
+    .fc-auth-modal__close {
+        top: 9px;
+        left: 9px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fc-auth-modal__backdrop,
+    .fc-auth-modal__dialog,
+    .fc-auth-modal__spinner {
+        animation: none !important;
+    }
+
+    .fc-auth-modal__close {
+        transition: none !important;
+    }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+    .fc-auth-modal__backdrop,
+    .fc-auth-modal__dialog {
+        -webkit-backdrop-filter: none;
+        backdrop-filter: none;
+    }
+
+    .fc-auth-modal__dialog {
+        background: #111111;
+    }
+}
+
+
+/* Overlay header: the page canvas continues underneath instead of leaving
+   a solid reserved strip below the navigation. */
+.shock-header {
+    position: sticky;
+    top: 0;
+    z-index: 1050;
+    margin-bottom: -72px;
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+.shock-header:not(.is-scrolled):not(.is-scroll-down):not(.is-scroll-up) {
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+.shock-header.is-scrolled,
+.shock-header.is-scroll-down,
+.shock-header.is-scroll-up {
+    background: rgba(13, 13, 13, .58) !important;
+    border-bottom-color: rgba(255, 255, 255, .09) !important;
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .2) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(125%) !important;
+    backdrop-filter: blur(18px) saturate(125%) !important;
+}
+
+@media (max-width: 700px) {
+    .shock-header {
+        margin-bottom: -64px;
+    }
+}
+
+/* No-animation mode toggle, available in the desktop header and mobile drawer. */
+.shock-header .fc-motion-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 36px;
+    padding: 0 11px;
+    border: 1px solid rgba(255, 255, 255, .09);
+    border-radius: 8px;
+    background: rgba(13, 13, 13, .22);
+    color: #A3A3A3;
+    font-family: inherit;
+    font-size: .69rem;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.shock-header .fc-motion-toggle i {
+    color: #A3A3A3;
+    font-size: .85rem;
+}
+
+.shock-header .fc-motion-toggle:hover,
+.shock-header .fc-motion-toggle:focus-visible,
+.shock-header .fc-motion-toggle.is-active {
+    border-color: rgba(249, 115, 22, .28);
+    outline: none;
+    background: rgba(249, 115, 22, .09);
+    color: #FDBA74;
+}
+
+.shock-header .fc-motion-toggle.is-active i {
+    color: #F97316;
+}
+
+.fc-motion-toggle-mobile {
+    width: 100%;
+    min-height: 44px;
+    justify-content: flex-start;
+    border: 1px solid transparent;
+    background: transparent;
+    color: #A3A3A3;
+    font-family: inherit;
+    text-align: right;
+    cursor: pointer;
+}
+
+.fc-motion-toggle-mobile .fc-motion-toggle__state {
+    margin-right: auto;
+    color: #737373;
+    font-size: .68rem;
+}
+
+.fc-motion-toggle-mobile.is-active {
+    border-color: rgba(249, 115, 22, .2);
+    background: rgba(249, 115, 22, .075);
+    color: #FDBA74;
+}
+
+.fc-motion-toggle-mobile.is-active i,
+.fc-motion-toggle-mobile.is-active .fc-motion-toggle__state {
+    color: #F97316;
+}
+
+@media (max-width: 1100px) {
+    .shock-header .fc-motion-toggle {
+        display: none;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header .fc-motion-toggle,
+    .fc-motion-toggle-mobile {
+        transition: none !important;
+    }
+}
+
+
+@media (min-width: 1101px) and (max-width: 1320px) {
+    .shock-header .fc-motion-toggle {
+        width: 38px;
+        min-width: 38px;
+        padding: 0;
+    }
+
+    .shock-header .fc-motion-toggle__label {
+        display: none;
+    }
+}
+
+
+/* Keep the overlay/header overlap and the first page content on the same
+   measured height. The mobile container resolves to 66px in this layout. */
+:root {
+    --fc-header-overlap-height: 72px;
+}
+
+.shock-header {
+    margin-bottom: calc(-1 * var(--fc-header-overlap-height)) !important;
+}
+
+@media (max-width: 700px) {
+    :root {
+        --fc-header-overlap-height: 66px;
+    }
+
+    .shock-header {
+        margin-bottom: calc(-1 * var(--fc-header-overlap-height)) !important;
+    }
+}
+
+/* Compact icon-first Performance Mode control. The label expands on hover
+   and keyboard focus without changing the button's vertical alignment. */
+.shock-header .fc-motion-toggle {
+    box-sizing: border-box;
+    width: 40px;
+    min-width: 40px;
+    height: 40px;
+    min-height: 40px;
+    flex: 0 0 40px;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 10px;
+    transition:
+        width 190ms ease,
+        flex-basis 190ms ease,
+        gap 190ms ease,
+        padding 190ms ease,
+        color 140ms ease,
+        background-color 140ms ease,
+        border-color 140ms ease;
+}
+
+.shock-header .fc-motion-toggle__label {
+    display: inline-block;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    white-space: nowrap;
+    font-size: .67rem;
+    transition:
+        max-width 190ms ease,
+        opacity 130ms ease,
+        visibility 130ms ease;
+}
+
+.shock-header .fc-motion-toggle:hover,
+.shock-header .fc-motion-toggle:focus-visible {
+    width: 158px;
+    min-width: 158px;
+    flex-basis: 158px;
+    gap: 8px;
+    padding-inline: 11px;
+}
+
+.shock-header .fc-motion-toggle:hover .fc-motion-toggle__label,
+.shock-header .fc-motion-toggle:focus-visible .fc-motion-toggle__label {
+    max-width: 112px;
+    opacity: 1;
+    visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header .fc-motion-toggle,
+    .shock-header .fc-motion-toggle__label {
+        transition: none !important;
+    }
+}
+
+
+/* One measured height and aligned baselines for every header action. */
+.shock-header .frag-login-btn,.shock-header .action-icon-btn,.shock-header .fc-motion-toggle,.shock-header .shock-mobile-toggle,.shock-header .frag-user-trigger{
+ box-sizing:border-box;min-height:40px;height:40px;
+}
+.shock-header .frag-login-btn{
+ display:inline-flex;align-items:center;justify-content:center;gap:8px;
+ flex:0 0 auto;min-width:132px;padding:0 13px;border-radius:9px;
+ font-size:.73rem;font-weight:800;line-height:1;white-space:nowrap;
+}
+.shock-header .frag-login-btn i{font-size:1.08rem;line-height:1}
+.shock-header .frag-login-btn span{line-height:1}
+.shock-header .action-icon-btn{flex:0 0 40px;width:40px;height:40px;padding:0}
+.shock-header .fc-motion-toggle{width:40px;min-width:40px;min-height:40px;height:40px;flex:0 0 40px}
+.shock-header .shock-mobile-toggle{width:40px;min-width:40px;height:40px;flex:0 0 40px;padding:0}
+.mobile-nav-link.mobile-steam-login-link{min-height:44px;border:1px solid rgba(249,115,22,.2);border-radius:9px;background:rgba(249,115,22,.075);color:#FDBA74}
+.mobile-nav-link.mobile-steam-login-link i{color:#F97316;font-size:1.05rem}
+.mobile-nav-link.mobile-steam-login-link:hover,.mobile-nav-link.mobile-steam-login-link:focus-visible{border-color:rgba(249,115,22,.42);background:rgba(249,115,22,.12);color:#FFD0A5}
+@media(max-width:700px){
+ .shock-header .frag-login-btn,.shock-header .action-icon-btn,.shock-header .fc-motion-toggle,.shock-header .shock-mobile-toggle,.shock-header .frag-user-trigger{min-height:36px;height:36px}
+ .shock-header .frag-login-btn{width:36px;min-width:36px;max-width:36px;flex:0 0 36px;padding:0;gap:0}
+ .shock-header .frag-login-btn span{display:none}
+ .shock-header .frag-login-btn i{font-size:1.05rem}
+ .shock-header .action-icon-btn,.shock-header .fc-motion-toggle,.shock-header .shock-mobile-toggle{width:36px;min-width:36px;flex-basis:36px}
+}
+
+/* Logout actions inside the account information menu and mobile drawer. */
+.frag-drop-logout-form,
+.mobile-nav-logout-form {
+    width: 100%;
+    margin: 0;
+}
+
+button.frag-drop-link.logout {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    text-align: right;
+    cursor: pointer;
+}
+
+button.frag-drop-link.logout:focus-visible,
+button.mobile-nav-link.logout-link:focus-visible {
+    outline: 2px solid rgba(249, 115, 22, .72);
+    outline-offset: -2px;
+}
+
+button.mobile-nav-link.logout-link {
+    width: 100%;
+    border: 0;
+    background: transparent;
+    font: inherit;
+    text-align: right;
+    cursor: pointer;
+}
+
+/* Keep the mobile drawer aligned with the desktop "More" navigation. */
+.mobile-nav-more {
+    width: 100%;
+}
+
+.mobile-nav-more > summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.mobile-nav-more > summary::-webkit-details-marker {
+    display: none;
+}
+
+.mobile-nav-more-toggle {
+    display: flex;
+    width: 100%;
+    box-sizing: border-box;
+    font: inherit;
+    text-align: right;
+}
+
+.mobile-nav-more-toggle .mobile-nav-more-arrow {
+    width: auto;
+    flex: 0 0 auto;
+    margin-inline-start: auto;
+    color: #929292;
+    transition: transform 180ms ease, color 180ms ease;
+}
+
+.mobile-nav-more[open] .mobile-nav-more-arrow {
+    transform: rotate(180deg);
+    color: var(--header-orange);
+}
+
+.mobile-nav-more-menu {
+    display: grid;
+    gap: 4px;
+    margin: 4px 13px 8px 0;
+    padding-inline-end: 11px;
+    border-inline-end: 1px solid rgba(249, 115, 22, .24);
+}
+
+.mobile-nav-more-menu .mobile-nav-link {
+    min-height: 42px;
+    padding: 8px 11px;
+    border-radius: 9px;
+    font-size: .86rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .mobile-nav-more-toggle .mobile-nav-more-arrow {
+        transition: none;
+    }
+}
+
+
+/* FACEIT level row in the account dropdown */
+#shockUserDropdown .frag-drop-faceit {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    margin-top: 7px;
+    padding: 7px 10px;
+    border: 1px solid rgba(249, 115, 22, 0.18);
+    border-radius: 10px;
+    background: linear-gradient(105deg, rgba(249, 115, 22, 0.075), rgba(255, 255, 255, 0.018));
+}
+
+#shockUserDropdown .frag-drop-faceit__label {
+    color: #A3A3A3;
+    font-size: 0.66rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+}
+
+#shockUserDropdown .frag-drop-faceit__value {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    min-width: 0;
+    color: #FDBA74;
+    font-size: 0.76rem;
+    text-align: left;
+}
+
+#shockUserDropdown .frag-drop-faceit__value img {
+    display: block;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    object-fit: contain;
+}
+
+#shockUserDropdown .frag-drop-faceit__value strong {
+    color: #FDBA74;
+    font-size: 0.8rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+#shockUserDropdown .frag-drop-faceit__value > span {
+    color: #A3A3A3;
+    font-size: 0.65rem;
+    line-height: 1.5;
+    text-align: left;
+}
+
+
+/* FACEIT rank-coloured progress indicator inside the user dropdown. */
+#shockUserDropdown .frag-drop-faceit {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: center;
+    gap: 8px;
+    min-height: 0;
+    margin-top: 8px;
+    padding: 9px 10px;
+    border-color: color-mix(in srgb, var(--faceit-rank-color, #CDCDCD) 28%, transparent);
+    background:
+        linear-gradient(
+            105deg,
+            color-mix(in srgb, var(--faceit-rank-color, #CDCDCD) 9%, transparent),
+            rgba(255, 255, 255, .018)
+        );
+}
+
+#shockUserDropdown .frag-drop-faceit__top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+
+#shockUserDropdown .frag-drop-faceit__rank {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    color: #E5E5E5;
+    font-size: .72rem;
+    font-weight: 800;
+}
+
+#shockUserDropdown .frag-drop-faceit__rank img {
+    display: block;
+    width: 27px;
+    height: 27px;
+    flex: 0 0 27px;
+    object-fit: contain;
+}
+
+#shockUserDropdown .frag-drop-faceit__rank strong {
+    color: var(--faceit-rank-color, #CDCDCD);
+    font-size: .74rem;
+    font-weight: 850;
+    white-space: nowrap;
+}
+
+#shockUserDropdown .frag-drop-faceit__elo {
+    flex: 0 0 auto;
+    color: var(--faceit-rank-color, #CDCDCD);
+    font-size: .72rem;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+    direction: ltr;
+    unicode-bidi: isolate;
+    white-space: nowrap;
+}
+
+#shockUserDropdown .frag-drop-faceit__progress {
+    width: 100%;
+    height: 5px;
+    min-height: 5px;
+    overflow: hidden;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .09);
+}
+
+#shockUserDropdown .frag-drop-faceit__progress > span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: var(--faceit-rank-color, #CDCDCD);
+    box-shadow: 0 0 8px color-mix(in srgb, var(--faceit-rank-color, #CDCDCD) 28%, transparent);
+    transition: width 360ms cubic-bezier(.22, .61, .36, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #shockUserDropdown .frag-drop-faceit__progress > span {
+        transition: none;
+    }
+}
+
+
+/* =========================================================
+   Unified wallet balance + in-place charge modal
+========================================================= */
+#shockUserDropdown .frag-drop-wallet-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin: 10px 10px 12px;
+    padding: 11px 12px;
+    border: 1px solid rgba(249, 115, 22, .2);
+    border-radius: 13px;
+    background:
+        radial-gradient(ellipse at 0 50%, rgba(249, 115, 22, .11), transparent 62%),
+        linear-gradient(135deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .012));
+}
+
+.frag-drop-wallet-card__balance {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+}
+
+.frag-drop-wallet-card__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #A3A3A3;
+    font-size: .68rem;
+    font-weight: 750;
+}
+
+.frag-drop-wallet-card__label i {
+    color: #F97316;
+    font-size: .78rem;
+}
+
+.frag-drop-wallet-card__balance > strong {
+    color: #F5F5F5;
+    font-size: .88rem;
+    font-weight: 900;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+}
+
+.frag-drop-wallet-card__add,
+.mobile-wallet-balance-row > button {
+    display: inline-grid;
+    place-items: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    border: 1px solid rgba(249, 115, 22, .38);
+    border-radius: 10px;
+    background: linear-gradient(145deg, rgba(249, 115, 22, .19), rgba(249, 115, 22, .08));
+    color: #FFB347;
+    font: inherit;
+    font-size: .92rem;
+    cursor: pointer;
+    transition: transform 160ms ease, border-color 160ms ease, background 160ms ease, box-shadow 160ms ease;
+}
+
+.frag-drop-wallet-card__add:hover,
+.mobile-wallet-balance-row > button:hover {
+    transform: translateY(-1px);
+    border-color: rgba(255, 179, 71, .68);
+    background: rgba(249, 115, 22, .22);
+    box-shadow: 0 5px 16px rgba(249, 115, 22, .12);
+}
+
+.frag-drop-wallet-card__add:focus-visible,
+.mobile-wallet-balance-row > button:focus-visible {
+    outline: 2px solid #FFB347;
+    outline-offset: 3px;
+}
+
+.mobile-wallet-balance-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    margin: 2px 0 5px;
+    padding: 9px 11px;
+    border: 1px solid rgba(249, 115, 22, .18);
+    border-radius: 11px;
+    background: rgba(249, 115, 22, .055);
+}
+
+.mobile-wallet-balance-row > span {
+    display: inline-flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    min-width: 0;
+    color: #A3A3A3;
+    font-size: .78rem;
+}
+
+.mobile-wallet-balance-row > span > i {
+    color: #F97316;
+}
+
+.mobile-wallet-balance-row > span > strong {
+    color: #F5F5F5;
+    font-size: .82rem;
+    font-variant-numeric: tabular-nums;
+}
+
+.fc-wallet-charge-modal[hidden] {
+    display: none !important;
+}
+
+.fc-wallet-charge-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 14000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 18px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 180ms ease, visibility 180ms ease;
+}
+
+.fc-wallet-charge-modal.is-open {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.fc-wallet-charge-modal__backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(3, 3, 3, .78);
+    -webkit-backdrop-filter: blur(11px);
+    backdrop-filter: blur(11px);
+}
+
+.fc-wallet-charge-modal__dialog {
+    position: relative;
+    z-index: 1;
+    width: min(100%, 440px);
+    padding: 30px;
+    border: 1px solid rgba(249, 115, 22, .23);
+    border-radius: 22px;
+    background:
+        radial-gradient(ellipse at 100% 0, rgba(249, 115, 22, .105), transparent 48%),
+        linear-gradient(145deg, #1B1B1B, #101010 74%);
+    box-shadow: 0 28px 85px rgba(0, 0, 0, .62), 0 0 38px rgba(249, 115, 22, .075);
+    transform: translateY(12px) scale(.985);
+    transition: transform 180ms cubic-bezier(.22, .61, .36, 1);
+}
+
+.fc-wallet-charge-modal.is-open .fc-wallet-charge-modal__dialog {
+    transform: translateY(0) scale(1);
+}
+
+.fc-wallet-charge-modal__close {
+    position: absolute;
+    top: 13px;
+    left: 13px;
+    display: grid;
+    place-items: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, .09);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .035);
+    color: #A3A3A3;
+    cursor: pointer;
+    transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.fc-wallet-charge-modal__close:hover {
+    border-color: rgba(249, 115, 22, .28);
+    background: rgba(249, 115, 22, .09);
+    color: #FFB347;
+}
+
+.fc-wallet-charge-modal__icon {
+    display: grid;
+    place-items: center;
+    width: 52px;
+    height: 52px;
+    margin-bottom: 17px;
+    border: 1px solid rgba(249, 115, 22, .3);
+    border-radius: 15px;
+    background: linear-gradient(145deg, rgba(249, 115, 22, .22), rgba(249, 115, 22, .09));
+    color: #FFB347;
+    font-size: 1.2rem;
+    box-shadow: 0 12px 28px rgba(249, 115, 22, .1);
+}
+
+.fc-wallet-charge-modal__heading > span {
+    color: #F97316;
+    font-size: .63rem;
+    font-weight: 900;
+    letter-spacing: .15em;
+}
+
+.fc-wallet-charge-modal__heading h2 {
+    margin: 5px 0 0;
+    color: #FAFAFA;
+    font-size: 1.22rem;
+    font-weight: 900;
+}
+
+.fc-wallet-charge-modal__heading p {
+    margin: 8px 0 22px;
+    color: #A3A3A3;
+    font-size: .79rem;
+    line-height: 1.9;
+}
+
+.fc-wallet-charge-modal__form {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.fc-wallet-charge-modal__form > label {
+    color: #D4D4D4;
+    font-size: .78rem;
+    font-weight: 750;
+}
+
+.fc-wallet-charge-modal__input-wrap {
+    position: relative;
+}
+
+.fc-wallet-charge-modal__input-wrap > i {
+    position: absolute;
+    top: 50%;
+    right: 14px;
+    transform: translateY(-50%);
+    color: #F97316;
+    pointer-events: none;
+}
+
+.fc-wallet-charge-modal__input-wrap input {
+    box-sizing: border-box;
+    width: 100%;
+    min-height: 48px;
+    padding: 0 43px 0 14px;
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 12px;
+    outline: none;
+    background: rgba(0, 0, 0, .28);
+    color: #FAFAFA;
+    font: inherit;
+    font-size: .86rem;
+    font-variant-numeric: tabular-nums;
+    transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.fc-wallet-charge-modal__input-wrap input::placeholder {
+    color: #666;
+}
+
+.fc-wallet-charge-modal__input-wrap input:focus {
+    border-color: rgba(249, 115, 22, .68);
+    box-shadow: 0 0 0 4px rgba(249, 115, 22, .1);
+}
+
+.fc-wallet-charge-modal__hint {
+    margin: 0 0 8px;
+    color: #777;
+    font-size: .68rem;
+}
+
+.fc-wallet-charge-modal__actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 9px;
+    margin-top: 5px;
+}
+
+.fc-wallet-charge-modal__submit,
+.fc-wallet-charge-modal__cancel {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 43px;
+    padding: 9px 15px;
+    border-radius: 11px;
+    font: inherit;
+    font-size: .78rem;
+    font-weight: 850;
+    cursor: pointer;
+    transition: transform 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.fc-wallet-charge-modal__submit {
+    border: 1px solid rgba(249, 115, 22, .58);
+    background: linear-gradient(135deg, #F97316, #D95B0B);
+    color: #111;
+    box-shadow: 0 8px 20px rgba(249, 115, 22, .16);
+}
+
+.fc-wallet-charge-modal__submit:hover {
+    transform: translateY(-1px);
+    background: linear-gradient(135deg, #FF983D, #F97316);
+}
+
+.fc-wallet-charge-modal__cancel {
+    border: 1px solid rgba(255, 255, 255, .1);
+    background: rgba(255, 255, 255, .035);
+    color: #B3B3B3;
+}
+
+.fc-wallet-charge-modal__cancel:hover {
+    border-color: rgba(255, 255, 255, .2);
+    background: rgba(255, 255, 255, .07);
+    color: #F5F5F5;
+}
+
+.fc-wallet-charge-modal__close:focus-visible,
+.fc-wallet-charge-modal__submit:focus-visible,
+.fc-wallet-charge-modal__cancel:focus-visible {
+    outline: 2px solid #FFB347;
+    outline-offset: 3px;
+}
+
+body.fc-wallet-charge-open {
+    overflow: hidden !important;
+}
+
+@media (max-width: 520px) {
+    .fc-wallet-charge-modal {
+        padding: 12px;
+    }
+
+    .fc-wallet-charge-modal__dialog {
+        padding: 25px 20px 20px;
+        border-radius: 18px;
+    }
+
+    .fc-wallet-charge-modal__actions {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .frag-drop-wallet-card__add,
+    .mobile-wallet-balance-row > button,
+    .fc-wallet-charge-modal,
+    .fc-wallet-charge-modal__dialog,
+    .fc-wallet-charge-modal__close,
+    .fc-wallet-charge-modal__submit,
+    .fc-wallet-charge-modal__cancel {
+        transition: none !important;
+    }
+}
+
+
+/* Server Guide: a quiet, icon-led primary navigation link. */
+.shock-header .shock-nav-item--guide {
+    gap: 7px;
+}
+
+.shock-header .shock-nav-item--guide i {
+    color: #F97316;
+    font-size: .84rem;
+    opacity: .9;
+}
+
+.shock-header .shock-nav-item--guide span {
+    line-height: 1;
+}
+
+.shock-header .shock-nav-item--guide:hover i,
+.shock-header .shock-nav-item--guide.active i {
+    color: #FFB347;
+    opacity: 1;
+}
+
+
+/* Responsive account dropdown: viewport-anchored so it never spills left. */
+html,
+body { max-width: 100%; overflow-x: clip; }
+
+@supports not (overflow-x: clip) {
+    html,
+    body { overflow-x: hidden; }
+}
+
+.shock-header,
+.shock-header .shock-container,
+.shock-header .shock-user-area-wrapper {
+    box-sizing: border-box;
+    max-width: 100%;
+}
+
+.shock-header .shock-container { width: 100%; min-width: 0; }
+#shockUserDropdown .frag-dropdown-menu { box-sizing: border-box; }
+
+#shockUserDropdown .frag-drop-faceit,
+#shockUserDropdown .frag-drop-header--profile,
+#shockUserDropdown .frag-drop-wallet-card {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+#shockUserDropdown .frag-drop-faceit { margin: 0 0 7px; }
+
+#shockUserDropdown .frag-drop-wallet-card {
+    margin: 7px 0 0;
+    padding: 10px 11px;
+    border: 1px solid rgba(255, 255, 255, .085);
+    border-radius: 11px;
+    background: rgba(255, 255, 255, .025);
+}
+
+#shockUserDropdown .frag-drop-wallet-card__label i { color: #A3A3A3; }
+
+#shockUserDropdown .frag-drop-wallet-card__add {
+    border-color: rgba(255, 255, 255, .10);
+    background: rgba(255, 255, 255, .045);
+    color: #BDBDBD;
+}
+
+#shockUserDropdown .frag-drop-wallet-card__add:hover {
+    border-color: rgba(255, 255, 255, .2);
+    background: rgba(255, 255, 255, .09);
+    color: #F5F5F5;
+    box-shadow: none;
+}
+
+#shockUserDropdown .frag-drop-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    min-width: 0;
+}
+
+#shockUserDropdown .frag-drop-actions .frag-drop-link {
+    justify-content: center;
+    min-width: 0;
+    min-height: 38px;
+    margin: 0;
+    padding: 7px 8px;
+    gap: 6px;
+    font-size: .74rem;
+    white-space: nowrap;
+}
+
+#shockUserDropdown .frag-drop-actions .frag-drop-link > i {
+    flex: 0 0 22px;
+    width: 22px;
+    height: 22px;
+    border: 0;
+    background: transparent;
+    font-size: .78rem;
+}
+
+#shockUserDropdown .frag-drop-actions .frag-drop-link--orders {
+    grid-column: 1 / -1;
+    justify-content: flex-start;
+    padding-right: 11px;
+    border-color: rgba(249, 115, 22, .2);
+    background: linear-gradient(100deg, rgba(249, 115, 22, .12), rgba(249, 115, 22, .035));
+    color: #FDBA74;
+}
+
+#shockUserDropdown .frag-drop-actions .frag-drop-link--orders:hover,
+#shockUserDropdown .frag-drop-actions .frag-drop-link--orders.active {
+    border-color: rgba(249, 115, 22, .38);
+    background: linear-gradient(100deg, rgba(249, 115, 22, .18), rgba(249, 115, 22, .06));
+    color: #FFD0A8;
+}
+
+#shockUserDropdown .frag-drop-logout-form { margin: 0; }
+
+@media (max-width: 700px) {
+    body.mobile-menu-open {
+        overflow: hidden;
+        overflow-x: clip;
+        overscroll-behavior: none;
+    }
+
+    #shockUserDropdown .frag-dropdown-menu {
+        position: fixed !important;
+        top: 72px !important;
+        right: 12px !important;
+        left: auto !important;
+        width: min(316px, calc(100vw - 24px)) !important;
+        min-width: 0 !important;
+        max-width: calc(100vw - 24px) !important;
+        max-height: min(560px, calc(100dvh - 84px));
+        padding: 8px;
+        box-sizing: border-box;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        overscroll-behavior: contain;
+        -webkit-overflow-scrolling: touch;
+        touch-action: pan-y;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(255, 255, 255, .2) transparent;
+        transform-origin: top right;
+    }
+
+    #shockUserDropdown .frag-drop-faceit {
+        gap: 6px;
+        margin: 0 0 7px;
+        padding: 7px 9px;
+        border-radius: 10px;
+    }
+
+    #shockUserDropdown .frag-drop-faceit__rank { gap: 6px; font-size: .69rem; }
+    #shockUserDropdown .frag-drop-faceit__rank img {
+        width: 24px;
+        height: 24px;
+        flex-basis: 24px;
+    }
+
+    #shockUserDropdown .frag-drop-faceit__rank strong,
+    #shockUserDropdown .frag-drop-faceit__elo { font-size: .68rem; }
+
+    #shockUserDropdown .frag-drop-faceit__progress {
+        height: 4px;
+        min-height: 4px;
+    }
+
+    #shockUserDropdown .frag-drop-header--profile {
+        gap: 8px;
+        margin: 0;
+        padding: 8px;
+        border-radius: 11px;
+    }
+
+    #shockUserDropdown .frag-drop-avatar-frame {
+        flex: 0 0 40px;
+        width: 40px;
+        height: 40px;
+        border-radius: 12px;
+    }
+
+    #shockUserDropdown .frag-drop-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+    }
+
+    #shockUserDropdown .frag-drop-eyebrow { font-size: .57rem; }
+    #shockUserDropdown .frag-drop-name { font-size: .78rem; line-height: 1.35; }
+
+    #shockUserDropdown .frag-drop-steam {
+        margin-top: 1px;
+        padding: 2px 5px;
+        font-size: .54rem;
+        line-height: 1.4;
+        overflow-wrap: anywhere;
+    }
+
+    #shockUserDropdown .frag-drop-profile-mark { display: none; }
+
+    #shockUserDropdown .frag-drop-wallet-card {
+        gap: 8px;
+        margin: 6px 0 0;
+        padding: 7px 9px;
+        border-radius: 10px;
+    }
+
+    #shockUserDropdown .frag-drop-wallet-card__balance {
+        flex-direction: row;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 6px 10px;
+    }
+
+    #shockUserDropdown .frag-drop-wallet-card__label { font-size: .62rem; }
+    #shockUserDropdown .frag-drop-wallet-card__balance > strong { font-size: .75rem; }
+
+    #shockUserDropdown .frag-drop-wallet-card__add {
+        flex-basis: 28px;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        font-size: .78rem;
+    }
+
+    #shockUserDropdown .frag-drop-steam-details {
+        margin: 6px 0 0;
+        padding: 0;
+    }
+
+    #shockUserDropdown .frag-drop-detail-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 5px;
+        margin-top: 0;
+    }
+
+    #shockUserDropdown .frag-drop-detail {
+        gap: 1px;
+        padding: 5px 7px;
+        border-radius: 8px;
+    }
+
+    #shockUserDropdown .frag-drop-detail span { font-size: .56rem; }
+    #shockUserDropdown .frag-drop-detail strong { font-size: .64rem; line-height: 1.35; }
+
+    #shockUserDropdown .frag-drop-steam-profile-link {
+        gap: 6px;
+        margin-top: 6px;
+        padding: 7px 8px;
+        border-radius: 8px;
+        font-size: .66rem;
+    }
+
+    #shockUserDropdown .frag-drop-actions { gap: 5px; }
+
+    #shockUserDropdown .frag-drop-actions .frag-drop-link {
+        min-height: 34px;
+        padding: 6px 5px;
+        font-size: .67rem;
+    }
+
+    #shockUserDropdown .frag-drop-divider { margin: 6px 2px; }
+
+    #shockUserDropdown .frag-drop-link.logout {
+        min-height: 34px;
+        margin: 0;
+        padding: 6px 8px;
+        border-radius: 8px;
+        font-size: .69rem;
+    }
+
+    .mobile-nav {
+        right: 0;
+        left: auto;
+        width: min(340px, calc(100vw - 16px));
+        max-width: 100vw;
+        box-sizing: border-box;
+        overflow-x: hidden;
+        overscroll-behavior: contain;
+    }
+
+    .mobile-nav-header,
+    .mobile-nav-links {
+        width: 100%;
+        min-width: 0;
+        box-sizing: border-box;
+    }
+
+    .mobile-nav-links {
+        padding: 12px;
+        overflow-x: hidden;
+    }
+
+    .mobile-nav-link,
+    .mobile-nav-more,
+    .mobile-wallet-balance-row,
+    .mobile-nav-logout-form {
+        min-width: 0;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+}
+
+@media (max-width: 380px) {
+    #shockUserDropdown .frag-dropdown-menu {
+        right: 10px !important;
+        width: min(300px, calc(100vw - 20px)) !important;
+        max-width: calc(100vw - 20px) !important;
+    }
+
+    .shock-header .shock-container { gap: 6px; padding-inline: 8px; }
+    .mobile-nav { width: min(320px, calc(100vw - 12px)); }
+}
+
+
+/* Keep profile actions aligned from the right edge in this RTL dropdown. */
+#shockUserDropdown .frag-drop-actions .frag-drop-link {
+    justify-content: flex-start !important;
+    direction: rtl !important;
+    text-align: right !important;
+    gap: 8px !important;
+}
+
+#shockUserDropdown .frag-drop-actions .frag-drop-link > i {
+    flex: 0 0 22px !important;
+}
+
+#shockUserDropdown .frag-drop-actions .frag-drop-link > span {
+    flex: 1 1 auto;
+    min-width: 0;
+    text-align: right;
+}
+
+/* Steam profile shortcut lives inside the first Steam account card. */
+#shockUserDropdown .frag-drop-profile-mark {
+    position: relative;
+    z-index: 1;
+    display: grid;
+    place-items: center;
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    border: 1px solid rgba(255, 255, 255, .12);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, .045);
+    color: #C7D5E0;
+    text-decoration: none;
+    font-size: 1rem;
+    transition: color 140ms ease, border-color 140ms ease, background-color 140ms ease, transform 140ms ease;
+}
+
+#shockUserDropdown .frag-drop-profile-mark:hover,
+#shockUserDropdown .frag-drop-profile-mark:focus-visible {
+    border-color: rgba(249, 115, 22, .32);
+    outline: none;
+    background: rgba(249, 115, 22, .10);
+    color: #F5F5F5;
+    transform: translateY(-1px);
+}
+
+#shockUserDropdown .frag-drop-faceit {
+    margin: 10px 0 0;
+    padding: 11px 12px;
+    border: 1px solid rgba(249, 115, 22, .2);
+    border-radius: 13px;
+    background:
+        radial-gradient(ellipse at 0 50%, rgba(249, 115, 22, .11), transparent 62%),
+        linear-gradient(135deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .012));
+}
+
+#shockUserDropdown .frag-drop-faceit__rank strong,
+#shockUserDropdown .frag-drop-faceit__elo {
+    color: #F5F5F5 !important;
+}
+
+#shockUserDropdown .frag-drop-faceit__rank img {
+    filter: none;
+    opacity: 1;
+}
+
+#shockUserDropdown .frag-drop-faceit__progress > span {
+    background: var(--faceit-rank-color, #CDCDCD);
+    box-shadow: none;
+}
+
+/* Match the wallet card's full-width alignment inside the dropdown. */
+#shockUserDropdown .frag-drop-faceit {
+    margin: 10px 0 0;
+}
+
+/* The mobile wallet card is edge-aligned to the dropdown's inner padding. */
+@media (max-width: 700px) {
+    #shockUserDropdown .frag-drop-faceit {
+        margin: 6px 0 7px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #shockUserDropdown .frag-drop-profile-mark {
+        transition: none;
+    }
+}
+
+/* =========================================================
+   Reliable viewport-pinned header
+   Keep the navigation attached to the viewport in both scroll
+   directions. The public page shell already reserves the header
+   overlap through --fc-header-overlap-height.
+========================================================= */
+.shock-header,
+.shock-header.is-scrolled,
+.shock-header.is-scroll-down,
+.shock-header.is-scroll-up {
+    position: fixed !important;
+    top: 0 !important;
+    right: 0 !important;
+    left: 0 !important;
+    z-index: 1050 !important;
+    width: 100% !important;
+    margin-bottom: 0 !important;
+    transform: translate3d(0, 0, 0);
+}
+
+/* Avoid any directional rule accidentally sliding the bar off-screen. */
+.shock-header.is-scroll-down,
+.shock-header.is-scroll-up,
+.shock-header.is-scrolled {
+    inset-block-start: 0 !important;
+    visibility: visible !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header,
+    .shock-header.is-scrolled,
+    .shock-header.is-scroll-down,
+    .shock-header.is-scroll-up {
+        transform: none !important;
+    }
+}
+
+
+/* Current Steam account VIP membership summary in the profile dropdown. */
+#shockUserDropdown .frag-drop-vip {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 9px 0 10px;
+    padding: 10px 11px;
+    border: 1px solid color-mix(in srgb, var(--vip-tier-color, #737373) 30%, transparent);
+    border-radius: 12px;
+    background:
+        radial-gradient(ellipse at 100% 0, color-mix(in srgb, var(--vip-tier-color, #737373) 10%, transparent), transparent 66%),
+        linear-gradient(135deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .012));
+}
+#shockUserDropdown .frag-drop-vip__top,
+#shockUserDropdown .frag-drop-vip__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    min-width: 0;
+}
+#shockUserDropdown .frag-drop-vip__label {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #A3A3A3;
+    font-size: .68rem;
+    font-weight: 800;
+}
+#shockUserDropdown .frag-drop-vip__label > i {
+    color: var(--vip-tier-color, #FFB347);
+}
+#shockUserDropdown .frag-drop-vip__tier {
+    overflow: hidden;
+    color: var(--vip-tier-color, #D4D4D4);
+    font-size: .78rem;
+    font-weight: 950;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+#shockUserDropdown .frag-drop-vip__state {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    color: #A3A3A3;
+    font-size: .65rem;
+    font-weight: 750;
+}
+#shockUserDropdown .frag-drop-vip__state > i {
+    flex: 0 0 auto;
+    color: #737373;
+}
+#shockUserDropdown .frag-drop-vip[data-state="active"] .frag-drop-vip__state,
+#shockUserDropdown .frag-drop-vip[data-state="active"] .frag-drop-vip__state > i {
+    color: #86EFAC;
+}
+#shockUserDropdown .frag-drop-vip[data-state="inactive"] .frag-drop-vip__state {
+    color: #A3A3A3;
+}
+#shockUserDropdown .frag-drop-vip[data-state="unavailable"] .frag-drop-vip__state,
+#shockUserDropdown .frag-drop-vip[data-state="unavailable"] .frag-drop-vip__state > i {
+    color: #FCA5A5;
+}
+#shockUserDropdown .frag-drop-vip__expiry {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #777;
+    font-size: .59rem;
+    white-space: nowrap;
+}
+#shockUserDropdown .frag-drop-vip__expiry > strong {
+    color: #D4D4D4;
+    font-size: .61rem;
+    font-weight: 850;
+    font-variant-numeric: tabular-nums;
+}
+@media (max-width: 700px) {
+    #shockUserDropdown .frag-drop-vip {
+        margin: 7px 0 8px;
+        padding: 9px 10px;
+    }
+}
+
+/* Unified navigation styling: only the current destination receives the gold treatment. */
+.shock-header .shock-nav .shock-nav-item {
+    min-height: 38px;
+    padding: 8px 14px;
+    gap: 8px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #A3A3A3;
+    box-shadow: none;
+    text-shadow: none;
+    font-weight: 750;
+    transition:
+        color 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.shock-header .shock-nav .shock-nav-item > i {
+    color: #8B8B8B;
+    transition: color 150ms ease;
+}
+
+/* Hover and keyboard focus stay quiet; they do not imitate the selected state. */
+.shock-header .shock-nav .shock-nav-item:not(.active):hover,
+.shock-header .shock-nav .shock-nav-item:not(.active):focus-visible,
+.shock-header .shock-nav .frag-dropdown.open > .shock-nav-item:not(.active) {
+    border-color: rgba(255, 255, 255, .085);
+    background: rgba(255, 255, 255, .035);
+    color: #E5E5E5;
+    box-shadow: none;
+    text-shadow: none;
+}
+
+.shock-header .shock-nav .shock-nav-item:not(.active):hover > i,
+.shock-header .shock-nav .shock-nav-item:not(.active):focus-visible > i {
+    color: #D4D4D4;
+}
+
+.shock-header .shock-nav .shock-nav-item:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, .38);
+    outline-offset: 2px;
+}
+
+/* The same champagne / gold finish is reserved for the active page. */
+.shock-header .shock-nav .shock-nav-item.active {
+    border-color: rgba(255, 179, 71, .48);
+    background: linear-gradient(135deg, rgba(255, 179, 71, .20), rgba(249, 115, 22, .115));
+    color: #FFE2B5;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045);
+    text-shadow: 0 0 18px rgba(255, 179, 71, .10);
+}
+
+.shock-header .shock-nav .shock-nav-item.active > i {
+    color: #FFB347;
+}
+
+/* Mobile drawer uses the same rule: neutral at rest, gold only for the active page. */
+.mobile-nav-links > .mobile-nav-link,
+.mobile-nav-more > .mobile-nav-more-toggle,
+.mobile-nav-more-menu .mobile-nav-link {
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #A3A3A3;
+    box-shadow: none;
+    transition:
+        color 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.mobile-nav-links > .mobile-nav-link > i,
+.mobile-nav-more > .mobile-nav-more-toggle > i,
+.mobile-nav-more-menu .mobile-nav-link > i {
+    color: #8B8B8B;
+}
+
+.mobile-nav-links > .mobile-nav-link:not(.active):hover,
+.mobile-nav-links > .mobile-nav-link:not(.active):focus-visible,
+.mobile-nav-more > .mobile-nav-more-toggle:not(.active):hover,
+.mobile-nav-more > .mobile-nav-more-toggle:not(.active):focus-visible,
+.mobile-nav-more-menu .mobile-nav-link:not(.active):hover,
+.mobile-nav-more-menu .mobile-nav-link:not(.active):focus-visible {
+    border-color: rgba(255, 255, 255, .085);
+    background: rgba(255, 255, 255, .035);
+    color: #E5E5E5;
+    box-shadow: none;
+}
+
+.mobile-nav-links > .mobile-nav-link:not(.active):hover > i,
+.mobile-nav-more > .mobile-nav-more-toggle:not(.active):hover > i,
+.mobile-nav-more-menu .mobile-nav-link:not(.active):hover > i {
+    color: #D4D4D4;
+}
+
+.mobile-nav-links > .mobile-nav-link:focus-visible,
+.mobile-nav-more > .mobile-nav-more-toggle:focus-visible,
+.mobile-nav-more-menu .mobile-nav-link:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, .38);
+    outline-offset: 2px;
+}
+
+.mobile-nav-links > .mobile-nav-link.active,
+.mobile-nav-more > .mobile-nav-more-toggle.active,
+.mobile-nav-more-menu .mobile-nav-link.active {
+    border-color: rgba(255, 179, 71, .43);
+    background: linear-gradient(135deg, rgba(255, 179, 71, .17), rgba(249, 115, 22, .10));
+    color: #FFE2B5;
+    box-shadow: inset -3px 0 0 #FFB347;
+}
+
+.mobile-nav-links > .mobile-nav-link.active > i,
+.mobile-nav-more > .mobile-nav-more-toggle.active > i,
+.mobile-nav-more-menu .mobile-nav-link.active > i {
+    color: #FFB347;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header .shock-nav .shock-nav-item,
+    .mobile-nav-links > .mobile-nav-link,
+    .mobile-nav-more > .mobile-nav-more-toggle,
+    .mobile-nav-more-menu .mobile-nav-link {
+        transition: none !important;
+    }
+}
+
+
+/* Header navigation sizing and selected states. */
+.shock-header .shock-nav {
+    align-items: center;
+    gap: 6px;
+}
+
+.shock-header .shock-nav > .shock-nav-item,
+.shock-header .shock-nav .frag-dropdown > .shock-nav-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    min-height: 46px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    border-radius: 10px;
+    line-height: 1.1;
+    font-size: .88rem;
+    white-space: nowrap;
+    flex: 0 0 auto;
+}
+
+.shock-header .shock-nav .frag-dropdown > .shock-nav-item--icon-only {
+    width: 46px;
+    min-width: 46px;
+    padding: 0;
+}
+
+.shock-header .shock-nav .frag-dropdown {
+    display: inline-flex;
+    align-items: center;
+    align-self: center;
+}
+
+/* Dropdown destinations follow the same neutral / gold-active language. */
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link {
+    display: flex;
+    align-items: center;
+    min-height: 46px;
+    box-sizing: border-box;
+    margin: 2px 6px;
+    padding: 10px 13px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #A3A3A3;
+    line-height: 1.25;
+    transform: none;
+    transition:
+        color 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link > i {
+    color: #8B8B8B;
+    transition: color 150ms ease;
+}
+
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link:not(.active):hover,
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link:not(.active):focus-visible {
+    border-color: rgba(255, 255, 255, .085);
+    background: rgba(255, 255, 255, .035);
+    color: #E5E5E5;
+    padding-right: 13px;
+    transform: none;
+    box-shadow: none;
+}
+
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link:not(.active):hover > i,
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link:not(.active):focus-visible > i {
+    color: #D4D4D4;
+}
+
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link.active {
+    border-color: rgba(255, 179, 71, .43);
+    background: linear-gradient(135deg, rgba(255, 179, 71, .17), rgba(249, 115, 22, .10));
+    color: #FFE2B5;
+    box-shadow: inset -3px 0 0 #FFB347;
+}
+
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link.active > i {
+    color: #FFB347;
+}
+
+.shock-header .shock-nav .frag-dropdown-menu .frag-drop-link:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, .38);
+    outline-offset: 2px;
+}
+
+/* Keep every route item in the mobile drawer on one consistent button height. */
+.mobile-nav-links > .mobile-nav-link,
+.mobile-nav-more > .mobile-nav-more-toggle,
+.mobile-nav-more-menu .mobile-nav-link {
+    min-height: 46px;
+    box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header .shock-nav .frag-dropdown-menu .frag-drop-link {
+        transition: none !important;
+    }
+}
+
+
+/* Secondary header controls use the same 46px neutral / gold-active system. */
+.shock-header .shock-user-area-wrapper > .frag-login-btn,
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 46px;
+    min-height: 46px;
+    box-sizing: border-box;
+    padding: 0 14px;
+    gap: 8px;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: #A3A3A3;
+    box-shadow: none;
+    font-family: inherit;
+    font-size: .86rem;
+    font-weight: 750;
+    line-height: 1.1;
+    text-decoration: none;
+    text-shadow: none;
+    white-space: nowrap;
+    transform: none;
+    filter: none;
+    transition:
+        color 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease,
+        box-shadow 150ms ease;
+}
+
+.shock-header .shock-user-area-wrapper > .frag-login-btn > i,
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle > i {
+    color: #8B8B8B;
+    font-size: .95rem;
+    transition: color 150ms ease;
+}
+
+/* Resting controls stay neutral; hover is deliberately subtler than selected. */
+.shock-header .shock-user-area-wrapper > .frag-login-btn:not(.active):not([aria-expanded="true"]):hover,
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle:not(.is-active):not([aria-pressed="true"]):hover {
+    border-color: rgba(255, 255, 255, .085);
+    background: rgba(255, 255, 255, .035);
+    color: #E5E5E5;
+    box-shadow: none;
+    transform: none;
+    filter: none;
+}
+
+.shock-header .shock-user-area-wrapper > .frag-login-btn:not(.active):not([aria-expanded="true"]):hover > i,
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle:not(.is-active):not([aria-pressed="true"]):hover > i {
+    color: #D4D4D4;
+}
+
+/* Login is selected on the auth route or while its modal is expanded. */
+.shock-header .shock-user-area-wrapper > .frag-login-btn.active,
+.shock-header .shock-user-area-wrapper > .frag-login-btn[aria-expanded="true"],
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle.is-active,
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle[aria-pressed="true"] {
+    border-color: rgba(255, 179, 71, .48);
+    background: linear-gradient(135deg, rgba(255, 179, 71, .20), rgba(249, 115, 22, .115));
+    color: #FFE2B5;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .045);
+    text-shadow: 0 0 18px rgba(255, 179, 71, .10);
+}
+
+.shock-header .shock-user-area-wrapper > .frag-login-btn.active > i,
+.shock-header .shock-user-area-wrapper > .frag-login-btn[aria-expanded="true"] > i,
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle.is-active > i,
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle[aria-pressed="true"] > i {
+    color: #FFB347;
+}
+
+.shock-header .shock-user-area-wrapper > .frag-login-btn:focus-visible,
+.shock-header .shock-user-area-wrapper > .fc-motion-toggle:focus-visible {
+    outline: 2px solid rgba(255, 179, 71, .55);
+    outline-offset: 3px;
+}
+
+/* The desktop More trigger is a regular labeled navigation button now. */
+.shock-header #shockMoreButton {
+    gap: 8px;
+}
+
+.shock-header #shockMoreButton .frag-arrow {
+    color: #8B8B8B;
+    font-size: .72rem;
+    transition: color 150ms ease, transform 180ms ease;
+}
+
+.shock-header #shockMoreButton.active .frag-arrow {
+    color: #FFB347;
+}
+
+.shock-header #shockMoreButton:not(.active):hover .frag-arrow {
+    color: #D4D4D4;
+}
+
+/* The mobile Performance Mode control follows the same active palette. */
+.mobile-nav-links > .fc-motion-toggle-mobile {
+    min-height: 46px;
+    border: 1px solid transparent;
+    border-radius: 9px;
+    background: transparent;
+    color: #A3A3A3;
+    font-size: .88rem;
+    font-weight: 750;
+    box-shadow: none;
+}
+
+.mobile-nav-links > .fc-motion-toggle-mobile > i {
+    color: #8B8B8B;
+}
+
+.mobile-nav-links > .fc-motion-toggle-mobile:not(.is-active):hover,
+.mobile-nav-links > .fc-motion-toggle-mobile:not(.is-active):focus-visible {
+    border-color: rgba(255, 255, 255, .085);
+    background: rgba(255, 255, 255, .035);
+    color: #E5E5E5;
+}
+
+.mobile-nav-links > .fc-motion-toggle-mobile:not(.is-active):hover > i {
+    color: #D4D4D4;
+}
+
+.mobile-nav-links > .fc-motion-toggle-mobile.is-active,
+.mobile-nav-links > .fc-motion-toggle-mobile[aria-pressed="true"] {
+    border-color: rgba(255, 179, 71, .43);
+    background: linear-gradient(135deg, rgba(255, 179, 71, .17), rgba(249, 115, 22, .10));
+    color: #FFE2B5;
+    box-shadow: inset -3px 0 0 #FFB347;
+}
+
+.mobile-nav-links > .fc-motion-toggle-mobile.is-active > i,
+.mobile-nav-links > .fc-motion-toggle-mobile[aria-pressed="true"] > i {
+    color: #FFB347;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header .shock-user-area-wrapper > .frag-login-btn,
+    .shock-header .shock-user-area-wrapper > .fc-motion-toggle,
+    .shock-header #shockMoreButton .frag-arrow,
+    .mobile-nav-links > .fc-motion-toggle-mobile {
+        transition: none !important;
+    }
+}
+
+
+/* Stable Performance Mode icon geometry in both gauge and bolt states. */
+.shock-header .shock-user-area-wrapper > button.fc-motion-toggle {
+    width: 46px;
+    min-width: 46px;
+    max-width: 46px;
+    height: 46px;
+    min-height: 46px;
+    flex: 0 0 46px;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    line-height: 1;
+}
+
+.shock-header .shock-user-area-wrapper > button.fc-motion-toggle > i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 18px;
+    width: 18px;
+    min-width: 18px;
+    max-width: 18px;
+    height: 18px;
+    margin: 0;
+    font-size: .95rem;
+    line-height: 1;
+    text-align: center;
+}
+
+.shock-header .shock-user-area-wrapper > button.fc-motion-toggle > .fc-motion-toggle__label {
+    display: inline-block;
+    flex: 0 0 auto;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    white-space: nowrap;
+    font-size: .67rem;
+    transition: max-width 190ms ease, opacity 130ms ease, visibility 130ms ease;
+}
+
+.shock-header .shock-user-area-wrapper > button.fc-motion-toggle:hover,
+.shock-header .shock-user-area-wrapper > button.fc-motion-toggle:focus-visible {
+    width: 158px;
+    min-width: 158px;
+    max-width: 158px;
+    flex-basis: 158px;
+    gap: 8px;
+    padding-inline: 11px;
+}
+
+.shock-header .shock-user-area-wrapper > button.fc-motion-toggle:hover > .fc-motion-toggle__label,
+.shock-header .shock-user-area-wrapper > button.fc-motion-toggle:focus-visible > .fc-motion-toggle__label {
+    max-width: 112px;
+    opacity: 1;
+    visibility: visible;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header .shock-user-area-wrapper > button.fc-motion-toggle,
+    .shock-header .shock-user-area-wrapper > button.fc-motion-toggle > .fc-motion-toggle__label {
+        transition: none !important;
+    }
+}
+
+
+/* Header support shortcut: icon-only at rest, matching the Performance Mode
+   expand-on-hover/focus interaction without reusing its toggle behavior. */
+.shock-header .shock-brand > .fc-support-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    width: 46px;
+    min-width: 46px;
+    max-width: 46px;
+    height: 46px;
+    min-height: 46px;
+    flex: 0 0 46px;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid transparent;
+    border-radius: 10px;
+    background: transparent;
+    color: #8B8B8B;
+    line-height: 1;
+    text-decoration: none;
+    white-space: nowrap;
+    transition:
+        width 190ms ease,
+        min-width 190ms ease,
+        max-width 190ms ease,
+        flex-basis 190ms ease,
+        gap 190ms ease,
+        padding 190ms ease,
+        color 150ms ease,
+        background-color 150ms ease,
+        border-color 150ms ease;
+}
+
+.shock-header .shock-brand > .fc-support-toggle > i {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 18px;
+    width: 18px;
+    min-width: 18px;
+    max-width: 18px;
+    height: 18px;
+    margin: 0;
+    color: #8B8B8B;
+    font-size: .98rem;
+    line-height: 1;
+    text-align: center;
+    transition: color 150ms ease;
+}
+
+.shock-header .shock-brand > .fc-support-toggle > .fc-support-toggle__label {
+    display: inline-block;
+    flex: 0 0 auto;
+    max-width: 0;
+    overflow: hidden;
+    opacity: 0;
+    visibility: hidden;
+    color: inherit;
+    font-size: .78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    transition:
+        max-width 190ms ease,
+        opacity 130ms ease,
+        visibility 130ms ease;
+}
+
+.shock-header .shock-brand > .fc-support-toggle:hover,
+.shock-header .shock-brand > .fc-support-toggle:focus-visible {
+    width: 110px;
+    min-width: 110px;
+    max-width: 110px;
+    flex-basis: 110px;
+    gap: 8px;
+    padding-inline: 11px;
+    border-color: rgba(255, 255, 255, .085);
+    background: rgba(255, 255, 255, .035);
+    color: #E5E5E5;
+    outline: none;
+}
+
+.shock-header .shock-brand > .fc-support-toggle:hover > i,
+.shock-header .shock-brand > .fc-support-toggle:focus-visible > i {
+    color: #D4D4D4;
+}
+
+.shock-header .shock-brand > .fc-support-toggle:hover > .fc-support-toggle__label,
+.shock-header .shock-brand > .fc-support-toggle:focus-visible > .fc-support-toggle__label {
+    max-width: 64px;
+    opacity: 1;
+    visibility: visible;
+}
+
+.shock-header .shock-brand > .fc-support-toggle.active {
+    border-color: rgba(255, 179, 71, .34);
+    background: rgba(249, 115, 22, .075);
+    color: #FFB347;
+}
+
+.shock-header .shock-brand > .fc-support-toggle.active > i {
+    color: #FFB347;
+}
+
+.shock-header .shock-brand > .fc-support-toggle:focus-visible {
+    outline: 2px solid rgba(255, 179, 71, .55);
+    outline-offset: 3px;
+}
+
+@media (max-width: 700px) {
+    .shock-header .shock-brand > .fc-support-toggle {
+        width: 36px;
+        min-width: 36px;
+        max-width: 36px;
+        height: 36px;
+        min-height: 36px;
+        flex-basis: 36px;
+    }
+
+    .shock-header .shock-brand > .fc-support-toggle:hover,
+    .shock-header .shock-brand > .fc-support-toggle:focus-visible {
+        width: 104px;
+        min-width: 104px;
+        max-width: 104px;
+        flex-basis: 104px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header .shock-brand > .fc-support-toggle,
+    .shock-header .shock-brand > .fc-support-toggle > .fc-support-toggle__label {
+        transition: none !important;
+    }
+}
+
+/* =========================================================
+   Desktop navigation — icon first, label expands like Support
+   ========================================================= */
+@media (min-width: 901px) {
+    .shock-header .shock-nav > a.shock-nav-item,
+    .shock-header .shock-nav > .frag-dropdown > .shock-nav-item {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        box-sizing: border-box !important;
+        width: max-content !important;
+        min-width: 46px !important;
+        max-width: 46px !important;
+        height: 46px !important;
+        min-height: 46px !important;
+        flex: 0 1 auto !important;
+        gap: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        border-radius: 10px !important;
+        white-space: nowrap !important;
+        transition:
+            max-width 190ms ease,
+            gap 190ms ease,
+            padding 190ms ease,
+            color 150ms ease,
+            background-color 150ms ease,
+            border-color 150ms ease,
+            box-shadow 150ms ease !important;
+    }
+
+    .shock-header .shock-nav > a.shock-nav-item > i,
+    .shock-header .shock-nav > .frag-dropdown > .shock-nav-item > i {
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        flex: 0 0 18px !important;
+        width: 18px !important;
+        min-width: 18px !important;
+        max-width: 18px !important;
+        height: 18px !important;
+        margin: 0 !important;
+        font-size: .98rem !important;
+        line-height: 1 !important;
+        text-align: center !important;
+        transition: color 150ms ease, opacity 150ms ease, width 190ms ease !important;
+    }
+
+    .shock-header .shock-nav > a.shock-nav-item > span,
+    .shock-header .shock-nav > .frag-dropdown > .shock-nav-item > span {
+        display: inline-block !important;
+        flex: 0 0 auto !important;
+        max-width: 0 !important;
+        overflow: hidden !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        white-space: nowrap !important;
+        transition:
+            max-width 190ms ease,
+            opacity 130ms ease,
+            visibility 130ms ease !important;
+    }
+
+    .shock-header .shock-nav > a.shock-nav-item:hover,
+    .shock-header .shock-nav > a.shock-nav-item:focus-visible,
+    .shock-header .shock-nav > .frag-dropdown:hover > .shock-nav-item,
+    .shock-header .shock-nav > .frag-dropdown:focus-within > .shock-nav-item,
+    .shock-header .shock-nav > .frag-dropdown.open > .shock-nav-item {
+        max-width: 220px !important;
+        gap: 8px !important;
+        padding-inline: 12px !important;
+    }
+
+    .shock-header .shock-nav > a.shock-nav-item:hover > span,
+    .shock-header .shock-nav > a.shock-nav-item:focus-visible > span,
+    .shock-header .shock-nav > .frag-dropdown:hover > .shock-nav-item > span,
+    .shock-header .shock-nav > .frag-dropdown:focus-within > .shock-nav-item > span,
+    .shock-header .shock-nav > .frag-dropdown.open > .shock-nav-item > span {
+        max-width: 150px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    /* The More control uses the ellipsis at rest and reveals its chevron
+       alongside the label only while expanded. */
+    .shock-header .shock-nav > .frag-dropdown > .shock-nav-item > .frag-arrow {
+        flex: 0 0 0 !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        overflow: hidden !important;
+        transition:
+            flex-basis 190ms ease,
+            width 190ms ease,
+            opacity 130ms ease,
+            visibility 130ms ease !important;
+    }
+
+    .shock-header .shock-nav > .frag-dropdown:hover > .shock-nav-item > .frag-arrow,
+    .shock-header .shock-nav > .frag-dropdown:focus-within > .shock-nav-item > .frag-arrow,
+    .shock-header .shock-nav > .frag-dropdown.open > .shock-nav-item > .frag-arrow {
+        flex-basis: 10px !important;
+        width: 10px !important;
+        min-width: 10px !important;
+        max-width: 10px !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+    }
+
+    .shock-header .shock-nav > a.shock-nav-item:focus-visible,
+    .shock-header .shock-nav > .frag-dropdown > .shock-nav-item:focus-visible {
+        outline: 2px solid rgba(255, 179, 71, .55) !important;
+        outline-offset: 3px !important;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .shock-header .shock-nav > a.shock-nav-item,
+    .shock-header .shock-nav > .frag-dropdown > .shock-nav-item,
+    .shock-header .shock-nav > a.shock-nav-item > span,
+    .shock-header .shock-nav > .frag-dropdown > .shock-nav-item > span,
+    .shock-header .shock-nav > .frag-dropdown > .shock-nav-item > .frag-arrow {
+        transition: none !important;
+    }
+}

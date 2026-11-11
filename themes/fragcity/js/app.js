@@ -1,4 +1,6 @@
 import './fragcity-motion.js';
+import './fragcity-site-header.js';
+import './fragcity-site-footer.js';
 
 import { Livewire, Alpine } from '../../../vendor/livewire/livewire/dist/livewire.esm';
 import anchor from '@alpinejs/anchor'

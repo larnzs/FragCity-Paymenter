@@ -52,3 +52,111 @@
 .fc-page-main {
     min-width: 0;
 }
+
+/* The shared header is sticky and occupies 72px in normal document flow. */
+.fc-site-sidebar {
+    top: 72px !important;
+    height: calc(100vh - 72px) !important;
+    margin-top: 0 !important;
+}
+
+@supports (height: 100dvh) {
+    .fc-site-sidebar {
+        height: calc(100dvh - 72px) !important;
+    }
+}
+
+
+/* Paymenter bindings for the shared FragCity site header. */
+.shock-auth-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    direction: rtl;
+}
+
+.shock-register-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 42px;
+    padding: 0.45rem 1rem;
+    border: 1px solid rgba(249, 115, 22, 0.28);
+    border-radius: 999px;
+    color: #f5f5f5;
+    background: rgba(249, 115, 22, 0.09);
+    font-size: 0.88rem;
+    font-weight: 750;
+    text-decoration: none;
+    transition: background-color 160ms ease, border-color 160ms ease, transform 160ms ease;
+}
+
+.shock-register-btn:hover {
+    transform: translateY(-1px);
+    border-color: rgba(249, 115, 22, 0.52);
+    background: rgba(249, 115, 22, 0.16);
+}
+
+.mobile-nav-profile {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+    padding: 12px;
+    direction: rtl;
+    border: 1px solid rgba(249, 115, 22, 0.18);
+    border-radius: 14px;
+    background: rgba(249, 115, 22, 0.06);
+}
+
+.mobile-nav-profile img {
+    width: 42px;
+    height: 42px;
+    flex: 0 0 42px;
+    border: 1px solid rgba(249, 115, 22, 0.28);
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.mobile-nav-profile > div {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.mobile-nav-profile strong,
+.mobile-nav-profile span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mobile-nav-profile strong {
+    color: #f5f5f5;
+    font-size: 0.9rem;
+}
+
+.mobile-nav-profile span {
+    color: #a3a3a3;
+    font-size: 0.76rem;
+    direction: ltr;
+    text-align: right;
+}
+
+.frag-drop-logout,
+.mobile-nav-logout {
+    width: 100%;
+    padding: 4px 8px;
+}
+
+.frag-drop-logout form,
+.mobile-nav-logout form {
+    width: 100%;
+}
+
+.frag-drop-logout button,
+.mobile-nav-logout button {
+    width: 100%;
+}

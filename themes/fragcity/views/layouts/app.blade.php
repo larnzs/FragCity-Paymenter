@@ -6,6 +6,8 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ config('app.name', 'Paymenter') }}@isset($title) - {{ $title }}@endisset</title>
     @livewireStyles
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
     @vite(['themes/' . config('settings.theme') . '/js/app.js', 'themes/' . config('settings.theme') . '/css/app.css'], config('settings.theme'))
     @include('layouts.customer-colors')
     @if (config('settings.favicon')) <link rel="icon" href="{{ Storage::url(config('settings.favicon')) }}"> @endif
@@ -29,16 +31,18 @@
     :class="{'dark': isDark}">
     {!! hook('body') !!}
     <x-navigation />
-    <div class="w-full flex flex-grow">
-        @if (isset($sidebar) && $sidebar) <x-navigation.sidebar title="$title" /> @endif
-        <div class="{{ (isset($sidebar) && $sidebar) ? 'md:ml-64 rtl:ml-0 rtl:md:mr-64' : '' }} flex flex-col flex-grow overflow-auto">
-            <main class="fc-page-main mt-16 grow">{{ $slot }}</main>
-            <x-notification />
-            <x-confirmation />
-            <div class="flex"><x-navigation.footer /></div>
+    <div class="w-full flex flex-col flex-grow">
+        <div class="w-full flex flex-grow min-w-0">
+            @if (isset($sidebar) && $sidebar) <x-navigation.sidebar title="$title" /> @endif
+            <div class="{{ (isset($sidebar) && $sidebar) ? 'md:ml-64 rtl:ml-0 rtl:md:mr-64' : '' }} flex flex-col flex-grow min-w-0">
+                <main class="fc-page-main grow">{{ $slot }}</main>
+                <x-notification />
+                <x-confirmation />
+            </div>
         </div>
-        <x-impersonating />
+        <x-navigation.footer />
     </div>
+    <x-impersonating />
     @livewireScriptConfig
     {!! hook('footer') !!}
 </body>
