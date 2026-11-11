@@ -3281,6 +3281,907 @@ class FragCityAPI extends Extension
         }
     }
 
+    /**
+     * Return Paymenter-owned VIP prices, wallet balance and current VIPCore state.
+     * No browser-supplied price or Paymenter user ID is trusted.
+     */
+    public function vipCatalog(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        $steamId = (string) $validator->validated()['steamid64'];
+        try {
+            $settings = $this->vipStoreSettings();
+            $link = DB::table('fragcity_user_links')->where('steamid64', $steamId)->first();
+            if (!$link) {
+                return response()->json(['success' => false, 'error' => 'fragcity_user_not_linked'], 404);
+            }
+
+            $user = User::query()->find((int) $link->user_id);
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'linked_paymenter_user_missing'], 404);
+            }
+
+            $product = $this->loadVipProduct($settings);
+            $vipStatus = $this->requestVipCore($settings, [
+                'action' => 'get_status',
+                'steamid64' => $steamId,
+            ]);
+
+            $prices = [];
+            foreach ([7, 15, 30, 60, 90] as $days) {
+                foreach ([1, 2, 3] as $level) {
+                    $prices[(string) $level][(string) $days] = $this->calculateVipPrice(
+                        $product,
+                        $settings,
+                        $user,
+                        $level,
+                        $days
+                    );
+                }
+            }
+
+            $upgradePrices = [];
+            $active = ($vipStatus['active'] ?? false) === true;
+            $currentLevel = (int) ($vipStatus['level'] ?? 0);
+            $currentExpires = (int) ($vipStatus['expires'] ?? 0);
+            $paidPurchase = $vipStatus['paid_purchase'] ?? null;
+
+            if ($active && is_array($paidPurchase) && in_array($currentLevel, [1, 2], true)) {
+                $sourceRef = strtolower((string) ($paidPurchase['order_ref'] ?? ''));
+                $durationSeconds = (int) ($paidPurchase['duration_seconds'] ?? 0);
+                $durationDays = (int) round($durationSeconds / 86400);
+                $sourceOrder = DB::table('fragcity_vip_orders')
+                    ->where('order_ref', $sourceRef)
+                    ->where('steamid64', $steamId)
+                    ->where('status', 'provisioned')
+                    ->first();
+
+                // Existing paid memberships from the old website are deliberately
+                // not guessed into the new billing ledger. They need a one-time
+                // verified import before discounted upgrades can be quoted.
+                if (
+                    is_array($paidPurchase)
+                    && preg_match('/^[a-f0-9]{32}$/D', $sourceRef)
+                    && is_object($sourceOrder)
+                    && in_array($durationDays, [7, 15, 30, 60, 90], true)
+                    && $durationSeconds === $durationDays * 86400
+                    && (int) ($sourceOrder->vip_level ?? 0) === $currentLevel
+                    && (int) ($sourceOrder->vip_expires_at ?? 0) === $currentExpires
+                ) {
+                    $remainingSeconds = max(0, $currentExpires - time());
+                    $currentTierPrice = (int) ($paidPurchase['tier_price_rial'] ?? $sourceOrder->tier_price_rial);
+                    if ($remainingSeconds > 0 && $currentTierPrice > 0) {
+                        foreach (range($currentLevel + 1, 3) as $targetLevel) {
+                            $target = $this->calculateVipPrice(
+                                $product,
+                                $settings,
+                                $user,
+                                $targetLevel,
+                                $durationDays
+                            );
+                            $baseDifference = (int) $target['tier_price_rial'] - $currentTierPrice;
+                            if ($baseDifference < 1) {
+                                continue;
+                            }
+
+                            $proratedBase = (int) (round((($baseDifference * $remainingSeconds) / $durationSeconds) / 1000) * 1000);
+                            if ($proratedBase < 10) {
+                                continue;
+                            }
+
+                            $plan = $this->resolveVipPlan($product, $settings, $durationDays);
+                            $taxed = new Price(
+                                ['price' => $proratedBase, 'currency' => $plan->price($settings['currency'])->currency],
+                                apply_exclusive_tax: true,
+                                tax: Settings::tax($user)
+                            );
+                            $amount = (float) $taxed->total;
+                            $amountRial = (int) round($amount);
+                            if (abs($amount - $amountRial) > 0.00001 || $amountRial < 10 || $amountRial % 10 !== 0) {
+                                continue;
+                            }
+
+                            $upgradePrices[(string) $targetLevel] = [
+                                'amount_rial' => $amountRial,
+                                'amount_toman' => intdiv($amountRial, 10),
+                                'tier_price_rial' => (int) $target['tier_price_rial'],
+                                'duration_days' => $durationDays,
+                                'remaining_seconds' => $remainingSeconds,
+                                'from_order_ref' => $sourceRef,
+                                'from_level' => $currentLevel,
+                                'from_expires' => $currentExpires,
+                            ];
+                        }
+                    }
+                }
+            }
+
+            $credit = $user->credits()->where('currency_code', $settings['currency'])->first();
+            $creditsEnabled = filter_var(
+                (string) (Settings::getSetting('credits_enabled')->value ?? false),
+                FILTER_VALIDATE_BOOLEAN
+            );
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'product' => [
+                        'id' => (int) $product->id,
+                        'name' => (string) $product->name,
+                    ],
+                    'currency_code' => $settings['currency'],
+                    'currency_unit' => 'rial',
+                    'duration_days' => [7, 15, 30, 60, 90],
+                    'prices' => $prices,
+                    'upgrade_prices' => $upgradePrices,
+                    'wallet_balance' => number_format((float) ($credit?->amount ?? 0), 2, '.', ''),
+                    'wallet_enabled' => $creditsEnabled,
+                    'current_membership' => [
+                        'active' => $active,
+                        'level' => $currentLevel,
+                        'expires' => $currentExpires,
+                        'paid_purchase' => is_array($paidPurchase) ? $paidPurchase : null,
+                        'upgrade_available' => count($upgradePrices) > 0,
+                        'legacy_paid_import_required' => $active
+                            && is_array($paidPurchase)
+                            && $currentLevel > 0
+                            && count($upgradePrices) === 0
+                            && !is_object($sourceOrder ?? null),
+                    ],
+                ],
+            ]);
+        } catch (RuntimeException $e) {
+            $status = match ($e->getMessage()) {
+                'fragcity_user_not_linked', 'linked_paymenter_user_missing' => 404,
+                'vip_store_not_configured', 'vipcore_not_configured' => 503,
+                'vip_product_invalid', 'vip_plan_invalid', 'vip_level_option_invalid' => 422,
+                default => 503,
+            };
+            Log::warning('FragCity VIP catalogue request failed.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'reason' => $e->getMessage(),
+            ]);
+            return response()->json(['success' => false, 'error' => $e->getMessage()], $status);
+        } catch (Throwable $e) {
+            Log::error('FragCity VIP catalogue could not be built.', [
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'exception' => get_class($e),
+            ]);
+            return response()->json(['success' => false, 'error' => 'vip_catalog_unavailable'], 503);
+        }
+    }
+
+    /**
+     * Charge the native Paymenter Wallet, create a real paid Invoice and write
+     * an idempotent VIP entitlement ledger before calling the Linux VIPCore API.
+     */
+    public function createVipOrder(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'order_ref' => ['required', 'string', 'regex:/^[a-f0-9]{32}$/i'],
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+            'level' => ['required', 'integer', 'in:1,2,3'],
+            'duration_days' => ['required', 'integer', 'in:7,15,30,60,90'],
+            'expected_amount_rial' => ['required', 'integer', 'min:10'],
+        ]);
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'error' => 'validation_failed',
+                'fields' => $validator->errors()->keys(),
+            ], 422);
+        }
+
+        $data = $validator->validated();
+        $orderRef = strtolower((string) $data['order_ref']);
+        $steamId = (string) $data['steamid64'];
+        $level = (int) $data['level'];
+        $durationDays = (int) $data['duration_days'];
+        $expectedAmount = (int) $data['expected_amount_rial'];
+        $payloadHash = hash('sha256', json_encode([
+            'steamid64' => $steamId,
+            'level' => $level,
+            'duration_days' => $durationDays,
+            'expected_amount_rial' => $expectedAmount,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR));
+
+        try {
+            $settings = $this->vipStoreSettings();
+
+            $existing = DB::table('fragcity_vip_orders')->where('order_ref', $orderRef)->first();
+            if ($existing) {
+                if (
+                    (string) $existing->steamid64 !== $steamId
+                    || !hash_equals((string) $existing->payload_hash, $payloadHash)
+                ) {
+                    return response()->json(['success' => false, 'error' => 'vip_order_reference_conflict'], 409);
+                }
+
+                if ((string) $existing->status === 'provisioned') {
+                    return response()->json([
+                        'success' => true,
+                        'data' => $this->vipOrderResponse($existing, true),
+                    ]);
+                }
+
+                if ((string) $existing->status !== 'paid') {
+                    return response()->json(['success' => false, 'error' => 'vip_order_not_retryable'], 409);
+                }
+
+                return $this->provisionVipOrder($settings, $existing, true);
+            }
+
+            $link = DB::table('fragcity_user_links')->where('steamid64', $steamId)->first();
+            if (!$link) {
+                return response()->json(['success' => false, 'error' => 'fragcity_user_not_linked'], 404);
+            }
+
+            $createdOrder = DB::transaction(function () use (
+                $settings,
+                $link,
+                $orderRef,
+                $steamId,
+                $level,
+                $durationDays,
+                $expectedAmount,
+                $payloadHash
+            ): object {
+                $existing = DB::table('fragcity_vip_orders')->where('order_ref', $orderRef)->lockForUpdate()->first();
+                if ($existing) {
+                    if (
+                        (string) $existing->steamid64 !== $steamId
+                        || !hash_equals((string) $existing->payload_hash, $payloadHash)
+                    ) {
+                        throw new RuntimeException('vip_order_reference_conflict');
+                    }
+                    return $existing;
+                }
+
+                $user = User::query()->lockForUpdate()->find((int) $link->user_id);
+                if (!$user) {
+                    throw new RuntimeException('linked_paymenter_user_missing');
+                }
+
+                $product = $this->loadVipProduct($settings);
+                $vipStatus = $this->requestVipCore($settings, [
+                    'action' => 'get_status',
+                    'steamid64' => $steamId,
+                ]);
+                $quote = $this->quoteVipSelection(
+                    $product,
+                    $settings,
+                    $user,
+                    $vipStatus,
+                    $steamId,
+                    $level,
+                    $durationDays
+                );
+
+                if ((int) $quote['amount_rial'] !== $expectedAmount) {
+                    throw new RuntimeException('vip_quote_amount_mismatch');
+                }
+
+                $creditsEnabled = filter_var(
+                    (string) (Settings::getSetting('credits_enabled')->value ?? false),
+                    FILTER_VALIDATE_BOOLEAN
+                );
+                if (!$creditsEnabled) {
+                    throw new RuntimeException('vip_wallet_not_enabled');
+                }
+
+                $credit = $user->credits()
+                    ->where('currency_code', $settings['currency'])
+                    ->lockForUpdate()
+                    ->first();
+                $available = (float) ($credit?->amount ?? 0);
+                if (!$credit || $available < (float) $quote['amount_rial']) {
+                    throw new RuntimeException('vip_wallet_insufficient');
+                }
+
+                $credit->decrement('amount', number_format((float) $quote['amount_rial'], 2, '.', ''));
+
+                $now = now();
+                $invoice = new Invoice([
+                    'user_id' => (int) $user->id,
+                    'due_at' => $now,
+                    'currency_code' => $settings['currency'],
+                ]);
+                $invoice->send_create_email = false;
+                $invoice->save();
+
+                $description = 'FragCity VIP ' . $this->vipLevelName($level)
+                    . ' — ' . $durationDays . ' days';
+                $invoice->items()->create([
+                    'reference_id' => (int) $product->id,
+                    'reference_type' => Product::class,
+                    'price' => number_format((float) $quote['amount_rial'], 2, '.', ''),
+                    'quantity' => 1,
+                    'description' => $description,
+                ]);
+
+                ExtensionHelper::addPayment(
+                    $invoice,
+                    null,
+                    (float) $quote['amount_rial'],
+                    null,
+                    'fragcity-vip:' . $orderRef,
+                    InvoiceTransactionStatus::Succeeded,
+                    true
+                );
+
+                $invoice->status = Invoice::STATUS_PAID;
+                $invoice->save();
+
+                DB::table('fragcity_vip_orders')->insert([
+                    'order_ref' => $orderRef,
+                    'steamid64' => $steamId,
+                    'paymenter_user_id' => (int) $user->id,
+                    'product_id' => (int) $product->id,
+                    'plan_id' => (int) $quote['plan_id'],
+                    'config_option_id' => (int) $settings['level_option_id'],
+                    'config_value_id' => (int) $quote['config_value_id'],
+                    'vip_level' => $level,
+                    'duration_days' => $durationDays,
+                    'duration_seconds' => $durationDays * 86400,
+                    'amount_rial' => number_format((float) $quote['amount_rial'], 2, '.', ''),
+                    'tier_price_rial' => (int) $quote['tier_price_rial'],
+                    'currency_code' => $settings['currency'],
+                    'purchase_type' => (string) $quote['purchase_type'],
+                    'upgrade_from_order_ref' => $quote['upgrade']['from_order_ref'] ?? null,
+                    'upgrade_from_level' => $quote['upgrade']['from_level'] ?? null,
+                    'upgrade_from_expires' => $quote['upgrade']['from_expires'] ?? null,
+                    'upgrade_remaining_seconds' => $quote['upgrade']['remaining_seconds'] ?? null,
+                    'payload_hash' => $payloadHash,
+                    'paymenter_invoice_id' => (int) $invoice->id,
+                    'status' => 'paid',
+                    'paid_at' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ]);
+
+                return DB::table('fragcity_vip_orders')->where('order_ref', $orderRef)->firstOrFail();
+            }, 3);
+
+            if ((string) $createdOrder->status === 'provisioned') {
+                return response()->json([
+                    'success' => true,
+                    'data' => $this->vipOrderResponse($createdOrder, true),
+                ]);
+            }
+
+            return $this->provisionVipOrder($settings, $createdOrder, false);
+        } catch (RuntimeException $e) {
+            $status = match ($e->getMessage()) {
+                'fragcity_user_not_linked', 'linked_paymenter_user_missing' => 404,
+                'vip_wallet_insufficient' => 422,
+                'vip_wallet_not_enabled' => 422,
+                'vip_product_invalid', 'vip_plan_invalid', 'vip_level_option_invalid' => 422,
+                'vip_store_not_configured', 'vipcore_not_configured' => 503,
+                'vip_order_reference_conflict' => 409,
+                'vip_paid_membership_upgrade_required', 'vip_membership_already_active',
+                'vip_paid_membership_not_migrated', 'vip_upgrade_source_changed' => 409,
+                'vip_quote_amount_mismatch' => 409,
+                default => 503,
+            };
+            return response()->json(['success' => false, 'error' => $e->getMessage()], $status);
+        } catch (Throwable $e) {
+            Log::error('FragCity VIP order creation failed.', [
+                'order_ref' => $orderRef,
+                'steamid_hash' => substr(hash('sha256', $steamId), 0, 16),
+                'exception' => get_class($e),
+            ]);
+            return response()->json(['success' => false, 'error' => 'vip_order_creation_failed'], 500);
+        }
+    }
+
+    public function listVipOrders(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        $steamId = (string) $validator->validated()['steamid64'];
+        $link = DB::table('fragcity_user_links')->where('steamid64', $steamId)->first();
+        if (!$link) {
+            return response()->json(['success' => false, 'error' => 'fragcity_user_not_linked'], 404);
+        }
+
+        $orders = DB::table('fragcity_vip_orders')
+            ->where('steamid64', $steamId)
+            ->orderByDesc('id')
+            ->limit(100)
+            ->get()
+            ->map(fn ($order): array => $this->vipOrderResponse($order, true))
+            ->values()
+            ->all();
+
+        return response()->json(['success' => true, 'data' => ['orders' => $orders]]);
+    }
+
+    /**
+     * The old RawPHP wallet refund path is intentionally not called by Paymenter.
+     * Revoke is enabled only after a matching Paymenter-owned paid ledger row exists.
+     */
+    public function revokeVipMembership(Request $request): JsonResponse
+    {
+        $authError = $this->authenticateBridgeRequest($request);
+        if ($authError) {
+            return $authError;
+        }
+
+        $payload = $request->attributes->get('fragcity_bridge_payload');
+        $validator = Validator::make(is_array($payload) ? $payload : [], [
+            'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
+        ]);
+        if ($validator->fails()) {
+            return response()->json(['success' => false, 'error' => 'validation_failed'], 422);
+        }
+
+        $steamId = (string) $validator->validated()['steamid64'];
+        return response()->json([
+            'success' => false,
+            'error' => 'vip_revoke_not_enabled',
+            'message' => 'VIP cancellation/refund has not been migrated to the Paymenter ledger yet.',
+        ], 503);
+    }
+
+    private function vipStoreSettings(): array
+    {
+        $productId = (int) $this->config('vip_product_id');
+        $levelOptionId = (int) $this->config('vip_level_option_id');
+        $currency = strtoupper(trim((string) ($this->config('vip_currency_code') ?: $this->config('cs2_currency_code'))));
+        $apiBase = rtrim(trim((string) $this->config('vipcore_api_base_url')), '/');
+        $apiSecret = trim((string) $this->config('vipcore_shared_secret'));
+        $planSettings = [
+            7 => 'vip_plan_id_7_days',
+            15 => 'vip_plan_id_15_days',
+            30 => 'vip_plan_id_30_days',
+            60 => 'vip_plan_id_60_days',
+            90 => 'vip_plan_id_90_days',
+        ];
+        $planIds = [];
+        foreach ($planSettings as $days => $setting) {
+            $planIds[$days] = (int) $this->config($setting);
+        }
+
+        $parts = parse_url($apiBase);
+        if (
+            $productId < 1
+            || $levelOptionId < 1
+            || $currency === ''
+            || in_array(0, $planIds, true)
+            || !is_array($parts)
+            || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+            || empty($parts['host'])
+            || isset($parts['user'])
+            || isset($parts['pass'])
+            || isset($parts['query'])
+            || isset($parts['fragment'])
+            || (isset($parts['path']) && $parts['path'] !== '' && $parts['path'] !== '/')
+            || !preg_match('/^[a-f0-9]{64,128}$/iD', $apiSecret)
+        ) {
+            throw new RuntimeException('vip_store_not_configured');
+        }
+
+        return [
+            'product_id' => $productId,
+            'level_option_id' => $levelOptionId,
+            'currency' => $currency,
+            'api_base' => $apiBase,
+            'api_secret' => $apiSecret,
+            'plan_ids' => $planIds,
+        ];
+    }
+
+    private function loadVipProduct(array $settings): Product
+    {
+        $product = Product::query()
+            ->with([
+                'server',
+                'plans.prices.currency',
+                'configOptions.children.plans.prices.currency',
+            ])
+            ->find((int) $settings['product_id']);
+
+        if (!$product || !(bool) $product->enabled || $product->server !== null) {
+            throw new RuntimeException('vip_product_invalid');
+        }
+
+        $option = $product->configOptions->firstWhere('id', (int) $settings['level_option_id']);
+        if (!$option || !in_array((string) $option->type, ['dropdown', 'select'], true)) {
+            throw new RuntimeException('vip_level_option_invalid');
+        }
+
+        foreach ([1, 2, 3] as $level) {
+            $matching = $option->children->filter(
+                fn ($child): bool => trim((string) ($child->env_variable ?? '')) === (string) $level
+            );
+            if ($matching->count() !== 1) {
+                throw new RuntimeException('vip_level_option_invalid');
+            }
+        }
+
+        return $product;
+    }
+
+    private function resolveVipPlan(Product $product, array $settings, int $days): Plan
+    {
+        $planId = (int) ($settings['plan_ids'][$days] ?? 0);
+        $plan = $product->plans->firstWhere('id', $planId);
+        $expected = match ($days) {
+            7 => [[7, 'day']],
+            15 => [[15, 'day']],
+            30 => [[30, 'day'], [1, 'month']],
+            60 => [[60, 'day'], [2, 'month']],
+            90 => [[90, 'day'], [3, 'month']],
+            default => [],
+        };
+
+        $periodMatches = false;
+        foreach ($expected as [$period, $unit]) {
+            if ($plan && (int) $plan->billing_period === $period && (string) $plan->billing_unit === $unit) {
+                $periodMatches = true;
+                break;
+            }
+        }
+
+        if (
+            !$plan
+            || in_array((string) $plan->type, ['free', 'one-time'], true)
+            || !$periodMatches
+        ) {
+            throw new RuntimeException('vip_plan_invalid');
+        }
+
+        return $plan;
+    }
+
+    private function calculateVipPrice(
+        Product $product,
+        array $settings,
+        User $user,
+        int $level,
+        int $days
+    ): array {
+        $option = $product->configOptions->firstWhere('id', (int) $settings['level_option_id']);
+        $child = $option?->children->first(
+            fn ($value): bool => trim((string) ($value->env_variable ?? '')) === (string) $level
+        );
+        if (!$child) {
+            throw new RuntimeException('vip_level_option_invalid');
+        }
+
+        $plan = $this->resolveVipPlan($product, $settings, $days);
+        $planPrice = $plan->price($settings['currency']);
+        $childPrice = $child->price(
+            null,
+            (int) $plan->billing_period,
+            (string) $plan->billing_unit,
+            $settings['currency']
+        );
+
+        if (!$planPrice->available || !$childPrice->available) {
+            throw new RuntimeException('vip_price_missing');
+        }
+
+        $baseRecurring = (float) $planPrice->price + (float) $childPrice->price;
+        $setupFees = (float) ($planPrice->setup_fee ?? 0) + (float) ($childPrice->setup_fee ?? 0);
+        $tierPrice = (int) round($baseRecurring + $setupFees);
+        if ($tierPrice < 10 || $tierPrice % 10 !== 0 || $tierPrice > 10000000000000) {
+            throw new RuntimeException('vip_price_invalid');
+        }
+
+        $taxed = new Price(
+            [
+                'price' => $baseRecurring,
+                'setup_fee' => $setupFees,
+                'currency' => $planPrice->currency,
+            ],
+            apply_exclusive_tax: true,
+            tax: Settings::tax($user)
+        );
+        $amount = (float) $taxed->total;
+        $amountRial = (int) round($amount);
+        if (abs($amount - $amountRial) > 0.00001 || $amountRial < 10 || $amountRial % 10 !== 0) {
+            throw new RuntimeException('vip_price_not_whole_toman');
+        }
+
+        return [
+            'amount_rial' => $amountRial,
+            'amount_toman' => intdiv($amountRial, 10),
+            'tier_price_rial' => $tierPrice,
+            'tax_rial' => $amountRial - $tierPrice,
+            'plan_id' => (int) $plan->id,
+            'config_value_id' => (int) $child->id,
+            'duration_days' => $days,
+        ];
+    }
+
+    private function quoteVipSelection(
+        Product $product,
+        array $settings,
+        User $user,
+        array $vipStatus,
+        string $steamId,
+        int $level,
+        int $days
+    ): array {
+        $base = $this->calculateVipPrice($product, $settings, $user, $level, $days);
+        $active = ($vipStatus['active'] ?? false) === true;
+        $currentLevel = (int) ($vipStatus['level'] ?? 0);
+        $currentExpires = (int) ($vipStatus['expires'] ?? 0);
+        $paidPurchase = $vipStatus['paid_purchase'] ?? null;
+
+        if (!$active) {
+            return $base + ['purchase_type' => 'new', 'upgrade' => null];
+        }
+
+        if (is_array($paidPurchase)) {
+            $sourceRef = strtolower((string) ($paidPurchase['order_ref'] ?? ''));
+            $durationSeconds = (int) ($paidPurchase['duration_seconds'] ?? 0);
+            $currentDurationDays = (int) round($durationSeconds / 86400);
+            $sourceOrder = DB::table('fragcity_vip_orders')
+                ->where('order_ref', $sourceRef)
+                ->where('steamid64', $steamId)
+                ->where('status', 'provisioned')
+                ->first();
+
+            if (
+                !preg_match('/^[a-f0-9]{32}$/D', $sourceRef)
+                || !$sourceOrder
+                || (int) $sourceOrder->vip_level !== $currentLevel
+                || (int) $sourceOrder->vip_expires_at !== $currentExpires
+                || (int) $sourceOrder->duration_seconds !== $durationSeconds
+                || !in_array($currentDurationDays, [7, 15, 30, 60, 90], true)
+            ) {
+                throw new RuntimeException('vip_paid_membership_not_migrated');
+            }
+
+            if ($level <= $currentLevel || $currentLevel > 2) {
+                throw new RuntimeException('vip_paid_membership_upgrade_required');
+            }
+            if ($days !== $currentDurationDays || $currentExpires <= time()) {
+                throw new RuntimeException('vip_upgrade_duration_mismatch');
+            }
+
+            $currentTierPrice = (int) ($paidPurchase['tier_price_rial'] ?? $sourceOrder->tier_price_rial);
+            $difference = (int) $base['tier_price_rial'] - $currentTierPrice;
+            if ($difference < 1) {
+                throw new RuntimeException('vip_upgrade_price_invalid');
+            }
+
+            $remainingSeconds = max(0, $currentExpires - time());
+            $proratedBase = (int) (round((($difference * $remainingSeconds) / $durationSeconds) / 1000) * 1000);
+            if ($proratedBase < 10) {
+                throw new RuntimeException('vip_upgrade_amount_too_small');
+            }
+
+            $plan = $this->resolveVipPlan($product, $settings, $days);
+            $taxed = new Price(
+                ['price' => $proratedBase, 'currency' => $plan->price($settings['currency'])->currency],
+                apply_exclusive_tax: true,
+                tax: Settings::tax($user)
+            );
+            $amount = (float) $taxed->total;
+            $amountRial = (int) round($amount);
+            if (abs($amount - $amountRial) > 0.00001 || $amountRial < 10 || $amountRial % 10 !== 0) {
+                throw new RuntimeException('vip_price_not_whole_toman');
+            }
+
+            return [
+                'amount_rial' => $amountRial,
+                'amount_toman' => intdiv($amountRial, 10),
+                'tier_price_rial' => (int) $base['tier_price_rial'],
+                'tax_rial' => $amountRial - $proratedBase,
+                'plan_id' => (int) $base['plan_id'],
+                'config_value_id' => (int) $base['config_value_id'],
+                'duration_days' => $days,
+                'purchase_type' => 'upgrade',
+                'upgrade' => [
+                    'from_order_ref' => $sourceRef,
+                    'from_level' => $currentLevel,
+                    'from_expires' => $currentExpires,
+                    'remaining_seconds' => $remainingSeconds,
+                ],
+            ];
+        }
+
+        if ($level < $currentLevel) {
+            throw new RuntimeException('vip_membership_already_active');
+        }
+
+        return $base + ['purchase_type' => 'replacement', 'upgrade' => null];
+    }
+
+    private function vipLevelName(int $level): string
+    {
+        return match ($level) {
+            1 => 'Bronze',
+            2 => 'Silver',
+            3 => 'Gold',
+            default => 'VIP',
+        };
+    }
+
+    private function requestVipCore(array $settings, array $payload): array
+    {
+        $base = rtrim((string) $settings['api_base'], '/');
+        $path = '/v1/vipcore';
+        $body = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+        $timestamp = (string) time();
+        $nonce = bin2hex(random_bytes(32));
+        $canonical = $timestamp . "\n" . $nonce . "\nPOST\n" . $path . "\n" . hash('sha256', $body);
+        $signature = hash_hmac('sha256', $canonical, (string) $settings['api_secret']);
+
+        $handle = curl_init($base . $path);
+        if ($handle === false) {
+            throw new RuntimeException('vipcore_unavailable');
+        }
+
+        curl_setopt_array($handle, [
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $body,
+            CURLOPT_HTTPHEADER => [
+                'Accept: application/json',
+                'Content-Type: application/json',
+                'X-FragCity-Timestamp: ' . $timestamp,
+                'X-FragCity-Nonce: ' . $nonce,
+                'X-FragCity-Signature: ' . $signature,
+            ],
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_CONNECTTIMEOUT => 5,
+            CURLOPT_TIMEOUT => 12,
+            CURLOPT_FOLLOWLOCATION => false,
+            CURLOPT_SSL_VERIFYPEER => true,
+            CURLOPT_SSL_VERIFYHOST => 2,
+            CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+            CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+        ]);
+
+        $response = curl_exec($handle);
+        $curlError = curl_errno($handle);
+        $httpStatus = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);
+        curl_close($handle);
+
+        if (!is_string($response) || $curlError !== 0) {
+            throw new RuntimeException('vipcore_unavailable');
+        }
+
+        $decoded = json_decode($response, true);
+        if (!is_array($decoded) || json_last_error() !== JSON_ERROR_NONE || ($decoded['success'] ?? false) !== true) {
+            $error = is_array($decoded) && is_string($decoded['error'] ?? null)
+                ? $decoded['error']
+                : 'vipcore_unavailable';
+            if ($httpStatus === 409 && $error === 'membership_already_active') {
+                throw new RuntimeException('vip_membership_already_active');
+            }
+            if ($httpStatus === 409 && $error === 'membership_upgrade_source_changed') {
+                throw new RuntimeException('vip_upgrade_source_changed');
+            }
+            throw new RuntimeException('vipcore_unavailable');
+        }
+
+        $data = $decoded['data'] ?? null;
+        if (!is_array($data)) {
+            throw new RuntimeException('vipcore_invalid_response');
+        }
+
+        return $data;
+    }
+
+    private function vipOrderResponse(object $order, bool $replayed): array
+    {
+        return [
+            'order_ref' => (string) $order->order_ref,
+            'invoice_id' => (int) ($order->paymenter_invoice_id ?? 0),
+            'vip_level' => (int) $order->vip_level,
+            'duration_days' => (int) $order->duration_days,
+            'amount_rial' => number_format((float) $order->amount_rial, 2, '.', ''),
+            'amount_toman' => number_format(((float) $order->amount_rial) / 10, 2, '.', ''),
+            'status' => (string) $order->status,
+            'provision_pending' => (string) $order->status === 'paid',
+            'expires' => (int) ($order->vip_expires_at ?? 0),
+            'replayed' => $replayed,
+        ];
+    }
+
+    private function provisionVipOrder(array $settings, object $order, bool $replayed): JsonResponse
+    {
+        try {
+            $upgrade = null;
+            if ((string) $order->purchase_type === 'upgrade') {
+                $upgrade = [
+                    'from_order_ref' => (string) $order->upgrade_from_order_ref,
+                    'from_level' => (int) $order->upgrade_from_level,
+                    'from_expires' => (int) $order->upgrade_from_expires,
+                    'duration_seconds' => (int) $order->duration_seconds,
+                ];
+            }
+
+            $grant = $this->requestVipCore($settings, [
+                'action' => 'grant_paid_membership',
+                'order_ref' => (string) $order->order_ref,
+                'steamid64' => (string) $order->steamid64,
+                'player_name' => 'FragCity Player',
+                'level' => (int) $order->vip_level,
+                'duration_seconds' => (int) $order->duration_seconds,
+                'tier_price_rial' => (int) $order->tier_price_rial,
+                'upgrade' => $upgrade,
+            ]);
+
+            if (
+                ($grant['granted'] ?? false) !== true
+                || (string) ($grant['order_ref'] ?? '') !== (string) $order->order_ref
+                || (int) ($grant['level'] ?? 0) !== (int) $order->vip_level
+                || (int) ($grant['duration_seconds'] ?? 0) !== (int) $order->duration_seconds
+                || !is_numeric($grant['expires'] ?? null)
+            ) {
+                throw new RuntimeException('vipcore_invalid_response');
+            }
+
+            DB::table('fragcity_vip_orders')->where('order_ref', (string) $order->order_ref)->update([
+                'status' => 'provisioned',
+                'vip_granted_at' => (int) ($grant['granted_at'] ?? time()),
+                'vip_expires_at' => (int) $grant['expires'],
+                'provisioned_at' => now(),
+                'last_error' => null,
+                'updated_at' => now(),
+            ]);
+
+            $fresh = DB::table('fragcity_vip_orders')->where('order_ref', (string) $order->order_ref)->first();
+            return response()->json([
+                'success' => true,
+                'data' => $this->vipOrderResponse($fresh, $replayed),
+            ], $replayed ? 200 : 201);
+        } catch (Throwable $e) {
+            DB::table('fragcity_vip_orders')->where('order_ref', (string) $order->order_ref)->update([
+                'provision_attempts' => DB::raw('provision_attempts + 1'),
+                'last_error' => $e instanceof RuntimeException ? substr($e->getMessage(), 0, 96) : 'vipcore_unavailable',
+                'updated_at' => now(),
+            ]);
+            Log::warning('Paymenter VIP order was paid but VIPCore provisioning is pending.', [
+                'order_ref' => (string) $order->order_ref,
+                'steamid_hash' => substr(hash('sha256', (string) $order->steamid64), 0, 16),
+                'exception' => get_class($e),
+            ]);
+
+            $fresh = DB::table('fragcity_vip_orders')->where('order_ref', (string) $order->order_ref)->first();
+            return response()->json([
+                'success' => true,
+                'data' => $this->vipOrderResponse($fresh, $replayed) + [
+                    'message' => 'پرداخت ثبت شده است؛ فعال‌سازی VIP در صف پیگیری قرار دارد. مبلغ دوباره کسر نمی‌شود.',
+                ],
+            ], 202);
+        }
+    }
+
     private function authenticateBridgeRequest(Request $request): ?JsonResponse
     {
         $secret = (string) $this->config('shared_secret');
