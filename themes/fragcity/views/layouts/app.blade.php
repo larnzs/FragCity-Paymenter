@@ -35,7 +35,7 @@
         <div class="w-full flex flex-grow min-w-0">
             @if (isset($sidebar) && $sidebar) <x-navigation.sidebar title="$title" /> @endif
             <div class="{{ (isset($sidebar) && $sidebar) ? 'md:ml-64 rtl:ml-0 rtl:md:mr-64' : '' }} flex flex-col flex-grow overflow-auto min-w-0">
-                <main class="fc-page-main mt-16 grow">{{ $slot }}</main>
+                <main class="fc-page-main grow">{{ $slot }}</main>
                 <x-notification />
                 <x-confirmation />
             </div>
