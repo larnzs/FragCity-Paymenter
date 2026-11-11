@@ -1362,3 +1362,94 @@
         animation-iteration-count: 1 !important;
     }
 }
+
+
+/* SSO two-factor checkpoint */
+.fc-sso-tfa-page {
+    display: flex;
+    min-height: min(70vh, 680px);
+    align-items: center;
+    justify-content: center;
+    padding-top: 30px;
+    padding-bottom: 60px;
+    direction: rtl;
+}
+
+.fc-sso-tfa-card {
+    width: min(100%, 460px);
+    padding: clamp(22px, 4vw, 34px);
+    border: 1px solid rgba(249, 115, 22, .24);
+    border-radius: 20px;
+    color: #f5f5f5;
+    background:
+        radial-gradient(circle at 100% 0, rgba(249, 115, 22, .15), transparent 38%),
+        linear-gradient(145deg, #1b1b1b, #111);
+    box-shadow: 0 26px 70px rgba(0, 0, 0, .4);
+}
+
+.fc-sso-tfa-card__icon {
+    display: grid;
+    width: 52px;
+    height: 52px;
+    place-items: center;
+    margin-bottom: 20px;
+    border: 1px solid rgba(249, 115, 22, .3);
+    border-radius: 15px;
+    color: #ffad70;
+    background: rgba(249, 115, 22, .12);
+    font-size: 21px;
+}
+
+.fc-sso-tfa-card h1 {
+    margin: 0;
+    color: #fff;
+    font-size: 1.65rem;
+    font-weight: 900;
+}
+
+.fc-sso-tfa-card > p {
+    margin: 8px 0 22px;
+    color: #aaa;
+    font-size: .83rem;
+    line-height: 2;
+}
+
+.fc-sso-tfa-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.fc-sso-tfa-form input {
+    height: 52px;
+    text-align: center;
+    font-family: var(--fc-font-mono);
+    font-size: 1.25rem;
+    letter-spacing: .28em;
+    font-variant-numeric: tabular-nums;
+}
+
+.fc-sso-tfa-form button {
+    min-height: 49px;
+    border-radius: 12px !important;
+    color: #17100b !important;
+    background: linear-gradient(110deg, #ff9a45, #f97316) !important;
+    font-weight: 900;
+}
+
+.fc-sso-tfa-error {
+    margin: 0;
+    color: #f28e8e;
+    font-size: .78rem;
+}
+
+.fc-sso-tfa-back {
+    display: inline-flex;
+    margin-top: 18px;
+    color: #aaa !important;
+    font-size: .77rem;
+}
+
+.fc-sso-tfa-back:hover {
+    color: #ffad70 !important;
+}
