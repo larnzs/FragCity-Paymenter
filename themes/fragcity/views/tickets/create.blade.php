@@ -4,8 +4,12 @@
         <div><span class="fc-portal-kicker">FRAGCITY / SUPPORT CENTER</span><h1>{{ __('ticket.create_ticket') }}</h1><p>موضوع درخواست را مشخص کن و پیام خود را برای تیم پشتیبانی بفرست.</p></div>
         <a href="{{ route('tickets') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-arrow-right"></i> بازگشت به تیکت‌ها</a>
     </div>
-    <div class="bg-primary-800 p-6 rounded-lg mt-2 fc-ticket-create-panel">
-    <div class="grid grid-cols-2 gap-4">
+    <section class="bg-primary-800 p-6 rounded-lg mt-2 fc-ticket-create-panel fc-ticket-create-panel--premium">
+        <div class="fc-ticket-create-panel__intro">
+            <span><i class="fa-solid fa-headset" aria-hidden="true"></i></span>
+            <div><strong>درخواست پشتیبانی جدید</strong><p>موضوع، اولویت و سرویس مرتبط را مشخص کن؛ سپس توضیحاتت را برای تیم FragCity بنویس.</p></div>
+        </div>
+        <div class="grid grid-cols-2 gap-4 fc-ticket-fields-grid">
         <x-form.input wire:model="subject" label="{{ __('ticket.subject') }}" name="subject" required />
         @if (count($departments) > 0)
             <x-form.select wire:model="department" label="{{ __('ticket.department') }}" name="department" required>
@@ -32,14 +36,14 @@
                 </option>
             @endforeach
         </x-form.select>
-        <div class="col-span-2">
-
-            <div class="mt-4">
+        <div class="col-span-2 fc-ticket-message-card">
+            <div class="fc-ticket-message-card__heading"><span><i class="fa-solid fa-pen-to-square" aria-hidden="true"></i></span><div><strong>شرح درخواست</strong><small>هرچه جزئیات بیشتری ارائه کنی، سریع‌تر بررسی می‌شود.</small></div></div>
+            <div class="mt-4 fc-ticket-message-editor">
                 <form wire:submit.prevent="create" wire:ignore>
                     <label for="editor" class="block text-sm font-medium text-primary-100">
                         {{ __('ticket.reply') }}
                     </label>
-                    <textarea id="editor" placeholder="Initial message"></textarea>
+                    <textarea id="editor" placeholder="مشکل یا درخواستت را با جزئیات توضیح بده..."></textarea>
 
                     <label for="attachments" class="block text-sm font-medium text-primary-100 mt-2">
                         {{ __('ticket.attachments') }}
@@ -112,6 +116,6 @@
                 <x-easymde-editor />
             </div>
         </div>
-    </div>
+    </section>
 </div>
 </div>
