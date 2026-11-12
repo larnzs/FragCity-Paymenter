@@ -773,6 +773,8 @@ class FragCityAPI extends Extension
                     'plans' => $plans,
                     'config_options' => $configOptions,
                     'checkout_fields' => $checkoutFields,
+                    'service_properties' => $manifest['paymenter']['service_properties'] ?? [],
+                    'pterodactyl_options' => $manifest['paymenter']['pterodactyl_options'] ?? [],
                     'game_mode_manager' => $manifest['game_mode_manager'] ?? [],
                     'catalog_version' => '1.9.0',
                 ],
@@ -1601,7 +1603,7 @@ class FragCityAPI extends Extension
         $validator = Validator::make(is_array($payload) ? $payload : [], [
             'steamid64' => ['required', 'string', 'regex:/^[0-9]{17}$/'],
             'duration_days' => ['required', 'integer', 'in:3,7,15,30'],
-            'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9 ]+$/'],
+            'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9_. -]+$/'],
             'resources.memory_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
             'resources.disk_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
             'resources.cpu_percent' => ['required', 'integer', 'min:1', 'max:6400'],
@@ -1927,6 +1929,34 @@ class FragCityAPI extends Extension
                 $eggRules[$name] = array_values(array_unique($rules));
             }
 
+
+            $servicePropertyFields = $manifest['paymenter']['service_properties'] ?? [];
+            if (!is_array($servicePropertyFields) || count($servicePropertyFields) !== 1) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+            foreach ($servicePropertyFields as $field) {
+                $name = strtoupper(trim((string) ($field['env_variable'] ?? '')));
+                if (
+                    $name === ''
+                    || ($field['type'] ?? null) !== 'text'
+                    || ($field['target'] ?? null) !== 'egg'
+                    || in_array($name, $allowedEggKeys, true)
+                ) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $allowedEggKeys[] = $name;
+                $normalizedEggValues[$name] = $eggValues[$name] ?? ($field['default'] ?? null);
+                $fieldRules = $field['validation'] ?? [];
+                if (is_string($fieldRules)) {
+                    $fieldRules = array_filter(explode('|', $fieldRules));
+                }
+                if (!is_array($fieldRules)) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+                $eggRules[$name] = array_values(array_unique($fieldRules));
+            }
+
             // The manifest also defines five native Paymenter Config Options:
             // Max Players and Tickrate are Egg values; database/allocation/backup
             // values are feature limits and must not be sent as arbitrary Egg keys.
@@ -2151,7 +2181,7 @@ class FragCityAPI extends Extension
                 'min:10',
             ],
             'duration_days' => ['required', 'integer', 'in:3,7,15,30'],
-            'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9 ]+$/'],
+            'server_name' => ['required', 'string', 'min:1', 'max:64', 'regex:/^[A-Za-z0-9_. -]+$/'],
             'resources.memory_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
             'resources.disk_mb' => ['required', 'integer', 'min:1', 'max:1048576'],
             'resources.cpu_percent' => ['required', 'integer', 'min:1', 'max:6400'],
@@ -2621,6 +2651,34 @@ class FragCityAPI extends Extension
 
                     $eggRules[$name] = array_values(array_unique($rules));
                 }
+
+
+            $servicePropertyFields = $cs2Manifest['paymenter']['service_properties'] ?? [];
+            if (!is_array($servicePropertyFields) || count($servicePropertyFields) !== 1) {
+                throw new RuntimeException('cs2_checkout_manifest_unavailable');
+            }
+            foreach ($servicePropertyFields as $field) {
+                $name = strtoupper(trim((string) ($field['env_variable'] ?? '')));
+                if (
+                    $name === ''
+                    || ($field['type'] ?? null) !== 'text'
+                    || ($field['target'] ?? null) !== 'egg'
+                    || in_array($name, $allowedEggKeys, true)
+                ) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+
+                $allowedEggKeys[] = $name;
+                $normalizedEggValues[$name] = $eggValues[$name] ?? ($field['default'] ?? null);
+                $fieldRules = $field['validation'] ?? [];
+                if (is_string($fieldRules)) {
+                    $fieldRules = array_filter(explode('|', $fieldRules));
+                }
+                if (!is_array($fieldRules)) {
+                    throw new RuntimeException('cs2_checkout_manifest_unavailable');
+                }
+                $eggRules[$name] = array_values(array_unique($fieldRules));
+            }
 
                 $nativeConfigOptionFields = $cs2Manifest['paymenter']['config_options'] ?? [];
                 if (!is_array($nativeConfigOptionFields) || count($nativeConfigOptionFields) !== 5) {
