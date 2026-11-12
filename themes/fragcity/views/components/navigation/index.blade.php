@@ -107,15 +107,43 @@
                                 </div>
                             </div>
                             <div class="frag-drop-divider"></div>
-                            <div class="frag-drop-actions">
-                                @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
-                                    @php($fragcityAccountLink = $fragcityAccountNav($nav))
-                                    <a href="{{ $nav['url'] }}" class="frag-drop-link"
-                                       @if(isset($nav['spa']) && $nav['spa']) wire:navigate @endif>
-                                        <i class="fa-solid {{ $fragcityAccountLink['icon'] }}" aria-hidden="true"></i>
-                                        <span>{{ $fragcityAccountLink['label'] }}</span>
+                            <a href="{{ route('services') }}" class="frag-drop-link" wire:navigate>
+                                <i class="fa-solid fa-server" aria-hidden="true"></i><span>سرورهای من</span>
+                            </a>
+                            <a href="{{ route('invoices') }}" class="frag-drop-link" wire:navigate>
+                                <i class="fa-solid fa-receipt" aria-hidden="true"></i><span>فاکتورها و پرداخت‌ها</span>
+                            </a>
+                            @if(!config('settings.tickets_disabled', false))
+                            <a href="{{ route('tickets') }}" class="frag-drop-link" wire:navigate>
+                                <i class="fa-solid fa-headset" aria-hidden="true"></i><span>تیکت‌های پشتیبانی</span>
+                            </a>
+                            @endif
+                            <a href="{{ route('account') }}" class="frag-drop-link" wire:navigate>
+                                <i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>تنظیمات حساب</span>
+                            </a>
+                            @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
+                                @if(mb_strtolower(trim((string) ($nav['name'] ?? ''))) === 'admin')
+                                    <a href="{{ $nav['url'] }}" class="frag-drop-link">
+                                        <i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>پنل مدیریت</span>
                                     </a>
-                                @endforeach
+                                @endif
+                            @endforeach
+                            <div class="frag-drop-divider"></div>
+                            <div class="frag-drop-wallet">
+                                <div class="frag-drop-wallet__balances">
+                                    <span class="frag-drop-wallet__label">موجودی کیف پول</span>
+                                    @forelse(auth()->user()->credits as $credit)
+                                        <strong class="frag-drop-wallet__balance">{{ $credit->formattedAmount }}</strong>
+                                        <span class="frag-drop-wallet__currency">{{ $credit->currency->code }}</span>
+                                    @empty
+                                        <strong class="frag-drop-wallet__balance">۰</strong>
+                                        <span class="frag-drop-wallet__currency">اعتباری ثبت نشده</span>
+                                    @endforelse
+                                </div>
+                                <a href="{{ route('account.credits') }}" class="frag-drop-wallet__add"
+                                   aria-label="شارژ کیف پول" title="شارژ کیف پول" wire:navigate>
+                                    <i class="fa-solid fa-plus" aria-hidden="true"></i>
+                                </a>
                             </div>
                             <div class="frag-drop-divider"></div>
                             <div class="frag-drop-logout">
@@ -126,8 +154,9 @@
                 </div>
             @else
                 <div class="shock-auth-actions">
-                    <a href="{{ route('login') }}" class="frag-login-btn">
-                        <i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>ورود</span>
+                    <a href="{{ route('login') }}" class="frag-login-btn" data-auth-modal-open
+                       aria-haspopup="dialog" aria-controls="fcLoginModal" aria-expanded="false">
+                        <i class="fa-brands fa-steam" aria-hidden="true"></i><span>ورود با استیم</span>
                     </a>
                     @if (!config('settings.registration_disabled', false))
                         <a href="{{ route('register') }}" class="shock-register-btn">
@@ -196,17 +225,22 @@
                     <span>{{ auth()->user()->email }}</span>
                 </div>
             </div>
+            <a href="{{ route('services') }}" class="mobile-nav-link" wire:navigate><i class="fa-solid fa-server" aria-hidden="true"></i><span>سرورهای من</span></a>
+            <a href="{{ route('invoices') }}" class="mobile-nav-link" wire:navigate><i class="fa-solid fa-receipt" aria-hidden="true"></i><span>فاکتورها و پرداخت‌ها</span></a>
+            <a href="{{ route('account.credits') }}" class="mobile-nav-link" wire:navigate><i class="fa-solid fa-wallet" aria-hidden="true"></i><span>کیف پول و شارژ</span></a>
+            <a href="{{ route('account') }}" class="mobile-nav-link" wire:navigate><i class="fa-solid fa-user-gear" aria-hidden="true"></i><span>تنظیمات حساب</span></a>
             @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
-                @php($fragcityAccountLink = $fragcityAccountNav($nav))
-                <a href="{{ $nav['url'] }}" class="mobile-nav-link"
-                   @if(isset($nav['spa']) && $nav['spa']) wire:navigate @endif>
-                    <i class="fa-solid {{ $fragcityAccountLink['icon'] }}" aria-hidden="true"></i>
-                    <span>{{ $fragcityAccountLink['label'] }}</span>
-                </a>
+                @if(mb_strtolower(trim((string) ($nav['name'] ?? ''))) === 'admin')
+                    <a href="{{ $nav['url'] }}" class="mobile-nav-link"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>پنل مدیریت</span></a>
+                @endif
             @endforeach
+            @endif
             <div class="mobile-nav-logout"><livewire:auth.logout /></div>
         @else
-            <a href="{{ route('login') }}" class="mobile-nav-link"><i class="fa-solid fa-right-to-bracket" aria-hidden="true"></i><span>ورود به حساب</span></a>
+            <a href="{{ route('login') }}" class="mobile-nav-link mobile-steam-login-link"
+               data-auth-modal-open aria-haspopup="dialog" aria-controls="fcLoginModal" aria-expanded="false">
+                <i class="fa-brands fa-steam" aria-hidden="true"></i><span>ورود با استیم</span>
+            </a>
             @if (!config('settings.registration_disabled', false))
                 <a href="{{ route('register') }}" class="mobile-nav-link"><i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>ساخت حساب کاربری</span></a>
             @endif
