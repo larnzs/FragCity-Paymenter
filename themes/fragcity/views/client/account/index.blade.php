@@ -3,7 +3,7 @@
 
     <div class="fc-portal-heading">
         <div>
-            <span class="fc-portal-kicker">FRAGCITY / ACCOUNT</span>
+            <span class="fc-portal-kicker">FRAGCITY / اطلاعات حساب</span>
             <h1>اطلاعات حساب کاربری</h1>
             <p>مشخصات و راه‌های ارتباطی حساب خود را مدیریت کن.</p>
         </div>
