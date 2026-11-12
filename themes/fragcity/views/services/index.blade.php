@@ -2,7 +2,7 @@
     <x-navigation.breadcrumb />
     <div class="fc-portal-heading">
         <div>
-            <span class="fc-portal-kicker">FRAGCITY / MY SERVICES</span>
+            <span class="fc-portal-kicker">FRAGCITY / سرویس‌های من</span>
             <h1>سرویس‌های من</h1>
             <p>وضعیت، منابع و جزئیات سرویس‌های خریداری‌شده را از این بخش مدیریت کن.</p>
         </div>
