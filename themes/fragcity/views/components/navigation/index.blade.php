@@ -234,7 +234,6 @@
                     <a href="{{ $nav['url'] }}" class="mobile-nav-link"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i><span>پنل مدیریت</span></a>
                 @endif
             @endforeach
-            @endif
             <div class="mobile-nav-logout"><livewire:auth.logout /></div>
         @else
             <a href="{{ route('login') }}" class="mobile-nav-link mobile-steam-login-link"
