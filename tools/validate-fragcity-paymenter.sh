@@ -266,6 +266,10 @@ done
 grep -Fq "\$wire.entangle('{{ \$name }}').live" themes/fragcity/views/components/form/configoption.blade.php
 grep -Fq "transform:scaleX" themes/fragcity/views/components/form/configoption.blade.php
 grep -Fq "transform-origin:right center" themes/fragcity/css/fragcity/storefront-product-pages.css
+grep -Fq "right:28px !important" themes/fragcity/css/fragcity/storefront-product-pages.css
+grep -Fq "width:calc(100% - 56px) !important" themes/fragcity/css/fragcity/storefront-product-pages.css
+grep -Fq "box-sizing:border-box" themes/fragcity/css/fragcity/storefront-product-pages.css
+
 grep -Fq "sensitiveConfigOptions." themes/fragcity/views/components/form/configoption.blade.php
 grep -Fq 'sensitiveConfigOptions[$configOption->id]' themes/fragcity/views/products/checkout.blade.php
 grep -Fq 'fc-checkout-option-card--tall' themes/fragcity/views/products/checkout.blade.php
