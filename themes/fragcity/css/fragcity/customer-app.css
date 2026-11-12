@@ -429,6 +429,15 @@ body.fc-customer-app-shell {
     background: rgba(249, 115, 22, .035);
 }
 
+/* Account and wallet forms may scroll internally on short desktop viewports. */
+.fc-customer-app-shell .fc-account-details-page .fc-account-content > section,
+.fc-customer-app-shell .fc-account-details-page .fc-account-content > aside,
+.fc-customer-app-shell .fc-credits-layout > section {
+    max-height: 100%;
+    overflow: auto;
+    scrollbar-width: thin;
+}
+
 /* Account details and wallet */
 .fc-customer-app-shell .fc-account-details-page .fc-account-content {
     display: grid;
