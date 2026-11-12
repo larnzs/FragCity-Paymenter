@@ -252,6 +252,13 @@
 .fc-product-description-section__mark { color:#6f6f76; font-size:.6rem; font-weight:900; letter-spacing:.13em; direction:ltr; }
 .fc-rich-description { color:#c6c6cb; font-size:.87rem; line-height:2; }
 .fc-product-description { padding:clamp(18px,3vw,30px); }
+/* Let product details use the full panel width; Tailwind Typography defaults to 65ch. */
+.fc-product-description.prose {
+    width:100%;
+    max-width:none !important;
+    min-width:0;
+    box-sizing:border-box;
+}
 .fc-rich-description>:first-child { margin-top:0 !important; }
 .fc-rich-description>:last-child { margin-bottom:0 !important; }
 .fc-rich-description h1,.fc-rich-description h2,.fc-rich-description h3,.fc-rich-description h4 { margin:1.7em 0 .55em; color:#f6e4d2; font-weight:900; line-height:1.65; }
