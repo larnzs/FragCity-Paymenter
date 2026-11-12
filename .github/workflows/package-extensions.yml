@@ -123,6 +123,10 @@ jobs:
           set -Eeuo pipefail
           bash tools/package-release.sh "$RUNNER_TEMP/fragcity-release" "$RELEASE_TAG"
           cp "$GITHUB_WORKSPACE/deployment/patches/paymenter-1.5.9-sensitive-config-options.patch" "$RUNNER_TEMP/fragcity-release/paymenter-1.5.9-sensitive-config-options.patch"
+          (
+            cd "$RUNNER_TEMP/fragcity-release"
+            sha256sum -b paymenter-1.5.9-sensitive-config-options.patch >> SHA256SUMS
+          )
 
       - name: Prepare Release notes
         shell: bash
@@ -170,7 +174,7 @@ jobs:
 
           ## Integrity
 
-          Verify downloaded ZIPs with SHA256SUMS. PACKAGES.txt lists the packaged components and source revision. THEME-PACKAGE.txt describes the theme overlay and installation boundary.
+          Verify every downloaded ZIP and the attached GSLT privacy patch with SHA256SUMS. PACKAGES.txt lists the packaged components and source revision. THEME-PACKAGE.txt describes the theme overlay and installation boundary.
 
           ## Compatibility and safety
 

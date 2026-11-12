@@ -631,7 +631,11 @@ class FragCityAPI extends Extension
                 ) === 0
             );
 
-            if ($definitions->count() !== 1 || (string) ($definitions->first()['type'] ?? '') !== 'text') {
+            if (
+                $definitions->count() !== 1
+                || (string) ($definitions->first()['type'] ?? '') !== 'text'
+                || ($envVariable === 'servername' && ($definitions->first()['required'] ?? false) !== true)
+            ) {
                 throw new RuntimeException('cs2_text_config_option_mapping_invalid');
             }
 

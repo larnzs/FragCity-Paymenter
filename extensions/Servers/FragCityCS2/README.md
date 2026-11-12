@@ -97,7 +97,7 @@ Attach two additional native Paymenter Config Options to the Product (both must 
 
 | Config Option | Parent Environment Variable | Type | Rules |
 | --- | --- | --- | --- |
-| Server Name / نام سرور | `servername` | Text | `nullable|string|max:64|regex:/^[A-Za-z0-9_. -]+$/` |
+| Server Name / نام سرور | `servername` | Text | `required|string|max:64|regex:/^[A-Za-z0-9_. -]+$/` |
 | Game Server Login Token (GSLT) | `STEAM_ACC` | Text | `nullable|string|max:32` |
 
 `servername` is a Pterodactyl server-create field, not an Egg variable. Paymenter's native Pterodactyl adapter reads it from the Service properties and sends it as the server's name. `STEAM_ACC` is per-Service and is passed to the Egg startup variable; it must never be stored as a Product-wide setting.

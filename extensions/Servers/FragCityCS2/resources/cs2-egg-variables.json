@@ -2275,9 +2275,9 @@
         "env_variable": "servername",
         "type": "text",
         "target": "server_name",
-        "required": false,
+        "required": true,
         "validation": [
-          "nullable",
+          "required",
           "string",
           "max:64",
           "regex:/^[A-Za-z0-9_. -]+$/"
