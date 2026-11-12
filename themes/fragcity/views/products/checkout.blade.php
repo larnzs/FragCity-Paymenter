@@ -17,7 +17,9 @@
     foreach ($product->configOptions as $configOption) {
         $optionEnv = strtoupper((string) ($configOption->env_variable ?? ''));
         $optionType = (string) $configOption->type;
-        $optionValue = $this->configOptions[$configOption->id] ?? null;
+        $optionValue = $optionEnv === 'STEAM_ACC'
+            ? ($this->sensitiveConfigOptions[$configOption->id] ?? null)
+            : ($this->configOptions[$configOption->id] ?? null);
 
         if (in_array($optionType, ['text', 'password', 'email', 'number'], true)) {
             if ($optionValue === null || $optionValue === '') continue;
