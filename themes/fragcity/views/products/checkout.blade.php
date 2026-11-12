@@ -1,6 +1,72 @@
 @php
     $availablePlans = $product->availablePlans();
     $checkoutFields = $this->getCheckoutConfig();
+
+    // Itemize every selection using Paymenter's own Price calculations.
+    // Never render the GSLT token value into the checkout summary.
+    $checkoutBreakdown = [];
+    $planPrice = $plan->price();
+    $checkoutBreakdown[] = [
+        'label' => $plan->name,
+        'value' => 'پلن پایه',
+        'price' => $planPrice->formatted->price,
+        'setup_fee' => ($planPrice->setup_fee ?? 0) > 0 ? $planPrice->formatted->setup_fee : null,
+        'kind' => 'priced',
+    ];
+
+    foreach ($product->configOptions as $configOption) {
+        $optionEnv = strtoupper((string) ($configOption->env_variable ?? ''));
+        $optionType = (string) $configOption->type;
+        $optionValue = $this->configOptions[$configOption->id] ?? null;
+
+        if (in_array($optionType, ['text', 'password', 'email', 'number'], true)) {
+            if ($optionValue === null || $optionValue === '') continue;
+            $isSecret = $optionEnv === 'STEAM_ACC';
+            $checkoutBreakdown[] = [
+                'label' => $configOption->name,
+                'value' => $isSecret ? 'ثبت شده (مخفی)' : (string) $optionValue,
+                'price' => null,
+                'setup_fee' => null,
+                'kind' => $isSecret ? 'secret' : 'text',
+            ];
+            continue;
+        }
+
+        if (!in_array($optionType, ['select', 'radio'], true) || $optionValue === null || $optionValue === '') continue;
+        $selectedChild = $configOption->children->firstWhere('id', $optionValue);
+        if (!$selectedChild) continue;
+        $selectedPrice = $selectedChild->price(
+            billing_period: $plan->billing_period,
+            billing_unit: $plan->billing_unit
+        );
+
+        $checkoutBreakdown[] = [
+            'label' => $configOption->name,
+            'value' => $selectedChild->name,
+            'price' => $selectedPrice->available ? $total->format($selectedPrice->price) : 'ناموجود',
+            'setup_fee' => $selectedPrice->available && ($selectedPrice->setup_fee ?? 0) > 0
+                ? $total->format($selectedPrice->setup_fee)
+                : null,
+            'kind' => 'priced',
+        ];
+    }
+
+    foreach ($checkoutFields as $field) {
+        $fieldName = (string) ($field['name'] ?? '');
+        $fieldValue = $this->checkoutConfig[$fieldName] ?? ($field['default'] ?? null);
+        if ($fieldName === '' || $fieldValue === null || $fieldValue === '') continue;
+        $fieldOptions = $field['options'] ?? [];
+        $fieldLabel = is_array($fieldOptions) && array_key_exists((string) $fieldValue, $fieldOptions)
+            ? $fieldOptions[(string) $fieldValue]
+            : (string) $fieldValue;
+        $checkoutBreakdown[] = [
+            'label' => (string) ($field['label'] ?? $fieldName),
+            'value' => $fieldLabel,
+            'price' => null,
+            'setup_fee' => null,
+            'kind' => 'included',
+        ];
+    }
 @endphp
 
 <div class="container fc-checkout-page" dir="rtl">
@@ -118,7 +184,7 @@
                     <div class="fc-checkout-options-grid fc-checkout-options-grid--startup">
                         @foreach ($checkoutFields as $configOption)
                             @php $configOption = (object) $configOption; @endphp
-                            <div class="fc-checkout-option-card">
+                            <div class="fc-checkout-option-card {{ in_array(strtoupper((string) $configOption->name), ['SRCDS_MAP', 'COOLDOWN'], true) ? 'fc-checkout-option-card--tall' : '' }}">
                                 <x-form.configoption :config="$configOption" :name="'checkoutConfig.' . $configOption->name">
                                     @if ($configOption->type == 'select')
                                         @foreach ($configOption->options as $configOptionValue => $configOptionValueName)
@@ -157,6 +223,25 @@
             </div>
 
             <div class="fc-checkout-summary__plan"><span>پلن فعلی</span><strong>{{ $plan->name }}</strong></div>
+
+            <section class="fc-checkout-summary__breakdown" aria-label="ریزفاکتور انتخاب‌ها">
+                <div class="fc-checkout-summary__breakdown-heading"><i class="fa-solid fa-list-check" aria-hidden="true"></i><span>ریزفاکتور انتخاب‌ها</span></div>
+                @foreach ($checkoutBreakdown as $line)
+                    <div class="fc-checkout-summary__breakdown-line">
+                        <div class="fc-checkout-summary__breakdown-copy"><strong>{{ $line['label'] }}</strong><small>{{ $line['value'] }}</small></div>
+                        <div class="fc-checkout-summary__breakdown-price">
+                            @if ($line['price'] !== null)
+                                <strong>{{ $line['price'] }}</strong>
+                            @elseif ($line['kind'] === 'secret')
+                                <span class="fc-checkout-summary__included">محرمانه</span>
+                            @else
+                                <span class="fc-checkout-summary__included">بدون هزینه جداگانه</span>
+                            @endif
+                            @if ($line['setup_fee'])<small>راه‌اندازی: {{ $line['setup_fee'] }}</small>@endif
+                        </div>
+                    </div>
+                @endforeach
+            </section>
 
             <div class="fc-checkout-summary__lines">
                 <div class="fc-checkout-summary__line"><span>{{ __('invoices.subtotal') }}</span><strong>{{ $total->format($total->subtotal) }}</strong></div>
