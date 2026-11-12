@@ -80,6 +80,17 @@
         <i class="fa-solid fa-chevron-left" aria-hidden="true"></i><span aria-current="page">پیکربندی سفارش</span>
     </nav>
 
+    @if ($errors->any())
+        <div class="fc-checkout-validation-errors" role="alert" aria-live="polite">
+            <strong>برای ادامه سفارش، موارد زیر را اصلاح کن:</strong>
+            <ul>
+                @foreach ($errors->all() as $error)
+                    <li>{{ $error }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <header class="fc-checkout-hero">
         <div class="fc-checkout-hero__identity">
             <span class="fc-checkout-hero__icon"><i class="fa-solid fa-sliders" aria-hidden="true"></i></span>
