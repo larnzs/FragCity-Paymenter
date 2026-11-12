@@ -4346,3 +4346,83 @@ body { max-width: 100%; overflow-x: clip; }
         transition: none !important;
     }
 }
+
+
+/* Paymenter account menu — match the FragCity main-site profile control. */
+#shockUserDropdown .frag-user-trigger {
+    min-height: 46px;
+    gap: 10px;
+    padding: 5px 12px 5px 9px;
+    border-radius: 999px;
+    direction: rtl;
+    font-family: inherit;
+}
+#shockUserDropdown .frag-user-trigger .frag-avatar {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+#shockUserDropdown .frag-user-trigger .frag-username {
+    max-width: 140px;
+    font-size: .86rem;
+    font-weight: 800;
+}
+#shockUserDropdown .frag-drop-account-label {
+    color: #A3A3A3;
+    font-size: .62rem;
+    font-weight: 750;
+    line-height: 1.4;
+}
+#shockUserDropdown .frag-drop-actions .frag-drop-link {
+    justify-content: flex-start;
+    min-height: 40px;
+    padding: 8px 11px;
+    gap: 9px;
+    border: 1px solid rgba(255, 255, 255, .055);
+    border-radius: 10px;
+    font-size: .78rem;
+    text-align: right;
+}
+#shockUserDropdown .frag-drop-actions .frag-drop-link > i {
+    color: #F97316;
+}
+#shockUserDropdown .frag-drop-actions .frag-drop-link:hover {
+    border-color: rgba(249, 115, 22, .22);
+}
+#shockUserDropdown .frag-drop-logout {
+    padding: 4px 2px 0;
+}
+#shockUserDropdown .frag-drop-logout button.frag-drop-link.logout {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    min-height: 42px;
+    padding: 9px 12px;
+    border: 1px solid rgba(248, 113, 113, .12);
+    border-radius: 10px;
+    color: #FCA5A5;
+    background: rgba(248, 113, 113, .045);
+    font-family: inherit;
+    font-size: .82rem;
+    font-weight: 750;
+    text-align: right;
+}
+#shockUserDropdown .frag-drop-logout button.frag-drop-link.logout > i {
+    width: 20px;
+    color: #FB7185;
+    text-align: center;
+}
+#shockUserDropdown .frag-drop-logout button.frag-drop-link.logout:hover {
+    border-color: rgba(248, 113, 113, .28);
+    color: #FFE4E6;
+    background: rgba(248, 113, 113, .10);
+}
+
+@media (max-width: 700px) {
+    #shockUserDropdown .frag-user-trigger .frag-username {
+        display: none;
+    }
+}
