@@ -40,19 +40,14 @@
                         selectedOption: 0,
                         selectedName: '',
                         selectedPrice: '',
-                        backendOption: $wire.entangle('{{ $name }}').live,
+                        
                         progressOption: '0%',
                         init() {
                             const initialValue = this.$wire.get('{{ $name }}');
                             const foundIndex = this.options.findIndex(option => option.value == initialValue);
                             if (foundIndex !== -1) this.selectedOption = foundIndex;
                             this.updateSliderVisuals();
-                            $watch('selectedOption', Alpine.debounce(() => {
-                                const selected = this.options[this.selectedOption];
-                                if (!selected) return;
-                                this.backendOption = selected.value;
-                                this.updateSliderVisuals();
-                            }, 180));
+                            
                         },
                         updateSliderVisuals() {
                             const lastIndex = Math.max(1, this.options.length - 1);
@@ -61,13 +56,20 @@
                             this.selectedName = selected ? selected.label : '';
                             this.selectedPrice = selected ? selected.price : '';
                         },
-                        setOptionValue(index) {
+                        setOptionValue(index, commit = false) {
                             const parsed = Number.parseInt(index, 10);
                             if (!Number.isInteger(parsed)) return;
                             this.selectedOption = Math.max(0, Math.min(this.options.length - 1, parsed));
                             this.updateSliderVisuals();
+                            if (commit) this.commitOption();
+                        },
+                        commitOption() {
                             const selected = this.options[this.selectedOption];
-                            if (selected) this.backendOption = selected.value;
+                            if (!selected) return;
+                            const currentValue = this.$wire.get('{{ $name }}');
+                            if (String(currentValue ?? '') !== String(selected.value)) {
+                                this.$wire.set('{{ $name }}', selected.value);
+                            }
                         }
                     }">
                     <div class="fc-resource-slider-control__heading">
@@ -83,7 +85,7 @@
                         <div class="fc-resource-slider-control__progress" :style="'width:' + progressOption" aria-hidden="true"></div>
                         <input class="fc-resource-slider-control__input" type="range" min="0"
                             max="{{ max(0, $config->children->count() - 1) }}" step="1"
-                            x-model.number="selectedOption" @input="setOptionValue($event.target.value)"
+                            :value="selectedOption" @input="setOptionValue($event.target.value)" @change="commitOption()"
                             id="{{ $name }}" name="{{ $name }}" aria-label="{{ $config->label ?? $config->name }}">
                     </div>
 
@@ -91,7 +93,7 @@
                         @foreach ($resourceSliderStopIndexes as $stopIndex)
                             @php $child = $resourceChildren[$stopIndex]; @endphp
                             <button type="button" class="fc-resource-slider-control__stop"
-                                @click="setOptionValue({{ $stopIndex }})"
+                                @click="setOptionValue({{ $stopIndex }}, true)"
                                 :class="{ 'is-active': selectedOption === {{ $stopIndex }} }"
                                 :aria-pressed="selectedOption === {{ $stopIndex }} ? 'true' : 'false'">
                                 <span>{{ $child->name }}</span>
@@ -123,19 +125,14 @@
                     selectedOption: 0,
                     selectedName: '',
                     selectedPrice: '',
-                    backendOption: $wire.entangle('{{ $name }}').live,
+                    
                     progressOption: '0%',
                     init() {
                         const initialValue = this.$wire.get('{{ $name }}');
                         const foundIndex = this.options.findIndex(option => option.value == initialValue);
                         if (foundIndex !== -1) this.selectedOption = foundIndex;
                         this.updateSliderVisuals();
-                        $watch('selectedOption', Alpine.debounce(() => {
-                            const selected = this.options[this.selectedOption];
-                            if (!selected) return;
-                            this.backendOption = selected.value;
-                            this.updateSliderVisuals();
-                        }, 180));
+                        
                     },
                     updateSliderVisuals() {
                         const lastIndex = Math.max(1, this.options.length - 1);
@@ -144,14 +141,21 @@
                         this.selectedName = selected ? selected.label : '';
                         this.selectedPrice = selected ? selected.price : '';
                     },
-                    setOptionValue(index) {
-                        const parsed = Number.parseInt(index, 10);
-                        if (!Number.isInteger(parsed)) return;
-                        this.selectedOption = Math.max(0, Math.min(this.options.length - 1, parsed));
-                        this.updateSliderVisuals();
-                        const selected = this.options[this.selectedOption];
-                        if (selected) this.backendOption = selected.value;
-                    }
+                    setOptionValue(index, commit = false) {
+                            const parsed = Number.parseInt(index, 10);
+                            if (!Number.isInteger(parsed)) return;
+                            this.selectedOption = Math.max(0, Math.min(this.options.length - 1, parsed));
+                            this.updateSliderVisuals();
+                            if (commit) this.commitOption();
+                        },
+                        commitOption() {
+                            const selected = this.options[this.selectedOption];
+                            if (!selected) return;
+                            const currentValue = this.$wire.get('{{ $name }}');
+                            if (String(currentValue ?? '') !== String(selected.value)) {
+                                this.$wire.set('{{ $name }}', selected.value);
+                            }
+                        }
                 }">
                 <div class="fc-resource-slider-control__heading">
                     <label for="{{ $name }}">{{ $config->label ?? $config->name }}</label>
@@ -162,13 +166,13 @@
                     <div class="fc-resource-slider-control__progress" :style="'width:' + progressOption" aria-hidden="true"></div>
                     <input class="fc-resource-slider-control__input" type="range" min="0"
                         max="{{ max(0, $config->children->count() - 1) }}" step="1"
-                        x-model.number="selectedOption" @input="setOptionValue($event.target.value)"
+                        :value="selectedOption" @input="setOptionValue($event.target.value)" @change="commitOption()"
                         id="{{ $name }}" name="{{ $name }}" aria-label="{{ $config->label ?? $config->name }}">
                 </div>
                 <div class="fc-resource-slider-control__stops">
                     @foreach ($resourceSliderStopIndexes as $stopIndex)
                         @php $child = $resourceChildren[$stopIndex]; @endphp
-                        <button type="button" class="fc-resource-slider-control__stop" @click="setOptionValue({{ $stopIndex }})"
+                        <button type="button" class="fc-resource-slider-control__stop" @click="setOptionValue({{ $stopIndex }}, true)"
                             :class="{ 'is-active': selectedOption === {{ $stopIndex }} }"
                             :aria-pressed="selectedOption === {{ $stopIndex }} ? 'true' : 'false'">
                             <span>{{ $child->name }}</span>
@@ -187,9 +191,12 @@
         @case('number')
         @case('color')
         @case('file')
-            <x-form.input name="{{ $name }}" :type="$config->type" :label="__($config->label ?? $config->name)"
-                :placeholder="$config->default ?? ''" :required="$config->required ?? false"
-                wire:model.live="{{ $name }}" :placeholder="$config->placeholder ?? ''" />
+            <x-form.input name="{{ $name }}"
+                :type="strtoupper((string) ($config->env_variable ?? '')) === 'STEAM_ACC' ? 'password' : $config->type"
+                :label="__($config->label ?? $config->name)"
+                :required="$config->required ?? false"
+                wire:model.blur="{{ $name }}"
+                :placeholder="$config->placeholder ?? ($config->default ?? '')" />
         @break
 
         @case('checkbox')
