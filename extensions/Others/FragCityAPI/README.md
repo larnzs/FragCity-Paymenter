@@ -71,7 +71,7 @@ The CS2 Product must contain both native Paymenter Config Options below. FragCit
 
 | Config Option | Parent Environment Variable | Type | Validation / target |
 | --- | --- | --- | --- |
-| Server Name / نام سرور | `servername` | Text | Optional; max 64; ASCII letters, numbers, spaces, `_`, `-`, `.`; sent as Pterodactyl server name |
+| Server Name / نام سرور | `servername` | Text | Required; max 64; ASCII letters, numbers, spaces, `_`, `-`, `.`; sent as Pterodactyl server name |
 | Game Server Login Token (GSLT) | `STEAM_ACC` | Text | Optional; `nullable|string|max:32`; sent only to the CS2 Egg startup variable |
 
 The website bridge payload keeps the server name at `server_name` and sends the optional token as `egg.STEAM_ACC`. The API validates both values against the Egg/Pterodactyl manifest and stores them on the newly created Paymenter Service as `servername` and `STEAM_ACC` properties respectively. GSLT is never included in the catalog response, quote response, cart labels, invoice descriptions or diagnostic logs.
