@@ -1714,3 +1714,215 @@
         padding: 11px;
     }
 }
+
+
+/* FragCity cart: clear separation from the sticky header and a balanced two-column order layout. */
+.fc-cart-page {
+    margin-top:0 !important;
+    padding-top:calc(var(--fc-header-overlap-height, 70px) + 22px) !important;
+}
+.fc-cart-page .fc-cart-hero { align-items:center; margin:0 0 22px; }
+.fc-cart-hero__count {
+    display:inline-flex; align-items:center; gap:9px; flex:0 0 auto;
+    padding:10px 14px; border:1px solid rgba(249,115,22,.2); border-radius:999px;
+    color:#ffb477; background:rgba(249,115,22,.07); font-size:.76rem; font-weight:850;
+}
+.fc-cart-layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(300px,360px); align-items:start; gap:22px; }
+.fc-cart-section-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; margin-bottom:13px; padding:0 3px; }
+.fc-cart-section-heading h2 { margin:4px 0 0; color:#f4f4f4; font-size:1.03rem; font-weight:900; }
+.fc-cart-section-heading > span { color:#a0a0a0; font-size:.72rem; }
+.fc-cart-page .fc-cart-items { display:grid; gap:13px; min-width:0; }
+.fc-cart-page .fc-cart-item {
+    display:flex; align-items:flex-start; justify-content:space-between; gap:22px;
+    min-width:0; padding:20px; border:1px solid rgba(255,255,255,.075); border-radius:16px;
+    background:linear-gradient(135deg,#1a1a1a,#111) !important;
+    transition:border-color .18s ease,transform .18s ease,background .18s ease;
+}
+.fc-cart-page .fc-cart-item:hover { transform:translateY(-1px); border-color:rgba(249,115,22,.27); }
+.fc-cart-item__main { display:flex; align-items:flex-start; gap:14px; min-width:0; flex:1; }
+.fc-cart-item__icon { display:grid; width:43px; height:43px; flex:0 0 43px; place-items:center; border:1px solid rgba(249,115,22,.2); border-radius:12px; color:#ffb477; background:rgba(249,115,22,.08); }
+.fc-cart-item__content { display:grid; min-width:0; gap:5px; }
+.fc-cart-item__eyebrow { color:#fb923c; font-size:.61rem; font-weight:900; letter-spacing:.08em; }
+.fc-cart-page .fc-cart-item h3 { margin:0; color:#f5f5f5; font-size:1.03rem; font-weight:900; }
+.fc-cart-item__options { display:flex; flex-wrap:wrap; gap:7px; margin-top:7px; }
+.fc-cart-option { display:grid; gap:3px; min-width:86px; max-width:100%; padding:7px 9px; border:1px solid rgba(255,255,255,.06); border-radius:9px; background:rgba(255,255,255,.025); }
+.fc-cart-option small { color:#8d8d8d; font-size:.61rem; }
+.fc-cart-option strong { color:#dcdcdc; font-size:.68rem; font-weight:750; overflow-wrap:anywhere; }
+.fc-cart-item__side { display:grid; justify-items:end; gap:14px; flex:0 0 auto; }
+.fc-cart-item__price { display:grid; justify-items:end; gap:4px; }
+.fc-cart-item__price small { color:#939393; font-size:.65rem; }
+.fc-cart-item__price strong { color:#ffb477; font-size:1rem; font-weight:950; font-variant-numeric:tabular-nums; }
+.fc-cart-item__price span { color:#777; font-size:.62rem; }
+.fc-cart-item__actions { display:flex; align-items:center; justify-content:flex-end; flex-wrap:wrap; gap:8px; }
+.fc-cart-quantity { display:flex; align-items:center; gap:6px; }
+.fc-cart-quantity > span { min-width:32px; text-align:center; color:#f1f1f1; font-weight:850; }
+.fc-cart-edit,.fc-cart-remove {
+    display:inline-flex; min-height:37px; align-items:center; justify-content:center; gap:7px;
+    padding:8px 11px; border:1px solid rgba(255,255,255,.09); border-radius:9px;
+    color:#e5e5e5 !important; background:rgba(255,255,255,.035); font-size:.69rem; font-weight:850;
+    transition:background .16s ease,border-color .16s ease,transform .16s ease;
+}
+.fc-cart-edit:hover { border-color:rgba(249,115,22,.3); background:rgba(249,115,22,.08); }
+.fc-cart-remove { color:#f0a0a0 !important; }
+.fc-cart-remove:hover { border-color:rgba(239,68,68,.28); background:rgba(239,68,68,.075); }
+.fc-cart-page .fc-cart-summary {
+    position:sticky; top:96px; display:grid; gap:16px; min-width:0;
+    padding:21px !important; border:1px solid rgba(249,115,22,.16) !important;
+    border-radius:17px !important; background:linear-gradient(145deg,#1a1a1a,#101010) !important;
+    box-shadow:0 20px 48px rgba(0,0,0,.28);
+}
+.fc-cart-summary__heading { display:flex; align-items:center; gap:11px; padding-bottom:14px; border-bottom:1px solid rgba(255,255,255,.075); }
+.fc-cart-summary__heading > span { display:grid; width:39px; height:39px; place-items:center; border-radius:11px; color:#ffb477; background:rgba(249,115,22,.1); }
+.fc-cart-summary__heading small { color:#fb923c; font-size:.58rem; font-weight:900; letter-spacing:.1em; }
+.fc-cart-summary__heading h2 { margin:3px 0 0; color:#f5f5f5; font-size:.95rem; font-weight:900; }
+.fc-cart-coupon { display:grid; gap:7px; }
+.fc-cart-coupon > label { color:#aaa; font-size:.7rem; font-weight:800; }
+.fc-cart-coupon__entry { display:flex; align-items:end; gap:8px; }
+.fc-cart-coupon__entry > *:first-child { flex:1; min-width:0; }
+.fc-cart-coupon__applied { display:flex; align-items:center; justify-content:space-between; gap:10px; padding:10px; border:1px solid rgba(74,222,128,.18); border-radius:10px; background:rgba(34,197,94,.045); }
+.fc-cart-coupon__applied > span { color:#9ae6b4; font-size:.75rem; font-weight:850; }
+.fc-cart-summary__lines { display:grid; gap:11px; padding:2px 0; }
+.fc-cart-summary__lines > div { display:flex; justify-content:space-between; align-items:center; gap:12px; color:#a8a8a8; font-size:.74rem; }
+.fc-cart-summary__lines strong { color:#e8e8e8; font-size:.76rem; font-weight:850; text-align:left; white-space:nowrap; }
+.fc-cart-summary__total { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:14px 0; border-top:1px solid rgba(255,255,255,.09); border-bottom:1px solid rgba(255,255,255,.09); }
+.fc-cart-summary__total span { color:#d0d0d0; font-size:.78rem; font-weight:850; }
+.fc-cart-summary__total strong { color:#ffb477; font-size:1.12rem; font-weight:950; white-space:nowrap; }
+.fc-cart-tos { color:#aaa; font-size:.72rem; line-height:1.8; }
+.fc-cart-checkout { width:100% !important; min-height:47px; border-radius:11px !important; font-weight:900 !important; }
+.fc-cart-secure { display:flex; align-items:flex-start; gap:8px; margin:0; color:#898989; font-size:.65rem; line-height:1.8; }
+.fc-cart-secure i { margin-top:3px; color:#fb923c; }
+.fc-cart-empty { display:grid; justify-items:center; gap:10px; padding:48px 20px; border:1px dashed rgba(249,115,22,.23); border-radius:18px; background:rgba(249,115,22,.035); text-align:center; }
+.fc-cart-empty > span { display:grid; width:55px; height:55px; place-items:center; border-radius:15px; color:#ffb477; background:rgba(249,115,22,.1); font-size:1.2rem; }
+.fc-cart-empty h2 { margin:0; color:#eee; font-size:1.05rem; font-weight:900; }
+.fc-cart-empty p { margin:0; color:#999; font-size:.75rem; }
+.fc-cart-empty a { display:inline-flex; align-items:center; gap:9px; margin-top:7px; padding:10px 15px; border:1px solid rgba(249,115,22,.25); border-radius:10px; color:#ffb477 !important; background:rgba(249,115,22,.08); font-size:.75rem; font-weight:850; }
+
+/* Invoice paper: the live template uses fc-invoice-paper (not the legacy fc-invoice-sheet). */
+.fc-invoice-detail-page .fc-invoice-paper {
+    overflow:hidden; color:#ededed !important; border:1px solid rgba(249,115,22,.18) !important;
+    border-radius:19px !important; background:linear-gradient(145deg,#191919 0%,#111 72%,#15120f 100%) !important;
+    box-shadow:0 22px 60px rgba(0,0,0,.34) !important;
+}
+.fc-invoice-detail-page .fc-invoice-paper :is(h1,h2,h3,h4,strong,th) { color:#f4f4f4; }
+.fc-invoice-detail-page .fc-invoice-paper :is(p,span,td,dt,dd,small) { color:inherit; }
+.fc-invoice-detail-page .fc-invoice-paper__rule { border-color:rgba(255,255,255,.09) !important; }
+.fc-invoice-detail-page .fc-invoice-table { color:#ddd; background:transparent !important; }
+.fc-invoice-detail-page .fc-invoice-table thead { background:rgba(255,255,255,.035) !important; }
+.fc-invoice-detail-page .fc-invoice-table th { color:#ffbd8b !important; }
+.fc-invoice-detail-page .fc-invoice-table td { border-color:rgba(255,255,255,.07) !important; }
+.fc-invoice-detail-page .fc-invoice-table tbody tr:nth-child(even) { background:rgba(255,255,255,.022) !important; }
+.fc-invoice-detail-page .fc-invoice-summary,
+.fc-invoice-detail-page .fc-invoice-state,
+.fc-invoice-detail-page .fc-invoice-party,
+.fc-invoice-detail-page .fc-invoice-meta > div,
+.fc-invoice-detail-page .fc-invoice-summary__note {
+    border-color:rgba(255,255,255,.075) !important; background:rgba(255,255,255,.025) !important;
+}
+
+/* Payment modal: clear section hierarchy, quiet selection cards and a single strong CTA. */
+.fc-modal-panel--payment {
+    max-width:min(100%,680px) !important; border:1px solid rgba(249,115,22,.22) !important;
+    border-radius:20px !important; color:#eee !important;
+    background:linear-gradient(150deg,#1b1b1b,#101010) !important;
+    box-shadow:0 28px 80px rgba(0,0,0,.58) !important;
+}
+.fc-modal-panel--payment :is(h1,h2,h3,h4) { color:#f5f5f5; }
+.fc-modal-panel--payment .fc-payment-modal__amount {
+    display:inline-flex; align-items:center; padding:8px 12px; border:1px solid rgba(249,115,22,.22);
+    border-radius:10px; color:#ffc18e; background:rgba(249,115,22,.085); font-size:.78rem; font-weight:900;
+}
+.fc-modal-panel--payment .fc-payment-flow { gap:14px; }
+.fc-modal-panel--payment .fc-payment-flow__intro { padding:16px 17px; border-radius:14px; }
+.fc-modal-panel--payment .fc-payment-option {
+    min-height:76px; padding:14px 15px !important; border:1px solid rgba(255,255,255,.08) !important;
+    border-radius:13px !important; background:rgba(255,255,255,.025) !important;
+    transition:border-color .16s ease,background .16s ease,transform .16s ease,box-shadow .16s ease;
+}
+.fc-modal-panel--payment .fc-payment-option:hover { transform:translateY(-1px); border-color:rgba(249,115,22,.25) !important; background:rgba(249,115,22,.045) !important; }
+.fc-modal-panel--payment .fc-payment-option--selected {
+    border-color:rgba(249,115,22,.55) !important; background:linear-gradient(110deg,rgba(249,115,22,.12),rgba(255,255,255,.025)) !important;
+    box-shadow:inset 0 0 0 1px rgba(249,115,22,.12),0 8px 24px rgba(0,0,0,.16) !important;
+}
+.fc-modal-panel--payment .fc-payment-option-group > h3 { margin-bottom:9px !important; color:#eee; font-size:.82rem; font-weight:900; }
+.fc-modal-panel--payment .fc-payment-one-time__toggle { min-height:48px; padding:12px 14px !important; color:#ddd; background:rgba(255,255,255,.035) !important; }
+.fc-modal-panel--payment .fc-payment-flow__submit button { min-height:49px; border-radius:12px; font-weight:900; }
+.fc-modal-panel--payment .fc-payment-provider-card { margin-top:12px; padding:16px; border:1px solid rgba(255,255,255,.075); border-radius:14px; background:rgba(255,255,255,.025); }
+
+/* Ticket composer: editor becomes the main workspace, not a plain textarea. */
+.fc-ticket-create-page { padding-top:calc(var(--fc-header-overlap-height,70px) + 22px) !important; }
+.fc-ticket-create-panel--premium { display:grid; gap:18px; }
+.fc-ticket-create-panel__intro { display:flex; align-items:center; gap:13px; padding:0 0 15px; border-bottom:1px solid rgba(255,255,255,.08); }
+.fc-ticket-create-panel__intro > span { display:grid; width:44px; height:44px; flex:0 0 44px; place-items:center; border:1px solid rgba(249,115,22,.2); border-radius:13px; color:#ffb477; background:rgba(249,115,22,.09); }
+.fc-ticket-create-panel__intro strong { color:#f3f3f3; font-size:.92rem; font-weight:900; }
+.fc-ticket-create-panel__intro p { margin:4px 0 0; color:#999; font-size:.72rem; line-height:1.8; }
+.fc-ticket-fields-grid { gap:15px !important; }
+.fc-ticket-message-card { margin-top:3px; padding:16px; border:1px solid rgba(255,255,255,.07); border-radius:15px; background:rgba(0,0,0,.15); }
+.fc-ticket-message-card__heading { display:flex; align-items:center; gap:10px; margin-bottom:14px; }
+.fc-ticket-message-card__heading > span { display:grid; width:35px; height:35px; place-items:center; border-radius:10px; color:#ffb477; background:rgba(249,115,22,.09); }
+.fc-ticket-message-card__heading div { display:grid; gap:3px; }
+.fc-ticket-message-card__heading strong { color:#eee; font-size:.8rem; font-weight:900; }
+.fc-ticket-message-card__heading small { color:#8e8e8e; font-size:.66rem; }
+.fc-ticket-message-editor .EasyMDEContainer { overflow:hidden; border:1px solid rgba(255,255,255,.11) !important; border-radius:13px !important; background:#0c0c0c !important; }
+.fc-ticket-create-page .EasyMDEContainer .editor-toolbar { display:flex; flex-wrap:wrap; gap:3px; padding:8px; border:0 !important; border-bottom:1px solid rgba(255,255,255,.09) !important; background:#151515 !important; opacity:1; }
+.fc-ticket-create-page .EasyMDEContainer .editor-toolbar button { width:31px; height:30px; border:1px solid transparent !important; border-radius:7px; color:#c7c7c7 !important; }
+.fc-ticket-create-page .EasyMDEContainer .editor-toolbar button:hover,
+.fc-ticket-create-page .EasyMDEContainer .editor-toolbar button.active { border-color:rgba(249,115,22,.24) !important; color:#ffb477 !important; background:rgba(249,115,22,.08) !important; }
+.fc-ticket-create-page .EasyMDEContainer .CodeMirror { min-height:250px; padding:10px 12px; border:0 !important; border-radius:0 0 12px 12px !important; color:#e9e9e9 !important; background:#0c0c0c !important; font-size:.82rem; line-height:1.9; }
+.fc-ticket-create-page .EasyMDEContainer .CodeMirror-cursor { border-left:1px solid #ffb477; }
+.fc-ticket-create-page .EasyMDEContainer .editor-preview,
+.fc-ticket-create-page .EasyMDEContainer .editor-preview-side { color:#ddd; background:#101010; }
+.fc-ticket-create-page .fc-ticket-message-card #attachments + div { margin-top:12px; }
+
+/* Service upgrade: product choices and live quote share the same portal language. */
+.fc-service-upgrade-page { padding-top:calc(var(--fc-header-overlap-height,70px) + 22px) !important; }
+.fc-upgrade-hero { align-items:center !important; }
+.fc-upgrade-hero p { margin:7px 0 0; color:#999; font-size:.76rem; }
+.fc-upgrade-step-heading { margin:0 0 17px; padding:14px 17px; border:1px solid rgba(255,255,255,.075); border-radius:13px; background:rgba(255,255,255,.025); }
+.fc-upgrade-step-heading h2 { margin:4px 0 0 !important; color:#f2f2f2; font-size:.94rem; font-weight:900; }
+.fc-upgrade-layout { grid-template-columns:minmax(0,1fr) minmax(290px,355px) !important; gap:20px !important; align-items:start; }
+.fc-upgrade-choices { grid-template-columns:repeat(2,minmax(0,1fr)); gap:13px !important; }
+.fc-upgrade-product-card {
+    position:relative; min-height:220px; height:100%; gap:12px; padding:19px !important;
+    border:1px solid rgba(255,255,255,.085) !important; border-radius:15px !important;
+    color:#eee !important; background:linear-gradient(145deg,#191919,#111) !important;
+    transition:transform .18s ease,border-color .18s ease,background .18s ease,box-shadow .18s ease;
+}
+.fc-upgrade-product-card:hover { transform:translateY(-2px); border-color:rgba(249,115,22,.28) !important; }
+.fc-upgrade-product-card :is(h2,h3,p) { color:#eee; }
+.fc-upgrade-product-card article { color:#999; font-size:.72rem; line-height:1.8; }
+.fc-upgrade-product-card article :is(p,li) { color:#999 !important; }
+.fc-service-upgrade-page .peer:checked + .fc-upgrade-product-card {
+    border-color:rgba(249,115,22,.6) !important; background:linear-gradient(145deg,rgba(249,115,22,.12),#141414 65%) !important;
+    box-shadow:inset 0 0 0 1px rgba(249,115,22,.12),0 14px 32px rgba(0,0,0,.2);
+}
+.fc-upgrade-config-form { padding:20px; border:1px solid rgba(255,255,255,.075); border-radius:16px; background:linear-gradient(145deg,#191919,#111); }
+.fc-upgrade-config-form > .fc-checkout-field { padding:13px; border:1px solid rgba(255,255,255,.06); border-radius:12px; background:rgba(0,0,0,.16); }
+.fc-upgrade-summary {
+    position:sticky; top:96px; display:grid; gap:14px; padding:20px !important;
+    border:1px solid rgba(249,115,22,.17) !important; border-radius:16px !important;
+    background:linear-gradient(145deg,#1b1b1b,#101010) !important; box-shadow:var(--fc-portal-shadow);
+}
+.fc-upgrade-summary h4 { margin:0 0 3px; padding-bottom:12px; border-bottom:1px solid rgba(255,255,255,.08); color:#f4f4f4; font-size:.95rem; font-weight:900; }
+.fc-upgrade-summary > div { justify-content:space-between; gap:12px; margin:0; padding:5px 0; color:#aaa; font-size:.73rem; }
+.fc-upgrade-summary > div span:last-child { color:#eee; text-align:left; font-weight:800; }
+.fc-upgrade-summary button { width:100%; min-height:46px; border-radius:11px; font-weight:900; }
+@media (max-width:900px) {
+    .fc-cart-layout,.fc-upgrade-layout { grid-template-columns:1fr !important; }
+    .fc-cart-page .fc-cart-summary,.fc-upgrade-summary { position:static; }
+    .fc-cart-page .fc-cart-summary { grid-row:1; }
+}
+@media (max-width:650px) {
+    .fc-cart-page { padding-top:calc(var(--fc-header-overlap-height,70px) + 16px) !important; }
+    .fc-cart-page .fc-cart-item { flex-direction:column; gap:15px; }
+    .fc-cart-item__main { width:100%; }
+    .fc-cart-item__side { width:100%; grid-template-columns:1fr; justify-items:stretch; }
+    .fc-cart-item__price { justify-items:start; }
+    .fc-cart-item__actions { justify-content:flex-start; }
+    .fc-cart-coupon__entry { align-items:stretch; }
+    .fc-ticket-fields-grid { grid-template-columns:1fr !important; }
+    .fc-ticket-fields-grid > * { grid-column:span 1 !important; }
+    .fc-ticket-message-card { padding:12px; }
+    .fc-ticket-create-page .EasyMDEContainer .CodeMirror { min-height:220px; }
+    .fc-upgrade-choices { grid-template-columns:1fr; }
+    .fc-upgrade-product-card { min-height:unset; }
+}
