@@ -386,7 +386,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.17.0',
+            'version' => '1.18.1',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
