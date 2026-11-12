@@ -3,7 +3,7 @@
 
     <div class="fc-portal-heading">
         <div>
-            <span class="fc-portal-kicker">FRAGCITY / WALLET</span>
+            <span class="fc-portal-kicker">FRAGCITY / کیف پول</span>
             <h1>کیف پول</h1>
             <p>موجودی اعتبار و افزایش موجودی حساب Billing را مدیریت کن.</p>
         </div>
