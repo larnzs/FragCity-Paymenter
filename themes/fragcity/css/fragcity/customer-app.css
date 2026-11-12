@@ -9,54 +9,57 @@
     --fc-customer-content-gutter: clamp(18px, 2.2vw, 32px);
 }
 
-/* The global header intentionally overlaps content on storefront pages.
-   Customer workspace needs its real 72px flow height, otherwise a dead
-   black strip remains at the bottom of the viewport. */
-body.fc-customer-app-shell > .shock-header {
-    flex: 0 0 auto;
-    margin-bottom: 0 !important;
-}
-
-/* Fixed app frame below the shared header. */
+/* Customer pages follow normal document flow just like the storefront.
+   This avoids the fixed-height black strip and prevents long content from
+   being clipped underneath the viewport. */
 body.fc-customer-app-shell {
-    display: flex;
+    display: block;
     width: 100%;
-    height: 100dvh;
+    height: auto;
     min-height: 100dvh;
-    max-height: 100dvh;
-    flex-direction: column;
-    overflow: hidden;
-    overscroll-behavior: none;
+    max-height: none;
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: auto;
     background: #0d0d0d;
 }
 
+/* The shared header has a global -72px overlap on the storefront.
+   Cancel it throughout the authenticated customer workspace. */
+.fc-customer-app-shell .shock-header {
+    position: sticky !important;
+    top: 0;
+    z-index: 1050;
+    margin-bottom: 0 !important;
+}
+
+/* Let each layout wrapper grow with its content instead of imposing a
+   viewport-sized clipping box. */
 .fc-customer-app-shell > div.w-full.flex.flex-col.flex-grow {
-    display: flex;
+    display: block;
     width: 100%;
-    height: calc(100dvh - var(--fc-customer-header-height));
-    min-height: 0;
-    max-height: calc(100dvh - var(--fc-customer-header-height));
-    flex: 1 1 auto;
-    flex-direction: column;
-    overflow: hidden;
+    height: auto;
+    min-height: calc(100dvh - var(--fc-customer-header-height));
+    max-height: none;
+    overflow: visible;
 }
 
 .fc-customer-app-shell > div.w-full.flex.flex-col.flex-grow > div.w-full.flex.flex-grow.min-w-0 {
     display: flex;
     width: 100%;
-    height: 100%;
-    min-height: 0;
+    height: auto;
+    min-height: calc(100dvh - var(--fc-customer-header-height));
     flex: 1 1 auto;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .fc-customer-app-shell > div.w-full.flex.flex-col.flex-grow > div.w-full.flex.flex-grow.min-w-0 > div.flex.flex-col.flex-grow.min-w-0 {
     display: flex;
-    height: 100%;
-    min-height: 0;
+    height: auto;
+    min-height: calc(100dvh - var(--fc-customer-header-height));
     flex: 1 1 auto;
     flex-direction: column;
-    overflow: hidden;
+    overflow: visible;
 }
 
 /* Keep the native customer sidebar anchored below, not behind, the shared header. */
@@ -83,13 +86,10 @@ body.fc-customer-app-shell {
     width: 100%;
     height: auto;
     min-width: 0;
-    min-height: 0;
-    flex: 1 1 0%;
-    overflow-x: hidden;
-    overflow-y: auto;
-    overscroll-behavior: contain;
-    scrollbar-gutter: stable;
-    padding: 30px 0 24px;
+    min-height: calc(100dvh - var(--fc-customer-header-height));
+    flex: 1 1 auto;
+    overflow: visible;
+    padding: clamp(32px, 3.2vw, 42px) 0 60px;
     background:
         radial-gradient(ellipse at 50% 0, rgba(249, 115, 22, .035), transparent 52%),
         #0d0d0d;
@@ -198,6 +198,44 @@ body.fc-customer-app-shell {
    panels, type scale, gaps or card dimensions from customer-portal.css. */
 .fc-customer-app-shell .fc-dashboard-page {
     width: 100%;
+}
+
+.fc-customer-app-shell .fc-dashboard-store-link {
+    display: inline-flex;
+    min-height: 45px;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    margin-top: 17px;
+    padding: 10px 17px;
+    border: 1px solid rgba(249, 115, 22, .58);
+    border-radius: 11px;
+    color: #17100b !important;
+    background: linear-gradient(115deg, #ffb477, #f97316);
+    box-shadow: 0 8px 22px rgba(249, 115, 22, .16);
+    font-size: .84rem;
+    font-weight: 900;
+    text-decoration: none;
+    transition: transform 160ms ease, filter 160ms ease, box-shadow 160ms ease;
+}
+
+.fc-customer-app-shell .fc-dashboard-store-link:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.06);
+    box-shadow: 0 11px 26px rgba(249, 115, 22, .22);
+}
+
+.fc-customer-app-shell .fc-dashboard-store-link:focus-visible {
+    outline: 2px solid #ffb477;
+    outline-offset: 3px;
+}
+
+/* Currency outputs are Persian and follow the RTL reading direction. */
+.fc-customer-app-shell [data-fc-rial-price],
+.fc-customer-app-shell [data-fc-currency-value] {
+    direction: rtl;
+    unicode-bidi: isolate;
+    font-variant-numeric: lining-nums;
 }
 
 .fc-customer-app-shell .fc-dashboard-page .fc-dashboard-hero {
@@ -630,18 +668,13 @@ body.fc-customer-app-shell {
 }
 
 /* Mobile returns to natural document flow and normal page scrolling. */
-@media (max-width: 767px) {
-    body.fc-customer-app-shell {
-        display: block;
-        width: 100%;
-        height: auto;
-        min-height: 100dvh;
-        max-height: none;
-        overflow-x: hidden;
-        overflow-y: auto;
-        overscroll-behavior: auto;
+@media (max-width: 700px) {
+    .fc-customer-app-shell {
+        --fc-customer-header-height: 64px;
     }
+}
 
+@media (max-width: 767px) {
     .fc-customer-app-shell > div.w-full.flex.flex-col.flex-grow,
     .fc-customer-app-shell > div.w-full.flex.flex-col.flex-grow > div.w-full.flex.flex-grow.min-w-0 {
         display: flex;
@@ -664,7 +697,7 @@ body.fc-customer-app-shell {
         height: auto;
         min-height: calc(100dvh - var(--fc-customer-header-height));
         overflow: visible;
-        padding: 20px 0 28px;
+        padding: 24px 0 40px;
     }
 
     .fc-customer-app-shell .fc-page-main > .fc-portal-page {
