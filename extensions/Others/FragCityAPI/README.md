@@ -1,6 +1,6 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.17.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.18.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
@@ -337,3 +337,8 @@ flow: the Steam-branded Billing action redirects to the main site's Steam
 OpenID login, then returns a short-lived signed ticket to Paymenter. The main
 website remains the single Steam identity verifier; Paymenter uses the linked
 user record and does not create an independent Steam identity.
+
+
+## Per-service CS2 GSLT
+
+The CS2 catalogue exposes the manifest's `service_properties` contract. `STEAM_ACC` is accepted only inside the signed CS2 quote/order payload at `egg.STEAM_ACC`, validated as an optional string with a maximum of 32 characters, and persisted as a per-service Paymenter property. Do not put this token in shared Product settings, logs, cart summaries or customer-visible service metadata. The CS2 server extension maps this exact Egg variable to the Egg startup environment.
