@@ -1,96 +1,88 @@
-<div class="container mt-14 fc-portal-page fc-account-page fc-account-security-page" dir="rtl">
+<div class="container fc-portal-page fc-account-page fc-account-security-page" dir="rtl">
     <x-navigation.breadcrumb />
 
-    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / ACCOUNT SECURITY</span><h1>امنیت حساب</h1><p>نشست‌های فعال، رمز عبور و تأیید دومرحله‌ای را مدیریت کن.</p></div></div>
-    <div class="fc-account-content px-2 flex flex-col gap-4">
+    <div class="fc-portal-heading">
+        <div><span class="fc-portal-kicker">FRAGCITY / SECURITY</span><h1>امنیت حساب</h1><p>نشست‌های فعال، رمز عبور و ورود دومرحله‌ای را کنترل کن.</p></div>
+    </div>
 
-        <!-- Sessions -->
-        <div class="fc-account-card bg-background-secondary rounded-lg p-4">
-            <h5 class="text-lg font-bold pb-3">{{ __('account.sessions') }}</h5>
-            @foreach (Auth::user()->sessions as $session)
-            <div class="flex flex-row items-center justify-between py-2 border-b border-base/50">
-                <div>
-                    <p class="text-sm text-primary-100">{{ $session->ip_address }} -
-                        {{ $session->last_activity->diffForHumans() }}</p>
-                    <p class="text-sm text-primary-400">{{ $session->formatted_device }}</p>
+    <div class="fc-account-content fc-security-grid">
+        <section class="fc-security-card">
+            <h2><i class="fa-solid fa-laptop ml-2 text-orange-300" aria-hidden="true"></i> نشست‌های فعال</h2>
+            @forelse (Auth::user()->sessions as $session)
+                <div class="fc-security-session">
+                    <div class="min-w-0">
+                        <p><strong>{{ $session->ip_address }}</strong></p>
+                        <p>{{ $session->formatted_device }}</p>
+                        <p>{{ $session->last_activity->format('Y/m/d H:i') }}</p>
+                    </div>
+                    @if(!$session->is_current_device)
+                        <x-button.primary wire:click="logoutSession('{{ $session->id }}')" class="!w-fit !px-3 text-xs">
+                            خروج
+                        </x-button.primary>
+                    @else
+                        <span class="shrink-0 rounded-full border border-green-500/20 bg-green-500/10 px-2 py-1 text-[.65rem] text-green-300">این دستگاه</span>
+                    @endif
                 </div>
-                @if(!$session->is_current_device)
-                <x-button.primary wire:click="logoutSession('{{ $session->id }}')" class="text-sm !w-fit">
-                    {{ __('account.logout_sessions') }}
-                </x-button.primary>
-                @else
-                <span class="text-sm text-primary-300 italic">{{ __('account.current_device') }}</span>
-                @endif
-            </div>
-            @endforeach
-        </div>
+            @empty
+                <p class="text-sm text-gray-400">نشست فعالی برای نمایش وجود ندارد.</p>
+            @endforelse
+        </section>
 
-        <!-- Change password -->
-        <div class="bg-background-secondary rounded-lg p-4">
-            <h5 class="text-lg font-bold pb-3">{{ __('account.change_password') }}</h5>
+        <section class="fc-security-card">
+            <h2><i class="fa-solid fa-key ml-2 text-orange-300" aria-hidden="true"></i> تغییر رمز عبور</h2>
+            <p class="mb-4 text-xs leading-6 text-gray-400">برای امنیت بیشتر از رمز عبور طولانی و غیرقابل حدس استفاده کن.</p>
             <form wire:submit="changePassword">
-                <div class="grid grid-cols-2 gap-4">
-                    <x-form.input divClass="col-span-2" name="current_password" type="password"
-                        :label="__('account.input.current_password')"
-                        :placeholder="__('account.input.current_password_placeholder')" wire:model="current_password"
-                        required />
-                    <x-form.input name="password" type="password" :label="__('account.input.new_password')"
-                        :placeholder="__('account.input.new_password_placeholder')" wire:model="password" required />
-                    <x-form.input name="password_confirmation" type="password" :label="__('account.input.confirm_password')"
-                        :placeholder="__('account.input.confirm_password_placeholder')" wire:model="password_confirmation"
-                        required />
-                </div>
-
-                <x-button.primary type="submit" class="w-full mt-4">
-                    {{ __('account.change_password') }}
-                </x-button.primary>
+                <x-form.input divClass="w-full" name="current_password" type="password"
+                    label="رمز عبور فعلی" placeholder="رمز فعلی" wire:model="current_password" required />
+                <x-form.input name="password" type="password" label="رمز عبور جدید"
+                    placeholder="رمز جدید" wire:model="password" required />
+                <x-form.input name="password_confirmation" type="password" label="تکرار رمز جدید"
+                    placeholder="رمز جدید را دوباره وارد کن" wire:model="password_confirmation" required />
+                <x-button.primary type="submit" class="w-full mt-3">به‌روزرسانی رمز عبور</x-button.primary>
             </form>
-        </div>
+        </section>
 
-        <div class="bg-background-secondary rounded-lg p-4">
-            <!-- Two factor authentication -->
-            <h5 class="text-lg font-bold pb-3">{{ __('account.two_factor_authentication') }}</h5>
+        <section class="fc-security-card">
+            <h2><i class="fa-solid fa-shield-halved ml-2 text-orange-300" aria-hidden="true"></i> تأیید دومرحله‌ای</h2>
             @if ($twoFactorEnabled)
-            <p class="text-sm text-primary-100">{{ __('account.two_factor_authentication_enabled') }}</p>
-            <x-button.primary class="w-full mt-4" x-on:click="$store.confirmation.confirm({
-                                title: '{{ __('account.two_factor_authentication_disable') }}',
-                                message: '{{ __('account.two_factor_authentication_disable_description') }}',
-                                confirmText: '{{ __('account.confirm') }}',
-                                cancelText: '{{ __('account.cancel') }}',
-                                callback: () => $wire.disableTwoFactor()
-                            })">
-                {{ __('account.two_factor_authentication_disable') }}
-            </x-button.primary>
-            @else
-            <p class="text-sm text-primary-100">{{ __('account.two_factor_authentication_description') }}</p>
-            <x-button.primary wire:click="enableTwoFactor" class="w-full mt-4">
-                {{ __('account.two_factor_authentication_enable') }}
-            </x-button.primary>
-            @if ($showEnableTwoFactor)
-            <x-modal :title="__('account.two_factor_authentication_enable')" open="true">
-                <p class="text-primary-100">{{ __('account.two_factor_authentication_enable_description') }}</p>
-                <div class="flex flex-col items-center mt-4">
-                    <img src="{{ $twoFactorData['image'] }}" alt="QR code" class="w-64 h-64" />
-                    <p class="text-primary-400 mt-2 text-sm text-center">
-                        {{ __('account.two_factor_authentication_secret') }}<br />{{ $twoFactorData['secret'] }}</p>
+                <div class="rounded-xl border border-green-500/20 bg-green-500/5 p-3 text-sm text-green-300">
+                    <i class="fa-solid fa-circle-check ml-1" aria-hidden="true"></i>
+                    تأیید دومرحله‌ای برای حساب فعال است.
                 </div>
-                <form wire:submit.prevent="enableTwoFactor">
-                    <x-form.input divClass="mt-8" name="two_factor_code" type="text"
-                        :label="__('account.input.two_factor_code')"
-                        :placeholder="__('account.input.two_factor_code_placeholder')" wire:model="twoFactorCode"
-                        required />
-                    <x-button.primary class="w-full mt-4" type="submit">
-                        {{ __('account.two_factor_authentication_enable') }}
-                    </x-button.primary>
-                </form>
-                <x-slot name="closeTrigger">
-                    <button @click="document.location.reload()" class="text-primary-100">
-                        <x-ri-close-fill class="size-6" />
-                    </button>
-                </x-slot>
-            </x-modal>
+                <x-button.primary class="w-full mt-4" x-on:click="$store.confirmation.confirm({
+                    title: 'غیرفعال‌کردن تأیید دومرحله‌ای',
+                    message: 'آیا از غیرفعال‌کردن لایه امنیتی دوم حساب مطمئن هستی؟',
+                    confirmText: 'بله، غیرفعال کن',
+                    cancelText: 'انصراف',
+                    callback: () => $wire.disableTwoFactor()
+                })">
+                    غیرفعال‌کردن تأیید دومرحله‌ای
+                </x-button.primary>
+            @else
+                <p class="text-xs leading-6 text-gray-400">با فعال‌سازی این قابلیت، هنگام ورود علاوه بر رمز عبور به کد یک‌بارمصرف نیاز خواهی داشت.</p>
+                <x-button.primary wire:click="enableTwoFactor" class="w-full mt-4">
+                    فعال‌سازی تأیید دومرحله‌ای
+                </x-button.primary>
+                @if ($showEnableTwoFactor)
+                    <x-modal title="راه‌اندازی تأیید دومرحله‌ای" open="true">
+                        <p class="text-sm leading-6 text-gray-300">کد QR را با برنامه Authenticator اسکن کن و کد شش‌رقمی را وارد کن.</p>
+                        <div class="flex flex-col items-center mt-4">
+                            <img src="{{ $twoFactorData['image'] }}" alt="کد QR ورود دومرحله‌ای" class="w-64 h-64 rounded-xl bg-white p-2" />
+                            <p class="text-orange-200 mt-3 text-sm text-center">کلید پشتیبان: <span class="select-all font-mono">{{ $twoFactorData['secret'] }}</span></p>
+                        </div>
+                        <form wire:submit.prevent="enableTwoFactor" class="mt-5">
+                            <x-form.input name="two_factor_code" type="text" label="کد تأیید"
+                                placeholder="کد شش‌رقمی" wire:model="twoFactorCode" required />
+                            <x-button.primary class="w-full mt-4" type="submit">تأیید و فعال‌سازی</x-button.primary>
+                        </form>
+                        <x-slot name="closeTrigger">
+                            <button @click="document.location.reload()" class="text-primary-100" aria-label="بستن">
+                                <x-ri-close-fill class="size-6" />
+                            </button>
+                        </x-slot>
+                    </x-modal>
+                @endif
             @endif
-            @endif
-        </div>
+        </section>
     </div>
 </div>
