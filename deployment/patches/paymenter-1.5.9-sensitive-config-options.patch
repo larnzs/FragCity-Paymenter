@@ -1,0 +1,80 @@
+diff --git a/app/Livewire/Products/Checkout.php b/app/Livewire/Products/Checkout.php
+index 0000000..0000000 100644
+--- a/app/Livewire/Products/Checkout.php
++++ b/app/Livewire/Products/Checkout.php
+@@ -33,6 +33,14 @@
+     #[Url(keep: true, as: 'options')]
+     public $configOptions = [];
+ 
++    // Sensitive free-text options must never be synchronized to the query string.
++    public $sensitiveConfigOptions = [];
++
++    private function isSensitiveConfigOption($option): bool
++    {
++        return strtoupper((string) ($option->env_variable ?? '')) === 'STEAM_ACC';
++    }
++
+     #[Url(keep: true, as: 'config')]
+     public $checkoutConfig = [];
+ 
+@@ -82,6 +90,19 @@
+                 }
+             }
+         }
++        // Move sensitive text options out of the #[Url] array immediately after
++        // hydration. This also migrates values from an existing cart-edit flow.
++        foreach ($this->product->configOptions as $option) {
++            if (!$this->isSensitiveConfigOption($option)) {
++                continue;
++            }
++
++            if (array_key_exists($option->id, $this->configOptions)) {
++                $this->sensitiveConfigOptions[$option->id] = $this->configOptions[$option->id];
++                unset($this->configOptions[$option->id]);
++            }
++        }
++
+         // Update the pricing
+         $this->updatePricing();
+ 
+@@ -154,7 +175,9 @@
+             ],
+         ];
+         foreach ($this->product->configOptions as $option) {
+-            if (in_array($option->type, ['text', 'number'])) {
++            if ($this->isSensitiveConfigOption($option)) {
++                $rules["sensitiveConfigOptions.{$option->id}"] = ['nullable', 'string', 'max:32'];
++            } elseif (in_array($option->type, ['text', 'number'])) {
+                 $rules["configOptions.{$option->id}"] = ['required'];
+             } elseif ($option->type === 'checkbox') {
+                 // No validation needed for checkbox
+@@ -206,7 +229,8 @@
+     {
+         $messages = [];
+         foreach ($this->product->configOptions as $option) {
+-            $messages["configOptions.{$option->id}"] = $option->name;
++            $field = $this->isSensitiveConfigOption($option) ? 'sensitiveConfigOptions' : 'configOptions';
++            $messages["{$field}.{$option->id}"] = $option->name;
+         }
+         foreach ($this->getCheckoutConfig() as $key => $config) {
+             $messages["checkoutConfig.{$config['name']}"] = $config['label'] ?? $config['name'];
+@@ -248,13 +272,17 @@
+                 ];
+             }
+             if (in_array($option->type, ['text', 'number'])) {
++                $value = $this->isSensitiveConfigOption($option)
++                    ? ($this->sensitiveConfigOptions[$option->id] ?? null)
++                    : ($this->configOptions[$option->id] ?? null);
++
+                 return (object) [
+                     'option_id' => $option->id,
+                     'option_name' => $option->name,
+                     'option_type' => $option->type,
+                     'option_env_variable' => $option->env_variable,
+-                    'value' => $this->configOptions[$option->id],
+-                    'value_name' => $this->configOptions[$option->id],
++                    'value' => $value,
++                    'value_name' => $value,
+                 ];
+             }
+ 

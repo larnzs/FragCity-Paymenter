@@ -75,8 +75,10 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 ! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.18.0'" "$api"
+grep -Fq "version: '1.18.1'" "$api"
 grep -Fq "'version' => '1.17.0'" "$api"
+test -s "deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
+grep -Fq "sensitiveConfigOptions" "deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
 grep -Fq "function startSso" "$api"
 grep -Fq "function completeSso" "$api"
 grep -Fq "function ssoTfaPage" "$api"
@@ -130,6 +132,10 @@ for needle in \
   "expected_amount_rial" \
   "if (\$expectedAmountRial !== null && \$expectedAmountRial !== \$wholeRialTotal)" \
   "function createCs2Order" \
+  "private function assertCs2TextConfigOptions" \
+  "assertCs2TextConfigOptions(\$product, \$manifest)" \
+  "assertCs2TextConfigOptions(\$product, \$cs2Manifest)" \
+  "cs2_text_config_option_mapping_invalid" \
   "Settings::tax(\$user)" \
   "cs2_quote_amount_mismatch" \
   "zarinpal_payment_already_used" \
@@ -201,6 +207,14 @@ php -r '
     fwrite(STDERR, "CS2 Pterodactyl Server Name option must use servername.\\n");
     exit(1);
   }
+  if (($serviceProperties[0]["type"] ?? null) !== "text"
+    || !in_array("nullable", $serviceProperties[0]["validation"] ?? [], true)
+    || !in_array("max:32", $serviceProperties[0]["validation"] ?? [], true)
+    || ($pterodactylOptions[0]["type"] ?? null) !== "text"
+    || !in_array("max:64", $pterodactylOptions[0]["validation"] ?? [], true)) {
+    fwrite(STDERR, "CS2 GSLT and Server Name must remain validated text properties.\\n");
+    exit(1);
+  }
 
   $configOptions = $manifest["paymenter"]["config_options"] ?? [];
   $expectedOptions = ["SRCDS_MAXPLAYERS", "TICKRATE", "databases", "additional_allocations", "backups"];
@@ -249,6 +263,17 @@ for file in \
   themes/fragcity/views/invoices/partials/payment-options.blade.php; do
   test -s "$file"
 done
+grep -Fq "\$wire.entangle('{{ \$name }}').live" themes/fragcity/views/components/form/configoption.blade.php
+grep -Fq "transform:scaleX" themes/fragcity/views/components/form/configoption.blade.php
+grep -Fq "transform-origin:right center" themes/fragcity/css/fragcity/storefront-product-pages.css
+grep -Fq "sensitiveConfigOptions." themes/fragcity/views/components/form/configoption.blade.php
+grep -Fq 'sensitiveConfigOptions[$configOption->id]' themes/fragcity/views/products/checkout.blade.php
+grep -Fq 'fc-checkout-option-card--tall' themes/fragcity/views/products/checkout.blade.php
+grep -Fq 'body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper' themes/fragcity/css/fragcity/customer-app.css
+grep -Fq ".fc-invoice-detail-page .fc-invoice-paper" "$portal_css"
+grep -Fq ".fc-modal-panel--payment" "$portal_css"
+grep -Fq ".fc-ticket-create-page .EasyMDEContainer .CodeMirror" "$portal_css"
+grep -Fq ".fc-service-upgrade-page .fc-upgrade-summary" "$portal_css"
 grep -Fq '.fc-portal-page' "$portal_css"
 grep -Fq '.fc-payment-modal' "$portal_css"
 grep -Fq '.fc-payment-option--selected' "$portal_css"

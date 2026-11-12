@@ -35,7 +35,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server VIP store, Paymenter wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.18.0',
+    version: '1.18.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -612,6 +612,43 @@ class FragCityAPI extends Extension
 
 
     /**
+     * Require the two customer-facing text Config Options on the actual Paymenter
+     * Product. Paymenter stores them as ServiceProperty values: servername is
+     * used by the Pterodactyl server-create request and STEAM_ACC by the CS2 Egg.
+     */
+    private function assertCs2TextConfigOptions(Product $product, array $manifest): void
+    {
+        $expected = [
+            'servername' => 'pterodactyl_options',
+            'STEAM_ACC' => 'service_properties',
+        ];
+
+        foreach ($expected as $envVariable => $section) {
+            $definitions = collect($manifest['paymenter'][$section] ?? [])->filter(
+                static fn ($field) => strcasecmp(
+                    trim((string) ($field['env_variable'] ?? '')),
+                    $envVariable
+                ) === 0
+            );
+
+            if ($definitions->count() !== 1 || (string) ($definitions->first()['type'] ?? '') !== 'text') {
+                throw new RuntimeException('cs2_text_config_option_mapping_invalid');
+            }
+
+            $options = collect($product->configOptions)->filter(
+                static fn ($option) => strcasecmp(
+                    trim((string) ($option->env_variable ?? '')),
+                    $envVariable
+                ) === 0
+            );
+
+            if ($options->count() !== 1 || (string) $options->first()->type !== 'text') {
+                throw new RuntimeException('cs2_text_config_option_mapping_invalid');
+            }
+        }
+    }
+
+    /**
      * Return the configured FragCity CS2 catalogue, including native Paymenter
      * plans, prices and product Config Options. This endpoint is server-to-server
      * only; the website must never expose the HMAC secret to browser JavaScript.
@@ -757,6 +794,7 @@ class FragCityAPI extends Extension
             if (!is_array($manifest)) {
                 throw new RuntimeException('cs2_checkout_manifest_unavailable');
             }
+            $this->assertCs2TextConfigOptions($product, $manifest);
 
             return response()->json([
                 'success' => true,
@@ -781,7 +819,7 @@ class FragCityAPI extends Extension
             ]);
         } catch (RuntimeException $e) {
             $status = match ($e->getMessage()) {
-                'cs2_product_invalid', 'cs2_plan_invalid' => 422,
+                'cs2_product_invalid', 'cs2_plan_invalid', 'cs2_text_config_option_mapping_invalid' => 422,
                 'cs2_checkout_not_configured', 'cs2_checkout_manifest_unavailable' => 503,
                 default => 500,
             };
@@ -1881,6 +1919,7 @@ class FragCityAPI extends Extension
             if (!is_array($manifest)) {
                 throw new RuntimeException('cs2_checkout_manifest_unavailable');
             }
+            $this->assertCs2TextConfigOptions($product, $manifest);
 
             $allowedEggKeys = [];
             $eggRules = [];
@@ -2108,7 +2147,7 @@ class FragCityAPI extends Extension
                 'cs2_plan_invalid', 'cs2_plan_price_missing', 'cs2_config_option_mapping_invalid',
                 'cs2_config_option_price_missing', 'cs2_quote_amount_mismatch',
                 'egg_combination_invalid', 'invalid_egg_variable', 'egg_validation_failed',
-                'paid_option_pricing_not_configured' => 422,
+                'paid_option_pricing_not_configured', 'cs2_text_config_option_mapping_invalid' => 422,
                 default => 500,
             };
 
@@ -2592,6 +2631,8 @@ class FragCityAPI extends Extension
                 } catch (Throwable) {
                     throw new RuntimeException('cs2_checkout_manifest_unavailable');
                 }
+
+                $this->assertCs2TextConfigOptions($product, $cs2Manifest);
 
                 $checkoutFields = ExtensionHelper::getCheckoutConfig($product);
                 if (!is_array($checkoutFields) || $checkoutFields === []) {
@@ -3097,7 +3138,7 @@ class FragCityAPI extends Extension
                 'paid_option_pricing_not_configured', 'invalid_egg_variable', 'egg_validation_failed',
                 'cs2_product_invalid', 'cs2_product_out_of_stock', 'cs2_product_user_limit',
                 'cs2_plan_invalid', 'cs2_plan_price_missing', 'cs2_quote_amount_mismatch', 'invalid_order_payload', 'egg_combination_invalid',
-                'wallet_insufficient_credit', 'wallet_not_enabled' => 422,
+                'wallet_insufficient_credit', 'wallet_not_enabled', 'cs2_text_config_option_mapping_invalid' => 422,
                 'cs2_config_option_mapping_invalid', 'cs2_config_option_price_missing' => 503,
                 'order_processing_incomplete' => 503,
                 default => 500,
