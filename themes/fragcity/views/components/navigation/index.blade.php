@@ -86,6 +86,16 @@
         </nav>
 
         <div class="shock-user-area-wrapper">
+            @php $fcCartCount = \App\Classes\Cart::items()->count(); @endphp
+            <a href="{{ route('cart') }}" wire:navigate class="fc-header-cart-link"
+               aria-label="سبد خرید، {{ $fcCartCount }} مورد" title="سبد خرید">
+                <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                <span class="fc-header-cart-link__label">سبد خرید</span>
+                @if ($fcCartCount > 0)
+                    <span class="fc-header-cart-link__count">{{ $fcCartCount }}</span>
+                @endif
+            </a>
+
             <button type="button" class="fc-motion-toggle" aria-label="حالت عملکرد"
                     data-motion-toggle aria-pressed="false" title="حالت بدون انیمیشن">
                 <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
