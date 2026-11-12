@@ -18,7 +18,7 @@
                 <small>{{ $invoice->items->first()?->description }}</small>
             </span>
             <span class="fc-invoice-card__amount">{{ $invoice->formattedTotal }}</span>
-            <span class="fc-portal-status fc-portal-status--{{ $invoice->status }}">@if($invoice->status === 'paid') پرداخت‌شده @elseif($invoice->status === 'pending') در انتظار پرداخت @elseif($invoice->status === 'cancelled') لغوشده @else {{ ucfirst($invoice->status) }} @endif</span>
+            <span class="fc-portal-status fc-portal-status--{{ $invoice->status }}">@if($invoice->status === 'paid') پرداخت‌شده @elseif($invoice->status === 'pending') در انتظار پرداخت @elseif($invoice->status === 'cancelled') لغوشده @else نامشخص @endif</span>
             <span class="fc-portal-list-card__arrow"><i class="fa-solid fa-arrow-left"></i></span>
         </a>
         @empty
