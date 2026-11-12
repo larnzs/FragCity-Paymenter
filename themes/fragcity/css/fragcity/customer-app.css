@@ -42,6 +42,34 @@ body.fc-customer-app-shell {
     overflow: hidden;
 }
 
+.fc-customer-app-shell > div.w-full.flex.flex-col.flex-grow > div.w-full.flex.flex-grow.min-w-0 > div.flex.flex-col.flex-grow.min-w-0 {
+    display: flex;
+    height: 100%;
+    min-height: 0;
+    flex: 1 1 auto;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Keep the native customer sidebar anchored below, not behind, the shared header. */
+.fc-customer-app-shell .fc-site-sidebar {
+    top: var(--fc-customer-header-height) !important;
+    right: 0 !important;
+    left: auto !important;
+    width: 256px;
+    height: calc(100dvh - var(--fc-customer-header-height)) !important;
+    margin: 0 !important;
+    padding: 18px 12px 20px;
+    border-right: 0 !important;
+    border-left: 1px solid rgba(255, 255, 255, .075) !important;
+}
+
+.fc-customer-app-shell .fc-site-sidebar > div {
+    min-height: 0;
+    overflow-y: auto;
+    scrollbar-width: thin;
+}
+
 .fc-customer-app-shell .fc-page-main {
     display: block;
     width: 100%;
@@ -169,12 +197,12 @@ body.fc-customer-app-shell {
 }
 
 .fc-customer-app-shell .fc-dashboard-page .fc-dashboard-hero {
-    min-height: 220px;
+    min-height: 235px;
     padding: clamp(26px, 3.2vw, 40px);
 }
 
 .fc-customer-app-shell .fc-dashboard-page .fc-portal-stat {
-    min-height: 145px;
+    min-height: 152px;
     padding: 17px 18px;
 }
 
