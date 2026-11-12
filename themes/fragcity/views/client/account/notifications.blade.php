@@ -2,7 +2,7 @@
     <x-navigation.breadcrumb />
 
     <div class="fc-portal-heading">
-        <div><span class="fc-portal-kicker">FRAGCITY / NOTIFICATIONS</span><h1>اعلان‌ها</h1><p>مشخص کن پیام‌های مهم حساب از چه طریقی به تو اطلاع داده شوند.</p></div>
+        <div><span class="fc-portal-kicker">FRAGCITY / اعلان‌ها</span><h1>اعلان‌ها</h1><p>مشخص کن پیام‌های مهم حساب از چه طریقی به تو اطلاع داده شوند.</p></div>
     </div>
 
     <div class="fc-account-content fc-notifications-grid">
