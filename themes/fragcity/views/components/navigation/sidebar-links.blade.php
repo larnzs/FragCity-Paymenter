@@ -1,3 +1,24 @@
+@php
+    $fragcityAdminArea = request()->is('admin', 'admin/*');
+    $fragcitySidebarLabel = static function ($name): string {
+        $key = mb_strtolower(trim((string) $name));
+        return match ($key) {
+            'dashboard', 'overview' => 'داشبورد',
+            'services', 'my services', 'servers', 'my servers' => 'سرورهای من',
+            'invoices', 'billing history', 'my invoices' => 'فاکتورها',
+            'tickets', 'support', 'support tickets' => 'تیکت‌های پشتیبانی',
+            'account', 'profile', 'personal information' => 'اطلاعات حساب',
+            'credits', 'wallet', 'account credits' => 'کیف پول',
+            'payment methods', 'saved payment methods' => 'روش‌های پرداخت',
+            'notifications' => 'اعلان‌ها',
+            'security', 'account security' => 'امنیت حساب',
+            'store', 'shop' => 'فروشگاه',
+            'settings' => 'تنظیمات',
+            default => (string) $name,
+        };
+    };
+@endphp
+
 <div class="lg:px-4 lg:py-6 flex flex-col gap-2">
     <div class="flex flex-col gap-2 md:hidden">
         @foreach (\App\Classes\Navigation::getLinks() as $nav)
@@ -12,7 +33,7 @@
                             <x-dynamic-component :component="$nav['icon']"
                             class="size-5 {{ $nav['active'] ? 'text-primary' : 'fill-base/50' }}" />
                         @endisset
-                        <span>{{ $nav['name'] }}</span>
+                        <span>{{ $fragcityAdminArea ? $nav['name'] : $fragcitySidebarLabel($nav['name']) }}</span>
                     </div>
                     <x-ri-arrow-down-s-line x-bind:class="{ 'rotate-180': activeAccordion }"
                         class="size-4 text-base ease-out duration-300" />
@@ -24,7 +45,7 @@
                             <x-navigation.link :href="$child['url']"
                                 :spa="$child['spa'] ?? true"
                                 class="{{ $child['active'] ? 'text-primary font-bold' : '' }}">
-                                {{ $child['name'] }}
+                                {{ $fragcityAdminArea ? $child['name'] : $fragcitySidebarLabel($child['name']) }}
                             </x-navigation.link>
                         </div>
                         @endforeach
@@ -40,7 +61,7 @@
                     <x-dynamic-component :component="$nav['icon']"
                         class="size-5 {{ $nav['active'] ? 'text-primary' : 'fill-base/50' }}" />
                 @endisset
-                {{ $nav['name'] }}
+                {{ $fragcityAdminArea ? $nav['name'] : $fragcitySidebarLabel($nav['name']) }}
             </x-navigation.link>
         </div>
         @endif
@@ -63,7 +84,7 @@
                             <x-dynamic-component :component="$nav['icon']"
                                 class="size-5 {{ $nav['active'] ? 'text-primary' : 'fill-base/50' }}" />
                         @endisset
-                        <span>{{ $nav['name'] }}</span>
+                        <span>{{ $fragcityAdminArea ? $nav['name'] : $fragcitySidebarLabel($nav['name']) }}</span>
                     </div>
                     <x-ri-arrow-down-s-line x-bind:class="{ 'rotate-180': activeAccordion }"
                         class="size-4 text-base ease-out duration-300" />
@@ -76,7 +97,7 @@
                                 <x-navigation.link :href="$child['url']"
                                     :spa="$child['spa'] ?? true"
                                     class="{{ $child['active'] ? 'text-primary font-bold' : '' }}">
-                                    {{ $child['name'] }}
+                                    {{ $fragcityAdminArea ? $child['name'] : $fragcitySidebarLabel($child['name']) }}
                                 </x-navigation.link>
                             </div>
                             @endif
@@ -94,7 +115,7 @@
                     <x-dynamic-component :component="$nav['icon']"
                         class="size-5 {{ $nav['active'] ? 'text-primary' : 'fill-base/50' }}" />
                 @endisset
-                {{ $nav['name'] }}
+                {{ $fragcityAdminArea ? $nav['name'] : $fragcitySidebarLabel($nav['name']) }}
             </x-navigation.link>
         </div>
         @endif
