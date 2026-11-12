@@ -6,6 +6,11 @@
             <span class="fc-portal-eyebrow"><span class="fc-portal-eyebrow__mark">FC</span> FRAGCITY / مرکز کاربری</span>
             <h1>سلام {{ Auth::user()->first_name ?: Auth::user()->name }} <span aria-hidden="true">👋</span></h1>
             <p>مدیریت سرورها، پرداخت‌ها و درخواست‌های پشتیبانی حساب FragCity از یک پنل یکپارچه.</p>
+            <a href="{{ route('home') }}" wire:navigate class="fc-dashboard-store-link">
+                <i class="fa-solid fa-store" aria-hidden="true"></i>
+                برو به فروشگاه
+                <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            </a>
             <div class="fc-portal-hero__meta">
                 <span><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> حساب کاربری امن</span>
                 <span><i class="fa-solid fa-server" aria-hidden="true"></i> مدیریت سرویس‌ها</span>
