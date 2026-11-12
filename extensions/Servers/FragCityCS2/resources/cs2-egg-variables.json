@@ -11,10 +11,12 @@
   "summary": {
     "total_egg_variables": 32,
     "checkout_fields": 6,
-    "product_admin_fields": 21,
+    "product_admin_fields": 20,
     "not_exposed": 3,
     "target_paymenter": "v1.5.9",
-    "native_config_options": 5
+    "native_config_options": 5,
+    "service_properties": 1,
+    "pterodactyl_options": 1
   },
   "variables": [
     {
@@ -167,7 +169,7 @@
       "order": 6,
       "name": "Game Server Login Token (GSLT)",
       "env_variable": "STEAM_ACC",
-      "description": "توکن GSLT برای معرفی سرور در فهرست عمومی Steam. این مقدار در سطح Product تنظیم می‌شود و برای تمام سرویس‌های ساخته‌شده از این محصول مشترک خواهد بود.",
+      "description": "توکن GSLT اختصاصی هر سرور برای معرفی آن در فهرست عمومی Steam.",
       "default_value": "",
       "default_redacted": false,
       "user_viewable": true,
@@ -175,9 +177,9 @@
       "rules": "max:32|nullable",
       "field_type": "text",
       "paymenter": {
-        "status": "product_setting",
+        "status": "service_property",
         "field_name": "STEAM_ACC",
-        "field_type": "password"
+        "field_type": "text"
       }
     },
     {
@@ -1736,20 +1738,6 @@
         "validation": "nullable|string"
       },
       {
-        "name": "STEAM_ACC",
-        "label": "توکن ورود سرور استیم (GSLT)",
-        "type": "password",
-        "description": "توکن GSLT برای معرفی سرور در فهرست عمومی Steam. این مقدار در سطح Product تنظیم می‌شود و برای تمام سرویس‌های ساخته‌شده از این محصول مشترک خواهد بود.",
-        "default": "",
-        "required": false,
-        "validation": [
-          "nullable",
-          "string",
-          "max:32"
-        ],
-        "placeholder": "GSLT (اختیاری)"
-      },
-      {
         "name": "PASSWORD",
         "label": "رمز عبور سرور",
         "type": "password",
@@ -2260,6 +2248,41 @@
           "required_child_price": 0,
           "price_owner": "Paymenter native Config Option child prices"
         }
+      }
+    ],
+    "service_properties": [
+      {
+        "name": "STEAM_ACC",
+        "label": "Game Server Login Token (GSLT)",
+        "env_variable": "STEAM_ACC",
+        "type": "text",
+        "target": "egg",
+        "default": "",
+        "required": false,
+        "sensitive": true,
+        "validation": [
+          "nullable",
+          "string",
+          "max:32"
+        ],
+        "description": "توکن اختصاصی این سرور؛ حداکثر ۳۲ کاراکتر. در سبد خرید و صفحات مشتری نمایش داده نمی‌شود."
+      }
+    ],
+    "pterodactyl_options": [
+      {
+        "name": "Server Name",
+        "label": "نام سرور",
+        "env_variable": "servername",
+        "type": "text",
+        "target": "server_name",
+        "required": false,
+        "validation": [
+          "nullable",
+          "string",
+          "max:64",
+          "regex:/^[A-Za-z0-9_. -]+$/"
+        ],
+        "description": "نام منبع سرور در Pterodactyl؛ این مقدار Egg Environment Variable نیست."
       }
     ]
   },
