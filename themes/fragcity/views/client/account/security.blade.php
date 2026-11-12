@@ -2,7 +2,7 @@
     <x-navigation.breadcrumb />
 
     <div class="fc-portal-heading">
-        <div><span class="fc-portal-kicker">FRAGCITY / SECURITY</span><h1>امنیت حساب</h1><p>نشست‌های فعال، رمز عبور و ورود دومرحله‌ای را کنترل کن.</p></div>
+        <div><span class="fc-portal-kicker">FRAGCITY / امنیت</span><h1>امنیت حساب</h1><p>نشست‌های فعال، رمز عبور و ورود دومرحله‌ای را کنترل کن.</p></div>
     </div>
 
     <div class="fc-account-content fc-security-grid">
