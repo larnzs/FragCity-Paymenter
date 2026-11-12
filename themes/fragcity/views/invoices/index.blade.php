@@ -2,7 +2,7 @@
     <x-navigation.breadcrumb />
     <div class="fc-portal-heading">
         <div>
-            <span class="fc-portal-kicker">FRAGCITY / BILLING HISTORY</span>
+            <span class="fc-portal-kicker">FRAGCITY / سوابق مالی</span>
             <h1>فاکتورهای من</h1>
             <p>فاکتورها، مبالغ و وضعیت پرداخت سفارش‌ها را اینجا پیگیری کن.</p>
         </div>
