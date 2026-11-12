@@ -50,6 +50,12 @@ Before enabling the `STEAM_ACC` text Config Option on the CS2 Product, apply thi
 
 The patch file already contains every required change to `app/Livewire/Products/Checkout.php`: a separate non-URL Livewire property, migration from the URL-bound array, optional 32-character validation, matching validation attributes, and forwarding the value to Paymenter's normal Cart/ServiceProperty flow. Do not copy only selected hunks or put the GSLT into a URL.
 
+A complete, ready-to-review reference copy of that patched Paymenter core file is also committed at:
+
+`app/Livewire/Products/Checkout.php`
+
+This file is based on the official Paymenter `v1.5.9` source and includes the same GSLT changes as the patch above. On the shared host, back up the existing file and replace the host's `app/Livewire/Products/Checkout.php` with this exact file. This repository copy is a deployment reference only: do not upload it through Paymenter's Extension uploader, and do not treat it as a FragCity extension package. It is version-specific to Paymenter v1.5.9.
+
 If you have shell access, run these commands from the Paymenter application root (adjust the patch path to the actual repository location):
 
 ```bash
