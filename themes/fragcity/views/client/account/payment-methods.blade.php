@@ -113,7 +113,7 @@
                                 <x-button.danger class="!w-fit !px-3 shrink-0"
                                     x-on:click="$store.confirmation.confirm({
                                         title: 'حذف روش پرداخت',
-                                        message: 'آیا از حذف روش پرداخت {{ addslashes($agreement->name) }} مطمئن هستی؟',
+                                        message: @js('آیا از حذف روش پرداخت ' . $agreement->name . ' مطمئن هستی؟'),
                                         confirmText: 'حذف',
                                         cancelText: 'انصراف',
                                         callback: () => $wire.removePaymentMethod('{{ $agreement->ulid }}')
