@@ -1220,3 +1220,52 @@ body.fc-customer-app-shell {
     .fc-customer-app-shell .fc-cs2-provisioning,.fc-customer-app-shell .fc-service-invoice-alert { align-items:flex-start; flex-wrap:wrap; }
     .fc-customer-app-shell .fc-service-invoice-alert a { margin-right:53px; }
 }
+
+
+/* The invoice component is intentionally charcoal in the customer portal.
+   This final screen rule overrides the legacy paper-white document palette
+   declared above in this same stylesheet. Print remains paper-friendly. */
+@media screen {
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper {
+        color:#ededed !important;
+        border:1px solid rgba(249,115,22,.2) !important;
+        background:linear-gradient(145deg,#191919 0%,#111 72%,#15120f 100%) !important;
+        box-shadow:0 22px 60px rgba(0,0,0,.34) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper :is(h1,h2,h3,h4,strong,th) {
+        color:#f4f4f4 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper :is(p,span,td,dt,dd,small) {
+        color:#c9c9c9 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__rule,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table td {
+        border-color:rgba(255,255,255,.09) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-meta,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-party,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary {
+        color:#d7d7d7 !important;
+        border-color:rgba(255,255,255,.09) !important;
+        background:rgba(255,255,255,.035) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table thead {
+        background:rgba(255,255,255,.05) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table th {
+        color:#ffbd8b !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary strong,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state__amount strong,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__title h2 {
+        color:#f5f5f5 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__title code,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-meta > div {
+        color:#d3d3d3 !important;
+        border-color:rgba(255,255,255,.08) !important;
+        background:rgba(0,0,0,.2) !important;
+    }
+}
