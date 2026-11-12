@@ -267,6 +267,9 @@ grep -Fq "\$wire.entangle('{{ \$name }}').live" themes/fragcity/views/components
 grep -Fq "transform:scaleX" themes/fragcity/views/components/form/configoption.blade.php
 grep -Fq "transform-origin:right center" themes/fragcity/css/fragcity/storefront-product-pages.css
 grep -Fq "sensitiveConfigOptions." themes/fragcity/views/components/form/configoption.blade.php
+grep -Fq 'sensitiveConfigOptions[$configOption->id]' themes/fragcity/views/products/checkout.blade.php
+grep -Fq 'fc-checkout-option-card--tall' themes/fragcity/views/products/checkout.blade.php
+grep -Fq 'body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper' themes/fragcity/css/fragcity/customer-app.css
 grep -Fq ".fc-invoice-detail-page .fc-invoice-paper" "$portal_css"
 grep -Fq ".fc-modal-panel--payment" "$portal_css"
 grep -Fq ".fc-ticket-create-page .EasyMDEContainer .CodeMirror" "$portal_css"
