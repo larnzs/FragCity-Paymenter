@@ -1,26 +1,33 @@
-<div class="container mt-14">
-    <h1 class="text-2xl font-bold">
+<div class="container mt-14 fc-portal-page fc-service-upgrade-page" dir="rtl">
+    <x-navigation.breadcrumb />
+    <header class="fc-portal-heading fc-upgrade-hero">
+        <div><span class="fc-portal-kicker">FRAGCITY / SERVICE UPGRADE</span>
+        <h1 class="text-2xl font-bold">
         {{ __('services.upgrade_service', ['service' => $service->product->name]) }}
-    </h1>
+        </h1>
+        <p>منابع و پلن سرویس را با نیاز فعلی کامیونیتی خود هماهنگ کن.</p>
+    </header>
 
-    <h2 class="text-lg font-semibold mt-4">
+    <div class="fc-upgrade-step-heading">
+        <span class="fc-portal-kicker">STEP {{ $step }} / 02</span>
+        <h2 class="text-lg font-semibold mt-4">
         @if($step == 1)
             {{ __('services.upgrade_choose_product') }}
         @else
             {{ __('services.upgrade_choose_config') }}
         @endif
-    </h2>
+        </h2>
+    </div>
 
-
-    <div class="grid grid-cols-3 gap-6 mt-2">
-        <div class="grid md:grid-cols-2 gap-6 col-span-2">
+    <div class="grid grid-cols-3 gap-6 mt-2 fc-upgrade-layout">
+        <div class="grid md:grid-cols-2 gap-6 col-span-2 fc-upgrade-choices">
             @if($step == 1)
             {{-- Show current product, we also allow config upgrades so they can use that --}}
             <div>
                 <input type="radio" name="upgrade" value="{{ $service->product->id }}" wire:model.live="upgrade"
                     class="hidden peer" id="product-{{ $service->product->id }}">
                 <label for="product-{{ $service->product->id }}"
-                    class="flex flex-col cursor-pointer bg-background-secondary hover:bg-background-secondary/80 border border-neutral peer-checked:border-secondary p-4 rounded-lg">
+                    class="fc-upgrade-product-card flex flex-col cursor-pointer bg-background-secondary hover:bg-background-secondary/80 border border-neutral peer-checked:border-secondary p-4 rounded-lg">
                     <div
                         class="rounded-full border border-background rounded-selector inline-flex items-center justify-center gap-2 align-middle bg-primary/60 w-fit px-2 py-0.5">
                         <p class="">{{ __('services.current_plan') }}</p>
@@ -61,7 +68,7 @@
                 <input type="radio" name="upgrade" value="{{ $product->id }}" wire:model.live="upgrade"
                     class="hidden peer" id="product-{{ $product->id }}">
                 <label for="product-{{ $product->id }}"
-                    class="flex flex-col cursor-pointer bg-background-secondary hover:bg-background-secondary/80 border border-neutral peer-checked:border-secondary p-4 rounded-lg">
+                    class="fc-upgrade-product-card flex flex-col cursor-pointer bg-background-secondary hover:bg-background-secondary/80 border border-neutral peer-checked:border-secondary p-4 rounded-lg">
                     @if($upgrade == $product->id)
                     <div
                         class="rounded-full border border-background rounded-selector inline-flex items-center justify-center gap-2 align-middle bg-primary w-fit px-2 py-0.5">
@@ -100,7 +107,7 @@
             </div>
             @endforeach
             @else
-            <div class="col-span-2 flex flex-col gap-4">
+            <div class="col-span-2 flex flex-col gap-4 fc-upgrade-config-form">
                 @foreach ($upgradeProduct->upgradableConfigOptions as $configOption)
                 @php
                     $showPriceTag = $configOption->children->filter(fn ($value) => !$value->price(billing_period: $service->plan->billing_period, billing_unit: $service->plan->billing_unit)->is_free)->count() > 0;
@@ -132,7 +139,7 @@
             </div>
             @endif
         </div>
-        <div class="flex flex-col gap-2 w-full col-span-1 bg-background-secondary p-3 rounded-md h-fit">
+        <aside class="fc-upgrade-summary flex flex-col gap-2 w-full col-span-1 bg-background-secondary p-3 rounded-md h-fit">
             <h4 class="text-lg font-semibold">{{ __('services.upgrade_summary') }}:</h4>
 
             <div class="flex items-center text-base">
@@ -162,6 +169,6 @@
                     @endif
                 </x-button.primary>
             </div>
-        </div>
+        </aside>
     </div>
 </div>
