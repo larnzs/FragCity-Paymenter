@@ -4426,3 +4426,39 @@ body { max-width: 100%; overflow-x: clip; }
         display: none;
     }
 }
+
+
+/* Account menu v2: persistent wallet shortcut and scroll-safe dropdown. */
+#shockUserMenu.frag-dropdown-menu {
+    width: min(330px, calc(100vw - 24px));
+    max-height: min(78dvh, 680px);
+    overflow-x: hidden;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(249, 115, 22, .4) transparent;
+}
+
+#shockUserMenu .frag-drop-actions {
+    display: flex;
+    flex-direction: column;
+}
+
+#shockUserMenu .frag-drop-link {
+    min-height: 42px;
+    font-size: .82rem;
+}
+
+.mobile-steam-login-link {
+    border-color: rgba(249, 115, 22, .28) !important;
+    color: #ffbd8a !important;
+    background: rgba(249, 115, 22, .08);
+}
+
+@media (max-width: 767px) {
+    #shockUserMenu.frag-dropdown-menu {
+        right: auto;
+        left: 0;
+        max-height: 72dvh;
+    }
+}
