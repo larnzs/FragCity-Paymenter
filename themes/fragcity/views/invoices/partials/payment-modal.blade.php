@@ -9,8 +9,8 @@
     </x-slot>
 
     @if ($this->pay)
-        <div class="mt-8 fc-payment-provider-content">{{ $this->pay }}</div>
+        <section class="fc-payment-provider-content fc-payment-provider-card">{{ $this->pay }}</section>
     @else
-        @include('invoices.partials.payment-options')
+        <div class="fc-payment-options-shell">@include('invoices.partials.payment-options')</div>
     @endif
 </x-modal>
