@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.8.0',
+    version: '1.8.1',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -507,7 +507,7 @@ class FragCityCS2 extends PterodactylExtension
      * Provide the dedicated CS2 customer workspace through Paymenter's
      * native extension service-view lifecycle. Core remains untouched.
      */
-    public function getActions(Service $service, $settings, $properties): array
+    public function getActions(Service $service): array
     {
         return [[
             'type' => 'view',
