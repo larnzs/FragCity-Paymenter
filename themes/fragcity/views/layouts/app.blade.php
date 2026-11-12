@@ -26,7 +26,10 @@
     <meta name="theme-color" content="{{ theme('primary') }}">
     {!! hook('head') !!}
 </head>
-<body class="w-full bg-background text-base min-h-screen flex flex-col antialiased" x-cloak
+<body @class([
+    'w-full bg-background text-base min-h-screen flex flex-col antialiased',
+    'fc-customer-app-shell' => auth()->check() && request()->is('dashboard', 'services', 'services/*', 'invoices', 'invoices/*', 'account', 'account/*', 'tickets', 'tickets/*') && !request()->is('admin', 'admin/*'),
+ ]) @if(!request()->is('admin', 'admin/*')) dir="rtl" @endif x-cloak
     x-data="{ theme: $persist('system').as('theme_mode'), systemDark: window.matchMedia('(prefers-color-scheme: dark)').matches, init() { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => { this.systemDark = e.matches; }); }, get isDark() { return this.theme === 'dark' || (this.theme === 'system' && this.systemDark); } }"
     :class="{'dark': isDark}">
     {!! hook('body') !!}
@@ -40,8 +43,19 @@
                 <x-confirmation />
             </div>
         </div>
-        <x-navigation.footer />
     </div>
+    @if (!auth()->check() && !request()->routeIs('login') && !request()->is('admin', 'admin/*'))
+    <div class="fc-auth-modal" id="fcLoginModal" aria-hidden="true" hidden>
+        <div class="fc-auth-modal__backdrop" data-auth-modal-close></div>
+        <section class="fc-auth-modal__dialog" role="dialog" aria-modal="true"
+                 aria-label="ورود به حساب FragCity" tabindex="-1">
+            <button type="button" class="fc-auth-modal__close" data-auth-modal-close aria-label="بستن پنجره ورود">
+                <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+            </button>
+            <livewire:auth.login />
+        </section>
+    </div>
+    @endif
     <x-impersonating />
     @livewireScriptConfig
     {!! hook('footer') !!}
