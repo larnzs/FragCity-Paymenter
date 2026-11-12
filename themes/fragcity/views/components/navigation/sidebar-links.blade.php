@@ -3,17 +3,18 @@
     $fragcitySidebarLabel = static function ($name): string {
         $key = mb_strtolower(trim((string) $name));
         return match ($key) {
-            'dashboard', 'overview' => 'داشبورد',
-            'services', 'my services', 'servers', 'my servers' => 'سرورهای من',
-            'invoices', 'billing history', 'my invoices' => 'فاکتورها',
-            'tickets', 'support', 'support tickets' => 'تیکت‌های پشتیبانی',
-            'account', 'profile', 'personal information' => 'اطلاعات حساب',
+            'dashboard', 'overview', 'home' => 'داشبورد',
+            'services', 'my services', 'servers', 'my servers', 'products' => 'سرورهای من',
+            'invoices', 'billing history', 'my invoices', 'transactions' => 'فاکتورها و تراکنش‌ها',
+            'tickets', 'support', 'support tickets', 'help desk' => 'تیکت‌های پشتیبانی',
+            'account', 'profile', 'personal information', 'personal details' => 'اطلاعات حساب',
             'credits', 'wallet', 'account credits' => 'کیف پول',
             'payment methods', 'saved payment methods' => 'روش‌های پرداخت',
-            'notifications' => 'اعلان‌ها',
-            'security', 'account security' => 'امنیت حساب',
+            'notifications', 'notification settings' => 'اعلان‌ها',
+            'security', 'account security', 'password and security' => 'امنیت حساب',
             'store', 'shop' => 'فروشگاه',
-            'settings' => 'تنظیمات',
+            'settings', 'preferences' => 'تنظیمات',
+            'logout', 'sign out' => 'خروج از حساب',
             default => (string) $name,
         };
     };
