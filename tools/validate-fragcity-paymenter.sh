@@ -103,7 +103,7 @@ grep -Fq "/auth/fragcity/sso/callback" "$routes"
 grep -Fq "fragcitySsoEnabled" "$api"
 test -f "extensions/Others/FragCityAPI/database/migrations/2026_11_11_000009_create_fragcity_sso_used_tickets_table.php"
 grep -Fq "ticket ID prevents replay" "$api_readme"
-grep -Fq "version: '1.8.1'" "$cs2"
+grep -Fq "version: '1.8.2'" "$cs2"
 grep -Fq "public function getActions(Service \$service): array" "$cs2"
 ! grep -Fq "function getActions(Service \$service, " "$cs2"
 grep -Fq "function getCustomerDashboardView" "$cs2"
@@ -188,6 +188,17 @@ php -r '
   $expectedCheckout = ["SRCDS_MAP", "EXEC", "MAPGROUP", "COOLDOWN", "ENABLE_GUARD", "GUARD_BAN_MINUTES"];
   if (array_diff($expectedCheckout, $checkout) || array_diff($checkout, $expectedCheckout)) {
     fwrite(STDERR, "CS2 Egg Checkout manifest does not match the six-field Checkout contract.\\n");
+    exit(1);
+  }
+
+  $serviceProperties = $manifest["paymenter"]["service_properties"] ?? [];
+  if (count($serviceProperties) !== 1 || ($serviceProperties[0]["env_variable"] ?? null) !== "STEAM_ACC") {
+    fwrite(STDERR, "CS2 per-service GSLT text property is missing.\\n");
+    exit(1);
+  }
+  $pterodactylOptions = $manifest["paymenter"]["pterodactyl_options"] ?? [];
+  if (count($pterodactylOptions) !== 1 || ($pterodactylOptions[0]["env_variable"] ?? null) !== "servername") {
+    fwrite(STDERR, "CS2 Pterodactyl Server Name option must use servername.\\n");
     exit(1);
   }
 
