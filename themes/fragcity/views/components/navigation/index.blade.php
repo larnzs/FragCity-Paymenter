@@ -73,10 +73,10 @@
         </nav>
 
         <div class="shock-user-area-wrapper">
-            <button type="button" class="fc-motion-toggle" aria-label="Performance Mode"
+            <button type="button" class="fc-motion-toggle" aria-label="حالت عملکرد"
                     data-motion-toggle aria-pressed="false" title="حالت بدون انیمیشن">
                 <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
-                <span class="fc-motion-toggle__label">Performance Mode</span>
+                <span class="fc-motion-toggle__label">حالت عملکرد</span>
             </button>
 
             @auth
@@ -102,7 +102,8 @@
                                 <div class="frag-drop-info">
                                     <span class="frag-drop-eyebrow">حساب کاربری FragCity</span>
                                     <span class="frag-drop-name">{{ auth()->user()->name }}</span>
-                                    <span class="frag-drop-steam" aria-label="ایمیل حساب">{{ auth()->user()->email }}</span>
+                                    <span class="frag-drop-account-label">ایمیل حساب</span>
+                                    <span class="frag-drop-steam">{{ auth()->user()->email }}</span>
                                 </div>
                             </div>
                             <div class="frag-drop-divider"></div>
@@ -160,9 +161,9 @@
 
     <div class="mobile-nav-links">
         <button type="button" class="mobile-nav-link fc-motion-toggle-mobile"
-                aria-label="Performance Mode" data-motion-toggle aria-pressed="false">
+                aria-label="حالت عملکرد" data-motion-toggle aria-pressed="false">
             <i class="fa-solid fa-gauge-high" aria-hidden="true"></i>
-            <span class="fc-motion-toggle__label">Performance Mode</span>
+            <span class="fc-motion-toggle__label">حالت عملکرد</span>
             <span class="fc-motion-toggle__state" aria-hidden="true"></span>
         </button>
 
