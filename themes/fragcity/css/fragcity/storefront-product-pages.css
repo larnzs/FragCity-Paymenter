@@ -474,3 +474,25 @@
 .fc-checkout-summary__breakdown-price small { color:#a3a3a3; font-size:.62rem; white-space:nowrap; }
 .fc-checkout-summary__included { color:#929292; font-size:.65rem; white-space:nowrap; }
 @media (prefers-reduced-motion:reduce) { .fc-resource-slider-control__progress,.fc-resource-slider-control__stop { transition:none !important; } }
+
+
+/* The range thumb center travels from 20px to 20px before the opposite edge.
+   Anchor the fill to that same travel line instead of the outer track padding. */
+.fc-resource-slider-control__rail {
+    right:20px !important;
+    left:auto !important;
+    width:calc(100% - 40px) !important;
+}
+.fc-resource-slider-control__progress {
+    right:20px !important;
+    left:auto !important;
+    width:calc(100% - 40px) !important;
+    max-width:none !important;
+    transform:scaleX(0);
+    transform-origin:right center;
+    transition:transform 180ms cubic-bezier(.2,.75,.25,1);
+}
+.fc-resource-slider-control__input { width:calc(100% - 20px) !important; margin-inline:10px !important; }
+@media (prefers-reduced-motion:reduce) {
+    .fc-resource-slider-control__progress { transition:none !important; }
+}
