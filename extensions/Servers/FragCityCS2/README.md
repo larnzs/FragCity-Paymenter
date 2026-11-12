@@ -91,6 +91,19 @@ Use the exact numeric value as each child Environment Variable. The values shown
 
 **Enable `Upgradable` for all eight Config Options.** Paymenter 1.5.9 removes service Config rows that are not included in the native Service Upgrade selection. With `Upgradable` enabled, the current selections are carried into the upgrade record; FragCityCS2 then resolves all eight rows again and forwards the updated limits/environment to Pterodactyl. This also lets the customer change an option through Paymenter's native upgrade flow, where Paymenter calculates the price from the selected child and the configured recurring price table. Keep Tickrate, Databases, Additional Allocations and Backups at zero price until FragCity checkout begins charging for them; keep every child priced for each supported Plan/currency. Do not perform a product/plan upgrade until the Product has all eight options attached, all eight are marked upgradable, and every selected child has a valid price row.
 
+## Customer text Config Options
+
+Attach two additional native Paymenter Config Options to the Product (both must use the **Text** type):
+
+| Config Option | Parent Environment Variable | Type | Rules |
+| --- | --- | --- | --- |
+| Server Name / نام سرور | `servername` | Text | `nullable|string|max:64|regex:/^[A-Za-z0-9_. -]+$/` |
+| Game Server Login Token (GSLT) | `STEAM_ACC` | Text | `nullable|string|max:32` |
+
+`servername` is a Pterodactyl server-create field, not an Egg variable. Paymenter's native Pterodactyl adapter reads it from the Service properties and sends it as the server's name. `STEAM_ACC` is per-Service and is passed to the Egg startup variable; it must never be stored as a Product-wide setting.
+
+The theme displays GSLT as a masked password input and redacts it from the checkout summary and cart. Paymenter v1.5.9 normally synchronizes all `configOptions` into the URL; apply `deployment/patches/paymenter-1.5.9-sensitive-config-options.patch` before enabling GSLT so its Livewire value uses `sensitiveConfigOptions`, outside URL synchronization. FragCityAPI also checks that both Product options exist with the exact parent environment-variable keys and Text type.
+
 ## Pricing contract
 
 `ENABLE_GUARD` is a paid add-on toggle. Paymenter captures the selection as a service property; the extension does **not** calculate the surcharge. FragCity Raw PHP checkout owns that pricing using the manifest's `fragcity_pricing` metadata.
