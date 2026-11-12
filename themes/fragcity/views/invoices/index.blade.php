@@ -13,8 +13,8 @@
         <a href="{{ route('invoices.show', $invoice) }}" wire:navigate class="fc-portal-list-card fc-invoice-card">
             <span class="fc-portal-list-card__icon"><x-ri-bill-line class="size-6" /></span>
             <span class="fc-portal-list-card__body">
-                <strong>{{ !$invoice->number && config('settings.invoice_proforma', false) ? __('invoices.proforma_invoice', ['id' => $invoice->id]) : __('invoices.invoice', ['id' => $invoice->number]) }}</strong>
-                <small>{{ $invoice->created_at->format('d M Y') }} <span>·</span> {{ $invoice->items->count() }} مورد</small>
+                <strong>{{ !$invoice->number && config('settings.invoice_proforma', false) ? 'پیش‌فاکتور #' . $invoice->id : 'فاکتور #' . $invoice->number }}</strong>
+                <small>{{ $invoice->created_at->format('Y/m/d') }} <span>·</span> {{ $invoice->items->count() }} مورد</small>
                 <small>{{ $invoice->items->first()?->description }}</small>
             </span>
             <span class="fc-invoice-card__amount">{{ $invoice->formattedTotal }}</span>
