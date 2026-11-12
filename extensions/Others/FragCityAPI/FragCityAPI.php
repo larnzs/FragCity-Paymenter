@@ -35,7 +35,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server VIP store, Paymenter wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.17.0',
+    version: '1.18.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
