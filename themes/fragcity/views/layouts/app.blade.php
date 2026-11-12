@@ -28,7 +28,7 @@
 </head>
 <body @class([
     'w-full bg-background text-base min-h-screen flex flex-col antialiased',
-    'fc-customer-app-shell' => auth()->check() && request()->is('dashboard', 'services', 'invoices', 'account', 'account/*') && !request()->is('admin', 'admin/*'),
+    'fc-customer-app-shell' => auth()->check() && request()->is('dashboard', 'services', 'services/*', 'invoices', 'invoices/*', 'account', 'account/*', 'tickets', 'tickets/*') && !request()->is('admin', 'admin/*'),
  ]) @if(!request()->is('admin', 'admin/*')) dir="rtl" @endif x-cloak
     x-data="{ theme: $persist('system').as('theme_mode'), systemDark: window.matchMedia('(prefers-color-scheme: dark)').matches, init() { window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => { this.systemDark = e.matches; }); }, get isDark() { return this.theme === 'dark' || (this.theme === 'system' && this.systemDark); } }"
     :class="{'dark': isDark}">
