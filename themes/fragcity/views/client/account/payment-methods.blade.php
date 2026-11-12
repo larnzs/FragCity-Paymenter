@@ -2,7 +2,7 @@
     <x-navigation.breadcrumb />
 
     <div class="fc-portal-heading">
-        <div><span class="fc-portal-kicker">FRAGCITY / PAYMENT METHODS</span><h1>روش‌های پرداخت</h1><p>روش‌های پرداخت ذخیره‌شده و تراکنش‌های اخیر حساب خود را مدیریت کن.</p></div>
+        <div><span class="fc-portal-kicker">FRAGCITY / روش‌های پرداخت</span><h1>روش‌های پرداخت</h1><p>روش‌های پرداخت ذخیره‌شده و تراکنش‌های اخیر حساب خود را مدیریت کن.</p></div>
     </div>
 
     @if($setupModalVisible)
