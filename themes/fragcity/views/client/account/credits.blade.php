@@ -19,7 +19,7 @@
             @forelse (Auth::user()->credits as $credit)
                 <div class="fc-credit-balance-item">
                     <span class="text-sm text-gray-300">موجودی {{ $credit->currency->code }}</span>
-                    <strong>{{ $credit->formattedAmount }}</strong>
+                    <strong data-fc-currency-value data-fc-currency-code="{{ $credit->currency->code }}">{{ $credit->formattedAmount }}</strong>
                 </div>
             @empty
                 <div class="fc-portal-empty mt-3">
