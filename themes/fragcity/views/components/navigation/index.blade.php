@@ -129,18 +129,20 @@
                                 @endif
                             @endforeach
                             <div class="frag-drop-divider"></div>
-                            <div class="frag-drop-wallet">
-                                <div class="frag-drop-wallet__balances">
-                                    <span class="frag-drop-wallet__label">موجودی کیف پول</span>
+                            <div class="frag-drop-wallet-card">
+                                <div class="frag-drop-wallet-card__balance">
+                                    <span class="frag-drop-wallet-card__label">
+                                        <i class="fa-solid fa-wallet" aria-hidden="true"></i>
+                                        موجودی کیف پول
+                                    </span>
                                     @forelse(auth()->user()->credits as $credit)
-                                        <strong class="frag-drop-wallet__balance">{{ $credit->formattedAmount }}</strong>
-                                        <span class="frag-drop-wallet__currency">{{ $credit->currency->code }}</span>
+                                        <strong data-fc-currency-value
+                                                data-fc-currency-code="{{ $credit->currency->code }}">{{ $credit->formattedAmount }}</strong>
                                     @empty
-                                        <strong class="frag-drop-wallet__balance">۰</strong>
-                                        <span class="frag-drop-wallet__currency">اعتباری ثبت نشده</span>
+                                        <strong>اعتباری ثبت نشده</strong>
                                     @endforelse
                                 </div>
-                                <a href="{{ route('account.credits') }}" class="frag-drop-wallet__add"
+                                <a href="{{ route('account.credits') }}" class="frag-drop-wallet-card__add"
                                    aria-label="شارژ کیف پول" title="شارژ کیف پول" wire:navigate>
                                     <i class="fa-solid fa-plus" aria-hidden="true"></i>
                                 </a>
