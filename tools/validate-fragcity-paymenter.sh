@@ -76,7 +76,7 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 
 # Extension versions and runtime bridge version must be released together.
 grep -Fq "version: '1.18.1'" "$api"
-grep -Fq "'version' => '1.17.0'" "$api"
+grep -Fq "'version' => '1.18.1'" "$api"
 test -s "deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
 grep -Fq "sensitiveConfigOptions" "deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
 grep -Fq "function startSso" "$api"
@@ -266,6 +266,10 @@ done
 grep -Fq "\$wire.entangle('{{ \$name }}').live" themes/fragcity/views/components/form/configoption.blade.php
 grep -Fq "transform:scaleX" themes/fragcity/views/components/form/configoption.blade.php
 grep -Fq "transform-origin:right center" themes/fragcity/css/fragcity/storefront-product-pages.css
+grep -Fq "right:28px !important" themes/fragcity/css/fragcity/storefront-product-pages.css
+grep -Fq "width:calc(100% - 56px) !important" themes/fragcity/css/fragcity/storefront-product-pages.css
+grep -Fq "box-sizing:border-box" themes/fragcity/css/fragcity/storefront-product-pages.css
+
 grep -Fq "sensitiveConfigOptions." themes/fragcity/views/components/form/configoption.blade.php
 grep -Fq 'sensitiveConfigOptions[$configOption->id]' themes/fragcity/views/products/checkout.blade.php
 grep -Fq 'fc-checkout-option-card--tall' themes/fragcity/views/products/checkout.blade.php

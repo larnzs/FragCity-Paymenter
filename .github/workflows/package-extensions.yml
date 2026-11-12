@@ -39,6 +39,16 @@ jobs:
           ref: v1.5.9
           path: paymenter-core
 
+      - name: Verify and apply the Paymenter 1.5.9 GSLT-safe Checkout patch
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          patch_file="$GITHUB_WORKSPACE/deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
+          git -C paymenter-core apply --check "$patch_file"
+          git -C paymenter-core apply "$patch_file"
+          php -l paymenter-core/app/Livewire/Products/Checkout.php
+          grep -Fq 'public $sensitiveConfigOptions = [];' paymenter-core/app/Livewire/Products/Checkout.php
+
       - name: Set up PHP for release validation and Blade compilation
         uses: shivammathur/setup-php@v2
         with:
@@ -112,6 +122,7 @@ jobs:
         run: |
           set -Eeuo pipefail
           bash tools/package-release.sh "$RUNNER_TEMP/fragcity-release" "$RELEASE_TAG"
+          cp "$GITHUB_WORKSPACE/deployment/patches/paymenter-1.5.9-sensitive-config-options.patch" "$RUNNER_TEMP/fragcity-release/paymenter-1.5.9-sensitive-config-options.patch"
 
       - name: Prepare Release notes
         shell: bash
@@ -153,6 +164,10 @@ jobs:
 
           The helper only changes themes/fragcity, public/fragcity and group inheritance on themes/ and public/. It never changes .env, vendor, app, database, storage or bootstrap. No Node.js, npm or Composer is required on the host.
 
+          ## Paymenter 1.5.9 GSLT privacy patch
+
+          The release also attaches `paymenter-1.5.9-sensitive-config-options.patch`. Apply this exact patch to the installed Paymenter v1.5.9 Checkout component before enabling the CS2 GSLT Text Config Option. It keeps the optional `STEAM_ACC` value outside the URL-synchronized `configOptions` property. See the repository's `deployment/README.md` for the manual File Manager procedure.
+
           ## Integrity
 
           Verify downloaded ZIPs with SHA256SUMS. PACKAGES.txt lists the packaged components and source revision. THEME-PACKAGE.txt describes the theme overlay and installation boundary.
@@ -183,6 +198,7 @@ jobs:
           package_dir="$RUNNER_TEMP/fragcity-release"
           gh release create "$RELEASE_TAG" \
             "$package_dir"/*.zip \
+            "$package_dir/paymenter-1.5.9-sensitive-config-options.patch" \
             "$package_dir/SHA256SUMS" \
             "$package_dir/PACKAGES.txt" \
             "$package_dir/THEME-PACKAGE.txt" \
