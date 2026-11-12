@@ -271,7 +271,7 @@
 
             @if (($product->stock > 0 || !$product->stock) && $product->price()->available)
                 <div class="fc-checkout-summary__submit">
-                    <x-button.primary class="fc-checkout-submit" wire:click="checkout" wire:loading.attr="disabled">
+                    <x-button.primary type="button" class="fc-checkout-submit" wire:click="checkout" wire:loading.attr="disabled" wire:target="checkout">
                         <x-loading target="checkout" />
                         <span wire:loading.remove wire:target="checkout">{{ __('product.checkout') }}</span>
                     </x-button.primary>
