@@ -1,6 +1,17 @@
 @php
     $fragcityMain = 'https://fragcity.ir';
     $fragcityFallbackAvatar = $fragcityMain . '/img/logoresponsive.png';
+
+    // Keep account-menu copy Persian even when Paymenter's global locale is English.
+    $fragcityAccountNav = static function (array $nav): array {
+        return match (mb_strtolower(trim((string) ($nav['name'] ?? '')))) {
+            'dashboard' => ['label' => 'داشبورد', 'icon' => 'fa-gauge-high'],
+            'tickets' => ['label' => 'تیکت‌ها و پشتیبانی', 'icon' => 'fa-headset'],
+            'account' => ['label' => 'تنظیمات حساب', 'icon' => 'fa-user-gear'],
+            'admin' => ['label' => 'پنل مدیریت', 'icon' => 'fa-shield-halved'],
+            default => ['label' => (string) ($nav['name'] ?? 'حساب کاربری'), 'icon' => 'fa-arrow-up-right-from-square'],
+        };
+    };
 @endphp
 
 <header class="shock-header" id="siteHeader">
@@ -72,6 +83,7 @@
                 <div class="frag-user-area">
                     <div class="frag-dropdown" id="shockUserDropdown">
                         <button type="button" class="frag-user-trigger" id="shockUserButton"
+                                aria-label="باز کردن منوی حساب کاربری" title="حساب کاربری"
                                 aria-expanded="false" aria-controls="shockUserMenu">
                             <img src="{{ auth()->user()->avatar ?: $fragcityFallbackAvatar }}"
                                  class="frag-avatar" alt="آواتار {{ auth()->user()->name }}"
@@ -90,16 +102,17 @@
                                 <div class="frag-drop-info">
                                     <span class="frag-drop-eyebrow">حساب کاربری FragCity</span>
                                     <span class="frag-drop-name">{{ auth()->user()->name }}</span>
-                                    <span class="frag-drop-steam">{{ auth()->user()->email }}</span>
+                                    <span class="frag-drop-steam" aria-label="ایمیل حساب">{{ auth()->user()->email }}</span>
                                 </div>
                             </div>
                             <div class="frag-drop-divider"></div>
                             <div class="frag-drop-actions">
                                 @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
+                                    @php($fragcityAccountLink = $fragcityAccountNav($nav))
                                     <a href="{{ $nav['url'] }}" class="frag-drop-link"
                                        @if(isset($nav['spa']) && $nav['spa']) wire:navigate @endif>
-                                        <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i>
-                                        <span>{{ $nav['name'] }}</span>
+                                        <i class="fa-solid {{ $fragcityAccountLink['icon'] }}" aria-hidden="true"></i>
+                                        <span>{{ $fragcityAccountLink['label'] }}</span>
                                     </a>
                                 @endforeach
                             </div>
@@ -183,9 +196,11 @@
                 </div>
             </div>
             @foreach (\App\Classes\Navigation::getAccountDropdownLinks() as $nav)
+                @php($fragcityAccountLink = $fragcityAccountNav($nav))
                 <a href="{{ $nav['url'] }}" class="mobile-nav-link"
                    @if(isset($nav['spa']) && $nav['spa']) wire:navigate @endif>
-                    <i class="fa-solid fa-arrow-up-right-from-square" aria-hidden="true"></i><span>{{ $nav['name'] }}</span>
+                    <i class="fa-solid {{ $fragcityAccountLink['icon'] }}" aria-hidden="true"></i>
+                    <span>{{ $fragcityAccountLink['label'] }}</span>
                 </a>
             @endforeach
             <div class="mobile-nav-logout"><livewire:auth.logout /></div>
