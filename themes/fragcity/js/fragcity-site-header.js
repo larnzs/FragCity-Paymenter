@@ -1,15 +1,19 @@
 (function () {
     'use strict';
 
-    if (window.fragCityHeaderReady) return;
-    window.fragCityHeaderReady = true;
+    if (window.fragCityHeaderDelegationReady) return;
+    window.fragCityHeaderDelegationReady = true;
 
     const body = document.body;
-    const siteHeader = document.getElementById('siteHeader');
-    let scrollTicking = false;
     let lastScrollTop = Math.max(window.scrollY || 0, document.documentElement.scrollTop || 0);
+    let scrollTicking = false;
+
+    function currentHeader() {
+        return document.getElementById('siteHeader');
+    }
 
     function updateHeaderScrollState() {
+        const siteHeader = currentHeader();
         if (!siteHeader) {
             scrollTicking = false;
             return;
@@ -22,7 +26,6 @@
             siteHeader.classList.remove('is-scrolled', 'is-scroll-down', 'is-scroll-up');
         } else {
             siteHeader.classList.add('is-scrolled');
-
             if (delta > 2) {
                 siteHeader.classList.add('is-scroll-down');
                 siteHeader.classList.remove('is-scroll-up');
@@ -46,83 +49,100 @@
         window.requestAnimationFrame(updateHeaderScrollState);
     }, { passive: true });
 
-    updateHeaderScrollState();
-
-    const dropdowns = Array.from(document.querySelectorAll('.frag-dropdown'));
-    const mobileNav = document.getElementById('mobileNav');
-    const mobileOverlay = document.getElementById('mobileOverlay');
-    const mobileOpen = document.getElementById('mobileNavOpen');
-    const mobileClose = document.getElementById('mobileNavClose');
-
-    function getDropdownTrigger(dropdown) {
-        return dropdown.querySelector(':scope > button, :scope > a');
+    function triggerFor(dropdown) {
+        return dropdown ? dropdown.querySelector(':scope > button, :scope > a') : null;
     }
 
-    function setDropdownState(dropdown, button, open) {
+    function setDropdown(dropdown, open) {
         if (!dropdown) return;
         dropdown.classList.toggle('open', open);
-        if (button) button.setAttribute('aria-expanded', open ? 'true' : 'false');
+        const trigger = triggerFor(dropdown);
+        if (trigger) trigger.setAttribute('aria-expanded', open ? 'true' : 'false');
     }
 
     function closeDropdowns(except) {
-        dropdowns.forEach(function (dropdown) {
-            if (dropdown === except) return;
-            setDropdownState(dropdown, getDropdownTrigger(dropdown), false);
+        document.querySelectorAll('.frag-dropdown.open').forEach(function (dropdown) {
+            if (dropdown !== except) setDropdown(dropdown, false);
         });
     }
 
+    function currentMobileNodes() {
+        return {
+            nav: document.getElementById('mobileNav'),
+            overlay: document.getElementById('mobileOverlay'),
+            open: document.getElementById('mobileNavOpen'),
+            close: document.getElementById('mobileNavClose')
+        };
+    }
+
     function openMobileMenu() {
-        if (!mobileNav || !mobileOverlay) return;
+        const nodes = currentMobileNodes();
+        if (!nodes.nav || !nodes.overlay) return;
         closeDropdowns();
-        mobileNav.classList.add('open');
-        mobileOverlay.classList.add('show');
-        mobileNav.setAttribute('aria-hidden', 'false');
-        mobileOverlay.setAttribute('aria-hidden', 'false');
-        if (mobileOpen) mobileOpen.setAttribute('aria-expanded', 'true');
+        nodes.nav.classList.add('open');
+        nodes.overlay.classList.add('show');
+        nodes.nav.setAttribute('aria-hidden', 'false');
+        nodes.overlay.setAttribute('aria-hidden', 'false');
+        if (nodes.open) nodes.open.setAttribute('aria-expanded', 'true');
         body.classList.add('mobile-menu-open');
     }
 
     function closeMobileMenu() {
-        if (!mobileNav || !mobileOverlay) return;
-        mobileNav.classList.remove('open');
-        mobileOverlay.classList.remove('show');
-        mobileNav.setAttribute('aria-hidden', 'true');
-        mobileOverlay.setAttribute('aria-hidden', 'true');
-        if (mobileOpen) mobileOpen.setAttribute('aria-expanded', 'false');
+        const nodes = currentMobileNodes();
+        if (!nodes.nav || !nodes.overlay) return;
+        nodes.nav.classList.remove('open');
+        nodes.overlay.classList.remove('show');
+        nodes.nav.setAttribute('aria-hidden', 'true');
+        nodes.overlay.setAttribute('aria-hidden', 'true');
+        if (nodes.open) nodes.open.setAttribute('aria-expanded', 'false');
         body.classList.remove('mobile-menu-open');
     }
 
     window.openMobileMenu = openMobileMenu;
     window.closeMobileMenu = closeMobileMenu;
 
-    dropdowns.forEach(function (dropdown) {
-        const trigger = getDropdownTrigger(dropdown);
-        if (!trigger) return;
-
-        trigger.addEventListener('click', function (event) {
-            event.preventDefault();
-            event.stopPropagation();
-            const shouldOpen = !dropdown.classList.contains('open');
-            closeDropdowns(dropdown);
-            setDropdownState(dropdown, trigger, shouldOpen);
-        });
-    });
-
-    if (mobileOpen) mobileOpen.addEventListener('click', openMobileMenu);
-    if (mobileClose) mobileClose.addEventListener('click', closeMobileMenu);
-    if (mobileOverlay) mobileOverlay.addEventListener('click', closeMobileMenu);
-
     document.addEventListener('click', function (event) {
-        dropdowns.forEach(function (dropdown) {
-            if (!dropdown.contains(event.target)) {
-                setDropdownState(dropdown, getDropdownTrigger(dropdown), false);
-            } else if (event.target instanceof Element && event.target.closest('a')) {
-                setDropdownState(dropdown, getDropdownTrigger(dropdown), false);
+        if (!(event.target instanceof Element)) return;
+
+        const trigger = event.target.closest('.frag-dropdown > button, .frag-dropdown > a');
+        if (trigger) {
+            const dropdown = trigger.closest('.frag-dropdown');
+            if (trigger.matches('button')) {
+                event.preventDefault();
+                event.stopPropagation();
+                const shouldOpen = !dropdown.classList.contains('open');
+                closeDropdowns(dropdown);
+                setDropdown(dropdown, shouldOpen);
+                return;
             }
+        }
+
+        const clickedAnchor = event.target.closest('a');
+        if (clickedAnchor) {
+            const containingDropdown = clickedAnchor.closest('.frag-dropdown');
+            if (containingDropdown) setDropdown(containingDropdown, false);
+        }
+
+        document.querySelectorAll('.frag-dropdown.open').forEach(function (dropdown) {
+            if (!dropdown.contains(event.target)) setDropdown(dropdown, false);
         });
 
-        if (event.target instanceof Element && event.target.closest('#mobileNav a')) {
+        if (event.target.closest('#mobileNavOpen')) {
+            event.preventDefault();
+            openMobileMenu();
+            return;
+        }
+        if (event.target.closest('#mobileNavClose, #mobileOverlay')) {
+            event.preventDefault();
             closeMobileMenu();
+            return;
+        }
+        if (event.target.closest('#mobileNav a')) closeMobileMenu();
+
+        const motionToggle = event.target.closest('[data-motion-toggle]');
+        if (motionToggle) {
+            event.preventDefault();
+            setNoAnimationMode(!document.documentElement.classList.contains('fc-no-animation'));
         }
     });
 
@@ -140,11 +160,9 @@
         document.querySelectorAll('[data-motion-toggle]').forEach(function (button) {
             button.setAttribute('aria-pressed', enabled ? 'true' : 'false');
             button.classList.toggle('is-active', enabled);
-            button.title = enabled
-                ? 'Performance Mode is on — click to restore animations'
-                : 'Enable Performance Mode';
+            button.title = enabled ? 'حالت عملکرد روشن است — برای بازگشت انیمیشن کلیک کنید' : 'فعال‌سازی حالت عملکرد';
             const label = button.querySelector('.fc-motion-toggle__label');
-            if (label) label.textContent = 'Performance Mode';
+            if (label) label.textContent = 'حالت عملکرد';
             const state = button.querySelector('.fc-motion-toggle__state');
             if (state) state.textContent = enabled ? 'روشن' : 'خاموش';
             const icon = button.querySelector('i');
@@ -158,41 +176,30 @@
     function setNoAnimationMode(enabled) {
         const root = document.documentElement;
         root.classList.toggle('fc-no-animation', enabled);
-
         try {
             localStorage.setItem(motionPreferenceKey, enabled ? '1' : '0');
-        } catch (error) {
-            // The visual mode still works for the current page when storage is unavailable.
-        }
-
-        window.dispatchEvent(new CustomEvent('fc-no-animation-change', {
-            detail: { enabled: enabled }
-        }));
+        } catch (error) {}
+        window.dispatchEvent(new CustomEvent('fc-no-animation-change', { detail: { enabled: enabled } }));
         syncMotionToggleButtons();
     }
 
-    document.addEventListener('click', function (event) {
-        if (!(event.target instanceof Element)) return;
-        const toggle = event.target.closest('[data-motion-toggle]');
-        if (!toggle) return;
-        event.preventDefault();
-        setNoAnimationMode(!document.documentElement.classList.contains('fc-no-animation'));
-    });
-
-    // Restore the same Performance Mode preference used by the main website.
     try {
         const savedMotionPreference = localStorage.getItem(motionPreferenceKey);
         if (savedMotionPreference === '1' || savedMotionPreference === '0') {
             const enabled = savedMotionPreference === '1';
             document.documentElement.classList.toggle('fc-no-animation', enabled);
-            window.dispatchEvent(new CustomEvent('fc-no-animation-change', {
-                detail: { enabled: enabled }
-            }));
+            window.dispatchEvent(new CustomEvent('fc-no-animation-change', { detail: { enabled: enabled } }));
         }
-    } catch (error) {
-        // Continue with the current page preference when storage is unavailable.
-    }
+    } catch (error) {}
 
     window.addEventListener('fc-motion-mode-ready', syncMotionToggleButtons);
+    document.addEventListener('livewire:navigated', function () {
+        lastScrollTop = Math.max(window.scrollY || 0, document.documentElement.scrollTop || 0);
+        updateHeaderScrollState();
+        syncMotionToggleButtons();
+        closeDropdowns();
+        closeMobileMenu();
+    });
     syncMotionToggleButtons();
+    updateHeaderScrollState();
 })();
