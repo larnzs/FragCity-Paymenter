@@ -4462,3 +4462,58 @@ body { max-width: 100%; overflow-x: clip; }
         max-height: 72dvh;
     }
 }
+
+/* Persistent shopping-cart shortcut in the FragCity storefront header. */
+.shock-header .fc-header-cart-link {
+    position:relative;
+    display:inline-flex;
+    min-width:42px;
+    min-height:40px;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:7px 11px;
+    border:1px solid rgba(255,179,71,.22);
+    border-radius:10px;
+    background:rgba(249,115,22,.075);
+    color:#ffd09f;
+    font-size:.75rem;
+    font-weight:850;
+    line-height:1;
+    text-decoration:none;
+    transition:background-color 160ms ease,border-color 160ms ease,transform 160ms ease;
+}
+.shock-header .fc-header-cart-link:hover {
+    transform:translateY(-1px);
+    border-color:rgba(255,179,71,.42);
+    background:rgba(249,115,22,.14);
+    color:#fff0dc;
+}
+.shock-header .fc-header-cart-link > i { font-size:.9rem; }
+.shock-header .fc-header-cart-link__count {
+    display:inline-flex;
+    min-width:19px;
+    height:19px;
+    align-items:center;
+    justify-content:center;
+    padding:0 5px;
+    border-radius:999px;
+    background:#f97316;
+    color:#1b120b;
+    font-size:.62rem;
+    font-weight:950;
+    font-variant-numeric:tabular-nums;
+}
+@media (max-width:700px) {
+    .shock-header .fc-header-cart-link { width:38px; min-width:38px; min-height:36px; padding:0; }
+    .shock-header .fc-header-cart-link__label { display:none; }
+    .shock-header .fc-header-cart-link__count {
+        position:absolute;
+        top:-5px;
+        right:-5px;
+        min-width:16px;
+        height:16px;
+        padding:0 3px;
+        font-size:.56rem;
+    }
+}
