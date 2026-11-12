@@ -65,6 +65,19 @@ After installing and enabling the extension under **Admin → Extensions → Oth
 
 Keep the secret out of Git, browser code and logs.
 
+## CS2 customer text Config Options
+
+The CS2 Product must contain both native Paymenter Config Options below. FragCityAPI verifies their parent environment-variable keys and `text` type when the CS2 catalog, quote and order endpoints run; the signed API fails closed with `cs2_text_config_option_mapping_invalid` if either option is missing or misconfigured.
+
+| Config Option | Parent Environment Variable | Type | Validation / target |
+| --- | --- | --- | --- |
+| Server Name / نام سرور | `servername` | Text | Optional; max 64; ASCII letters, numbers, spaces, `_`, `-`, `.`; sent as Pterodactyl server name |
+| Game Server Login Token (GSLT) | `STEAM_ACC` | Text | Optional; `nullable|string|max:32`; sent only to the CS2 Egg startup variable |
+
+The website bridge payload keeps the server name at `server_name` and sends the optional token as `egg.STEAM_ACC`. The API validates both values against the Egg/Pterodactyl manifest and stores them on the newly created Paymenter Service as `servername` and `STEAM_ACC` properties respectively. GSLT is never included in the catalog response, quote response, cart labels, invoice descriptions or diagnostic logs.
+
+For native Paymenter checkout, apply the sensitive Config Options patch in [deployment/README.md](../../deployment/README.md) before enabling the GSLT field. That patch prevents Paymenter v1.5.9's URL-synchronized Checkout property from putting the secret into the query string.
+
 ## User synchronization
 
 Request body:
