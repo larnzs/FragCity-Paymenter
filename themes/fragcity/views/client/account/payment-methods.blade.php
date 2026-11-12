@@ -163,7 +163,7 @@
                 </a>
             @empty
                 <div class="fc-portal-empty">
-                    <span><x-ri-history-line class="size-8" /></span>
+                    <span><x-ri-bill-line class="size-8" /></span>
                     <strong>تراکنشی برای نمایش وجود ندارد.</strong>
                     <p>سوابق پرداخت‌های بعدی در این بخش ثبت می‌شوند.</p>
                 </div>
