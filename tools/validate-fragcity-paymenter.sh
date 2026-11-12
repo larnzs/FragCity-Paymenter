@@ -75,7 +75,7 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 ! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.17.0'" "$api"
+grep -Fq "version: '1.18.0'" "$api"
 grep -Fq "'version' => '1.17.0'" "$api"
 grep -Fq "function startSso" "$api"
 grep -Fq "function completeSso" "$api"
