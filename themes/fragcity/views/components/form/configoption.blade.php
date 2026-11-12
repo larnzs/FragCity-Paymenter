@@ -213,11 +213,15 @@
         @case('number')
         @case('color')
         @case('file')
-            <x-form.input name="{{ $name }}"
-                :type="strtoupper((string) ($config->env_variable ?? '')) === 'STEAM_ACC' ? 'password' : $config->type"
+            @php
+                $isSensitiveConfigOption = strtoupper((string) ($config->env_variable ?? '')) === 'STEAM_ACC';
+                $configInputName = $isSensitiveConfigOption ? 'sensitiveConfigOptions.' . $config->id : $name;
+            @endphp
+            <x-form.input name="{{ $configInputName }}"
+                :type="$isSensitiveConfigOption ? 'password' : $config->type"
                 :label="__($config->label ?? $config->name)"
                 :required="$config->required ?? false"
-                wire:model.blur="{{ $name }}"
+                wire:model.blur="{{ $configInputName }}"
                 :placeholder="$config->placeholder ?? ($config->default ?? '')" />
         @break
 
