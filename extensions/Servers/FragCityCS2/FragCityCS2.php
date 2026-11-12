@@ -148,7 +148,11 @@ class FragCityCS2 extends PterodactylExtension
 
             $value = trim((string) ($properties[$key] ?? ''));
             if ($value === '') {
-                // Let the official Pterodactyl adapter use Product Name #Service ID.
+                if (!empty($field['required'])) {
+                    throw new RuntimeException('FragCity CS2 server name is required.');
+                }
+
+                // Optional legacy definitions can still fall back to Product Name #Service ID.
                 unset($properties[$key]);
                 continue;
             }
@@ -1625,6 +1629,7 @@ class FragCityCS2 extends PterodactylExtension
                 || $envVariable !== 'servername'
                 || ($field['type'] ?? null) !== 'text'
                 || ($field['target'] ?? null) !== 'server_name'
+                || ($field['required'] ?? false) !== true
                 || isset($pterodactylOptionMap[$envVariable])
                 || !is_array($field['validation'] ?? null)
             ) {
