@@ -20,7 +20,7 @@
     const amountPattern = /^[+-]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d{1,2})?$/;
     const inlineRialPattern = /([+-]?(?:[\d٠-٩۰-۹]{1,3}(?:[,٬][\d٠-٩۰-۹]{3})+|[\d٠-٩۰-۹]+)(?:[.٫][\d٠-٩۰-۹]{1,2})?)\s*(ریال|ريال|IRR|RIAL)(?![A-Za-z])/giu;
     const inlineTomanPattern = /([+-]?(?:[\d٠-٩۰-۹]{1,3}(?:[,٬][\d٠-٩۰-۹]{3})+|[\d٠-٩۰-۹]+)(?:[.٫][\d٠-٩۰-۹]{1,2})?)\s*تومان/gu;
-    const numericTokenPattern = /(^|[^\p{L}\p{N}_])([+-]?(?:[\d٠-٩۰-۹]{1,3}(?:[,٬][\d٠-٩-۹]{3})+|[\d٠-٩۰-۹]+)(?:[.٫][\d٠-٩۰-۹]+)?)(?=$|[^\p{L}\p{N}_])/gu;
+    const numericTokenPattern = /(^|[^\p{L}\p{N}_])([+-]?(?:[\d٠-٩۰-۹]{1,3}(?:[,٬][\d٠-٩۰-۹]{3})+|[\d٠-٩۰-۹]+)(?:[.٫][\d٠-٩۰-۹]+)?)(?=$|[^\p{L}\p{N}_])/gu;
 
     const containerStates = new WeakMap();
     const nodeStates = new WeakMap();
@@ -331,13 +331,19 @@
         }
 
         const normalized = normalizeDigits(node.nodeValue);
-        if (/(?:ریال|ريال|\bIRR\b|\bRIAL\b)/iu.test(normalized)) {
+        const suffix = normalized.trim();
+
+        // A standalone currency label needs its preceding amount node; handle
+        // it before registering an inline price container.
+        if (rialSuffix.test(suffix)) {
+            markSeparatePrice(node);
+            return;
+        }
+
+        if (/(?:ریال|ريال|\\bIRR\\b|\\bRIAL\\b)/iu.test(normalized)) {
             markInlinePrice(node);
             if (findState(node)) return;
         }
-
-        const suffix = normalized.trim();
-        if (rialSuffix.test(suffix) && markSeparatePrice(node)) return;
 
         localizeNumberTokens(node);
     }
