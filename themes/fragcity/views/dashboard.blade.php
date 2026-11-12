@@ -55,7 +55,7 @@
     </section>
 
     <div class="fc-dashboard-grid">
-        <div class="fc-dashboard-column">
+        <div class="fc-dashboard-column fc-dashboard-column--right">
             <section class="fc-portal-panel">
                 <div class="fc-portal-panel__heading">
                     <div>
@@ -91,7 +91,7 @@
             @endif
         </div>
 
-        <div class="fc-dashboard-column">
+        <div class="fc-dashboard-column fc-dashboard-column--left">
             <section class="fc-portal-panel">
                 <div class="fc-portal-panel__heading">
                     <div>

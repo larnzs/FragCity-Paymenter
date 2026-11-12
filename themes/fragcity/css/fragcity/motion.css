@@ -41,9 +41,9 @@ html.fc-motion-enabled .fc-motion-interactive {
 }
 
 /* A polished page entrance after initial load and AJAX navigation. */
-.fc-motion-page-enter { animation: fc-page-enter 480ms var(--fc-ease-emphasized) both; }
+.fc-motion-page-enter { animation: fc-page-enter 420ms cubic-bezier(.22,.61,.36,1) both; }
 @keyframes fc-page-enter {
-    from { opacity: 0; transform: translate3d(0, 12px, 0); }
+    from { opacity: 0; transform: translate3d(0, 8px, 0); }
     to { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
@@ -51,11 +51,11 @@ html.fc-motion-enabled .fc-motion-interactive {
 html.fc-motion-ready [data-fc-reveal] {
     opacity: 0;
     transition:
-        opacity 520ms var(--fc-ease-standard) var(--fc-reveal-delay, 0ms),
-        transform 520ms var(--fc-ease-emphasized) var(--fc-reveal-delay, 0ms);
+        opacity 420ms cubic-bezier(.22,.61,.36,1) var(--fc-reveal-delay, 0ms),
+        transform 420ms cubic-bezier(.22,.61,.36,1) var(--fc-reveal-delay, 0ms);
     will-change: opacity, transform;
 }
-html.fc-motion-ready [data-fc-reveal="up"] { transform: translate3d(0, 18px, 0); }
+html.fc-motion-ready [data-fc-reveal="up"] { transform: translate3d(0, 14px, 0); }
 html.fc-motion-ready [data-fc-reveal="down"] { transform: translate3d(0, -14px, 0); }
 html.fc-motion-ready [data-fc-reveal="left"] { transform: translate3d(18px, 0, 0); }
 html.fc-motion-ready [data-fc-reveal="right"] { transform: translate3d(-18px, 0, 0); }
@@ -77,13 +77,11 @@ html.fc-motion-ready [data-fc-reveal].is-visible {
 
 /* Keep AJAX departures short and page arrivals slightly more expressive. */
 .content-fader {
-    transition:
-        opacity 240ms var(--fc-ease-standard),
-        transform 240ms var(--fc-ease-emphasized);
+    transition: opacity 160ms ease, transform 160ms ease;
 }
 .content-fader.fade-out {
     opacity: 0;
-    transform: translate3d(0, 8px, 0) scale(0.996);
+    transform: translate3d(0, 4px, 0);
     pointer-events: none;
 }
 

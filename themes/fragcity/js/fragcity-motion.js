@@ -8,7 +8,15 @@
     let intersectionObserver = null;
     let mutationObserver = null;
 
-    const revealSelector = '[data-fc-reveal]';
+    const revealSelector = [
+        '[data-fc-reveal]',
+        '.fc-category-hero', '.fc-product-overview', '.fc-product-description-section',
+        '.fc-checkout-hero', '.fc-checkout-section', '.fc-checkout-summary', '.fc-checkout-option-card',
+        '.fc-catalog-card', '.fc-subcategory-card',
+        '.fc-dashboard-grid > .fc-dashboard-column', '.fc-dashboard-column--right > .fc-portal-panel',
+        '.fc-portal-stat', '.fc-portal-panel', '.fc-portal-list-card',
+        '.fc-invoice-actions', '.fc-invoice-paper', '.fc-invoice-transactions'
+    ].join(',');
     const interactiveSelector = '.fc-card--interactive, [data-fc-interactive]';
 
     function disabled() {
@@ -181,6 +189,9 @@
     function disableMotion() {
         disconnectObservers();
 
+        document.querySelectorAll('.content-fader.fade-out').forEach((element) => {
+            element.classList.remove('fade-out');
+        });
         root.classList.remove('fc-motion-enabled', 'fc-motion-ready');
 
         document.querySelectorAll(revealSelector).forEach(showImmediately);
@@ -219,11 +230,37 @@
         enableMotion();
     }
 
+    let livewireNavigationPending = false;
+
+    document.addEventListener('livewire:navigate', () => {
+        livewireNavigationPending = true;
+        if (disabled()) return;
+
+        const main = document.querySelector('.fc-page-main');
+        if (!main) return;
+
+        main.classList.remove('fc-motion-page-enter');
+        void main.offsetWidth;
+        main.classList.add('fade-out');
+    });
+
     document.addEventListener('livewire:navigated', () => {
+        const main = document.querySelector('.fc-page-main');
+        if (main) main.classList.remove('fade-out');
+
+        const completedNavigation = livewireNavigationPending;
+        livewireNavigationPending = false;
         if (disabled()) return;
 
         refresh(document);
-        animatePage();
+        if (completedNavigation) {
+            requestAnimationFrame(() => {
+                if (!main || !main.isConnected) return;
+                main.classList.remove('fc-motion-page-enter');
+                void main.offsetWidth;
+                animatePage();
+            });
+        }
     });
 
     window.addEventListener('fc-no-animation-change', (event) => {
