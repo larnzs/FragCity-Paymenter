@@ -18,7 +18,7 @@ If an existing client is found by email with an empty `external_id`, the extensi
 
 ## Customer server management
 
-Extension version: **1.8.1**.
+Extension version: **1.8.2**.
 
 The extension exposes two narrow methods for the signed FragCity API bridge:
 
@@ -34,7 +34,7 @@ The manifest is audited against the source Egg:
 - **32 Egg environment variables** are represented.
 - **6 variables** are routed to customer Checkout.
 - **2 variables** are routed to native Product Config Options.
-- **21 variables** are routed to Product admin settings.
+- **20 variables** are routed to Product admin settings.
 - **3 variables** are intentionally not exposed: fixed `SRCDS_APPID`, secret `AUTHKEY`, and development-only `GDB_DEBUG_PORT`.
 
 The secret `AUTHKEY` default is redacted from the FragCity repository.
@@ -52,18 +52,17 @@ The `EXEC` selector contains only the **34 unique CFG files** referenced by Game
 
 **Startup dependency:** the current Egg startup command does not contain `+exec {{EXEC}}`. Selecting a CFG stores/passes the environment value but does not execute the CFG until the Egg startup is intentionally updated.
 
-## Product admin settings (21)
+## Product admin settings (20)
 
-`ALLOW_TOKENLESS`, `SRCDS_STOP_UPDATE`, `SRCDS_VALIDATE`, `GAME_TYPE`, `GAME_MODE`, `INSTALL_METAMOD`, `INSTALL_CSS`, `INSTALL_SWIFTLY`, `INSTALL_MODSHARP`, `PRERELEASE`, `GUARD_ACTION`, `GUARD_WHITELIST_STEAMIDS`, `GUARD_WHITELIST_IPS`, `ENABLE_FILTER`, `CLEANUP_ENABLED`, `ENABLE_LOG_FILES`, `CUSTOM_PARAMS`, `STEAM_ACC`, `PASSWORD`, `WORKSHOP`, `CONSOLE_LOG_LEVEL`.
+`ALLOW_TOKENLESS`, `SRCDS_STOP_UPDATE`, `SRCDS_VALIDATE`, `GAME_TYPE`, `GAME_MODE`, `INSTALL_METAMOD`, `INSTALL_CSS`, `INSTALL_SWIFTLY`, `INSTALL_MODSHARP`, `PRERELEASE`, `GUARD_ACTION`, `GUARD_WHITELIST_STEAMIDS`, `GUARD_WHITELIST_IPS`, `ENABLE_FILTER`, `CLEANUP_ENABLED`, `ENABLE_LOG_FILES`, `CUSTOM_PARAMS`, `PASSWORD`, `WORKSHOP`, `CONSOLE_LOG_LEVEL`.
 
-The four fields moved out of customer Checkout for the current test phase:
+The remaining shared Product-level fields include:
 
-- `STEAM_ACC`: masked password input, optional.
 - `PASSWORD`: masked password input, optional.
 - `WORKSHOP`: optional numeric Collection ID.
 - `CONSOLE_LOG_LEVEL`: DEBUG/INFO/WARNING/ERROR or the logging.json default.
 
-**Product-level scope:** these four values are configured in the Product settings, so they are shared by every service provisioned from that Product. They are not per-customer or per-service inputs in this phase. Later, per-server customer controls can be implemented in FragCity's own server dashboard.
+**Product-level scope:** `PASSWORD`, `WORKSHOP` and the other listed settings are shared by services on this Product. GSLT is deliberately not in this group.
 
 ## Intentionally not exposed (3)
 
@@ -158,3 +157,17 @@ The manifest is also validated at runtime: variable coverage, scope assignment, 
 - GameModeManager: https://github.com/larnzs/cs2-kus-addons/blob/integration/kus-monorepo/game/csgo/addons/counterstrikesharp/configs/plugins/GameModeManager/GameModeManager.json
 - Paymenter compatibility: v1.5.9
 - Manifest: `resources/cs2-egg-variables.json`
+
+
+## Per-service text Config Options
+
+Attach these two native Paymenter Config Options to the CS2 Product as **Text** fields:
+
+| Customer label | Paymenter parent Environment Variable | Target | Rules |
+| --- | --- | --- | --- |
+| نام سرور / Server Name | `servername` | Pterodactyl server resource name (not an Egg variable) | Optional; max 64; letters, numbers, spaces, `_`, `-`, `.` |
+| Game Server Login Token (GSLT) | `STEAM_ACC` | Egg environment variable | Optional; `max:32|nullable` |
+
+Paymenter stores Text Config Options as per-service properties. The official Pterodactyl adapter consumes `servername` as the server's API `name` field; it is not sent in the Egg environment. `STEAM_ACC` is passed to the Egg and consumed by the startup argument `+sv_setsteamaccount {{STEAM_ACC}}`. The token is per service, is never stored as a Product-wide setting, and is masked in the customer's cart summary.
+
+The GSLT text value is validated by the signed FragCity order quote and paid-order bridge, and again by FragCityCS2 at provisioning. It is not upgradable through Paymenter's text Config Option flow; update it through the service property/order workflow rather than assuming it is a Select upgrade.
