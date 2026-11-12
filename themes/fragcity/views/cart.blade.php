@@ -1,122 +1,146 @@
 <div class="container mt-14 fc-portal-page fc-cart-page" dir="rtl">
     <x-navigation.breadcrumb />
-    <div class="fc-portal-heading"><div><span class="fc-portal-kicker">FRAGCITY / SHOPPING CART</span><h1>سبد خرید</h1><p>سفارش خود را مرور کن و پیش از پرداخت، گزینه‌ها و مبلغ نهایی را بررسی کن.</p></div></div>
-
-    <div class="flex flex-col md:grid md:grid-cols-4 gap-8">
-        <div class="flex flex-col col-span-3 gap-4 fc-cart-items">
-            @if (Cart::items()->count() === 0)
-            <h1 class="text-2xl font-semibold">
-                {{ __('product.empty_cart') }}
-            </h1>
-            @endif
-            @foreach (Cart::items() as $item)
-            <div class="fc-cart-item flex flex-row justify-between w-full bg-background-secondary p-3 rounded-md border border-neutral">
-                <div class="flex flex-col gap-1">
-                    <h2 class="text-2xl font-semibold">
-                        {{ $item->product->name }}
-                    </h2>
-                    <p class="text-sm">
-                        @foreach ($item->config_options as $option)
-                        {{ $option['option_name'] }}: {{ $option['value_name'] }}<br>
-                        @endforeach
-                    </p>
-                </div>
-                <div class="flex flex-col justify-between items-end gap-4">
-                    <h3 class="text-xl font-semibold p-1">
-                        {{ $item->price->format($item->price->total * $item->quantity) }} @if ($item->quantity > 1)
-                        ({{ $item->price }} each)
-                        @endif
-                    </h3>
-                    <div class="flex flex-row gap-2">
-                        @if ($item->product->allow_quantity == 'combined')
-                        <div class="flex flex-row gap-1 items-center mr-4">
-                            <x-button.secondary
-                                wire:click="updateQuantity({{ $item->id }}, {{ $item->quantity - 1 }})"
-                                class="h-full !w-fit">
-                                -
-                            </x-button.secondary>
-                            <x-form.input class="h-10 text-center" disabled divClass="!mt-0 !w-14" value="{{ $item->quantity }}" name="quantity" />
-                            <x-button.secondary
-                                wire:click="updateQuantity({{ $item->id }}, {{ $item->quantity + 1 }});"
-                                class="h-full !w-fit">
-                                +
-                            </x-button.secondary>
-                        </div>
-                        @endif
-                        <a href="{{ route('products.checkout', [$item->product->category, $item->product, 'edit' => $item->id]) }}"
-                            wire:navigate>
-                            <x-button.primary class="h-fit w-fit">
-                                {{ __('product.edit') }}
-                            </x-button.primary>
-                        </a>
-                        <x-button.danger wire:click="removeProduct({{ $item->id }})" class="h-fit !w-fit">
-                            <x-loading target="removeProduct({{ $item->id }})" />
-                            <div wire:loading.remove wire:target="removeProduct({{ $item->id }})">
-                                {{ __('product.remove') }}
-                            </div>
-                        </x-button.danger>
-                    </div>
-                </div>
-            </div>
-            @endforeach
+    <header class="fc-portal-heading fc-cart-hero">
+        <div>
+            <span class="fc-portal-kicker">FRAGCITY / SHOPPING CART</span>
+            <h1>سبد خرید</h1>
+            <p>سفارش خود را مرور کن و پیش از پرداخت، گزینه‌ها و مبلغ نهایی را بررسی کن.</p>
         </div>
-        <div class="flex flex-col gap-4">
-            @if (Cart::items()->count() > 0)
-            <div class="fc-cart-summary flex flex-col gap-2 w-full col-span-1 bg-background-secondary p-3 rounded-md border border-neutral">
-                <h2 class="text-2xl font-semibold mb-3">
-                    {{ __('product.order_summary') }}
-                </h2>
-                <div class="font-semibold flex items-end gap-2">
+        <div class="fc-cart-hero__count">
+            <i class="fa-solid fa-basket-shopping" aria-hidden="true"></i>
+            <span>{{ Cart::items()->count() }} آیتم</span>
+        </div>
+    </header>
+
+    @if (Cart::items()->count() === 0)
+        <section class="fc-cart-empty">
+            <span><i class="fa-solid fa-cart-shopping" aria-hidden="true"></i></span>
+            <h2>{{ __('product.empty_cart') }}</h2>
+            <p>هنوز محصولی به سبد خرید اضافه نکرده‌ای.</p>
+            <a href="{{ route('home') }}" wire:navigate>بازگشت به فروشگاه <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></a>
+        </section>
+    @else
+        <div class="fc-cart-layout">
+            <section class="fc-cart-items" aria-label="اقلام سبد خرید">
+                <div class="fc-cart-section-heading">
+                    <div><span class="fc-portal-kicker">YOUR ORDER</span><h2>محصولات انتخاب‌شده</h2></div>
+                    <span>{{ Cart::items()->count() }} مورد</span>
+                </div>
+
+                @foreach (Cart::items() as $item)
+                    <article class="fc-cart-item">
+                        <div class="fc-cart-item__main">
+                            <span class="fc-cart-item__icon"><i class="fa-solid fa-server" aria-hidden="true"></i></span>
+                            <div class="fc-cart-item__content">
+                                <span class="fc-cart-item__eyebrow">{{ $item->product->category->name ?? 'FRAGCITY / GAME SERVERS' }}</span>
+                                <h3>{{ $item->product->name }}</h3>
+                                <div class="fc-cart-item__options">
+                                    @foreach ($item->config_options as $option)
+                                        @php
+                                            $optionEnv = strtoupper((string) ($option['option_env_variable'] ?? ''));
+                                            $optionName = (string) ($option['option_name'] ?? 'تنظیم');
+                                            $optionValue = $option['value_name'] ?? '—';
+                                            $isSecretOption = $optionEnv === 'STEAM_ACC';
+                                        @endphp
+                                        @if ($optionValue !== null && $optionValue !== '')
+                                            <span class="fc-cart-option">
+                                                <small>{{ $optionName }}</small>
+                                                <strong>{{ $isSecretOption ? 'ثبت شده (مخفی)' : $optionValue }}</strong>
+                                            </span>
+                                        @endif
+                                    @endforeach
+                                    @foreach (($item->checkout_config ?? []) as $fieldName => $fieldValue)
+                                        @if ($fieldValue !== null && $fieldValue !== '')
+                                            <span class="fc-cart-option">
+                                                <small>{{ $fieldName }}</small>
+                                                <strong>{{ $fieldValue }}</strong>
+                                            </span>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="fc-cart-item__side">
+                            <div class="fc-cart-item__price">
+                                <small>مبلغ این ردیف</small>
+                                <strong>{{ $item->price->format($item->price->total * $item->quantity) }}</strong>
+                                @if ($item->quantity > 1)
+                                    <span>{{ $item->price }} برای هر عدد</span>
+                                @endif
+                            </div>
+
+                            <div class="fc-cart-item__actions">
+                                @if ($item->product->allow_quantity == 'combined')
+                                    <div class="fc-cart-quantity" aria-label="تعداد">
+                                        <x-button.secondary wire:click="updateQuantity({{ $item->id }}, {{ $item->quantity - 1 }})" class="!w-fit">−</x-button.secondary>
+                                        <span>{{ $item->quantity }}</span>
+                                        <x-button.secondary wire:click="updateQuantity({{ $item->id }}, {{ $item->quantity + 1 }})" class="!w-fit">+</x-button.secondary>
+                                    </div>
+                                @endif
+                                <a href="{{ route('products.checkout', [$item->product->category, $item->product, 'edit' => $item->id]) }}" wire:navigate class="fc-cart-edit">
+                                    <i class="fa-solid fa-sliders" aria-hidden="true"></i> {{ __('product.edit') }}
+                                </a>
+                                <button type="button" wire:click="removeProduct({{ $item->id }})" class="fc-cart-remove">
+                                    <span wire:loading wire:target="removeProduct({{ $item->id }})"><x-ri-loader-5-fill class="size-4 animate-spin" /></span>
+                                    <span wire:loading.remove wire:target="removeProduct({{ $item->id }})"><i class="fa-solid fa-trash-can" aria-hidden="true"></i> {{ __('product.remove') }}</span>
+                                </button>
+                            </div>
+                        </div>
+                    </article>
+                @endforeach
+            </section>
+
+            <aside class="fc-cart-summary" aria-label="خلاصه سفارش">
+                <div class="fc-cart-summary__heading">
+                    <span><i class="fa-solid fa-receipt" aria-hidden="true"></i></span>
+                    <div><small>ORDER SUMMARY</small><h2>{{ __('product.order_summary') }}</h2></div>
+                </div>
+
+                <div class="fc-cart-coupon">
                     @if(!$coupon)
-                    <x-form.input wire:model="coupon" name="coupon" label="Coupon" />
-                    <x-button.primary wire:click="applyCoupon" class="h-fit !w-fit mb-0.5" wire:loading.attr="disabled">
-                        <x-loading target="applyCoupon" />
-                        <div wire:loading.remove wire:target="applyCoupon">
-                            {{ __('product.apply') }}
+                        <label>کد تخفیف</label>
+                        <div class="fc-cart-coupon__entry">
+                            <x-form.input wire:model="coupon" name="coupon" placeholder="کد تخفیف را وارد کن" />
+                            <x-button.primary wire:click="applyCoupon" wire:loading.attr="disabled" class="!w-fit">
+                                <x-loading target="applyCoupon" />
+                                <span wire:loading.remove wire:target="applyCoupon">{{ __('product.apply') }}</span>
+                            </x-button.primary>
                         </div>
-                    </x-button.primary>
                     @else
-                    <div class="flex justify-between items-center w-full">
-                        <h4 class="text-center w-full">{{ $coupon->code }}</h4>
-                        <x-button.secondary wire:click="removeCoupon" class="h-fit !w-fit">
-                            {{ __('product.remove') }}
-                        </x-button.secondary>
-                    </div>
+                        <div class="fc-cart-coupon__applied">
+                            <span><i class="fa-solid fa-ticket" aria-hidden="true"></i> {{ $coupon->code }}</span>
+                            <x-button.secondary wire:click="removeCoupon" class="!w-fit">{{ __('product.remove') }}</x-button.secondary>
+                        </div>
                     @endif
                 </div>
-                <div class="font-semibold flex justify-between">
-                    <h4>{{ __('invoices.subtotal') }}:</h4> {{ $total->format($total->subtotal) }}
+
+                <div class="fc-cart-summary__lines">
+                    <div><span>{{ __('invoices.subtotal') }}</span><strong>{{ $total->format($total->subtotal) }}</strong></div>
+                    @if ($total->tax > 0)
+                        <div><span>{{ AppClassesSettings::tax()->name }} ({{ AppClassesSettings::tax()->rate }}%)</span><strong>{{ $total->format($total->tax) }}</strong></div>
+                    @endif
                 </div>
-                @if ($total->tax > 0)
-                <div class="font-semibold flex justify-between">
-                    <h4>{{ \App\Classes\Settings::tax()->name }} ({{ \App\Classes\Settings::tax()->rate }}%):</h4> {{ $total->format($total->tax) }}
+
+                <div class="fc-cart-summary__total">
+                    <span>{{ __('invoices.total') }}</span><strong>{{ $total->format($total->total) }}</strong>
                 </div>
+
+                @if(config('settings.tos'))
+                    <div class="fc-cart-tos">
+                        <x-form.checkbox wire:model="tos" name="tos">
+                            {{ __('product.tos') }}
+                            <a href="{{ config('settings.tos') }}" target="_blank" rel="noopener noreferrer">{{ __('product.tos_link') }}</a>
+                        </x-form.checkbox>
+                    </div>
                 @endif
-                <div class="text-lg font-semibold flex justify-between mt-1">
-                    <h4>{{ __('invoices.total') }}:</h4> {{ $total->format($total->total) }}
-                </div>
 
-                <div class="flex flex-col gap-2 w-full col-span-1">
-                    @if(config('settings.tos'))
-                    <x-form.checkbox wire:model="tos" name="tos">
-                        {{ __('product.tos') }}
-                        <a href="{{ config('settings.tos') }}" target="_blank" class="text-primary hover:text-primary/80">
-                            {{ __('product.tos_link') }}
-                        </a>
-                    </x-form.checkbox>
-                    @endif
-
-                    <div class="flex flex-row justify-end gap-2">
-                        <x-button.primary wire:click="checkout" class="h-fit" wire:loading.attr="disabled">
-                            <x-loading target="checkout" />
-                            <div wire:loading.remove wire:target="checkout">
-                                {{ __('product.checkout') }}
-                            </div>
-                        </x-button.primary>
-                    </div>
-                </div>
-            </div>
-            @endif
+                <x-button.primary wire:click="checkout" class="fc-cart-checkout" wire:loading.attr="disabled">
+                    <x-loading target="checkout" />
+                    <span wire:loading.remove wire:target="checkout">{{ __('product.checkout') }} <i class="fa-solid fa-arrow-left" aria-hidden="true"></i></span>
+                </x-button.primary>
+                <p class="fc-cart-secure"><i class="fa-solid fa-shield-halved" aria-hidden="true"></i> پرداخت و مبلغ نهایی به‌صورت امن در Paymenter اعتبارسنجی می‌شود.</p>
+            </aside>
         </div>
-    </div>
+    @endif
 </div>
