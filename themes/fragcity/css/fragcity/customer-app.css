@@ -18,19 +18,44 @@ body.fc-customer-app-shell {
     height: auto;
     min-height: 100dvh;
     max-height: none;
-    overflow-x: hidden;
-    overflow-y: auto;
+    /* Keep the document viewport as the scroll container. An auto-overflow
+       body creates a nested scrollport and breaks the sticky shared header. */
+    overflow-x: clip;
+    overflow-y: visible;
     overscroll-behavior: auto;
-    background: #0d0d0d;
+    background:
+        radial-gradient(ellipse at 50% 0, rgba(249, 115, 22, .075), transparent 48%),
+        radial-gradient(ellipse at 100% 24%, rgba(249, 115, 22, .025), transparent 42%),
+        #0d0d0d;
 }
 
-/* The shared header has a global -72px overlap on the storefront.
-   Cancel it throughout the authenticated customer workspace. */
-.fc-customer-app-shell .shock-header {
+/* Keep the shared FragCity header attached to the document viewport.
+   It is transparent at the top and becomes a glass surface while scrolling down. */
+.fc-customer-app-shell .shock-header,
+.fc-customer-app-shell .shock-header.is-scrolled:not(.is-scroll-down) {
     position: sticky !important;
-    top: 0;
+    top: 0 !important;
     z-index: 1050;
     margin-bottom: 0 !important;
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+    box-shadow: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    transition:
+        background-color 180ms ease,
+        border-color 180ms ease,
+        box-shadow 180ms ease,
+        -webkit-backdrop-filter 180ms ease,
+        backdrop-filter 180ms ease;
+}
+
+.fc-customer-app-shell .shock-header.is-scroll-down {
+    background: rgba(13, 13, 13, .62) !important;
+    border-bottom-color: rgba(249, 115, 22, .18) !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .28) !important;
+    -webkit-backdrop-filter: blur(18px) saturate(140%) !important;
+    backdrop-filter: blur(18px) saturate(140%) !important;
 }
 
 /* Let each layout wrapper grow with its content instead of imposing a
@@ -90,9 +115,9 @@ body.fc-customer-app-shell {
     flex: 1 1 auto;
     overflow: visible;
     padding: clamp(32px, 3.2vw, 42px) 0 60px;
-    background:
-        radial-gradient(ellipse at 50% 0, rgba(249, 115, 22, .035), transparent 52%),
-        #0d0d0d;
+    /* The page backdrop lives on the document so it continues behind the
+       transparent header and through the top content spacing without a black band. */
+    background: transparent;
 }
 
 /* Restore the same content width and spacing rhythm as the original portal. */
