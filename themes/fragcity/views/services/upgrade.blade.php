@@ -6,6 +6,7 @@
         {{ __('services.upgrade_service', ['service' => $service->product->name]) }}
         </h1>
         <p>منابع و پلن سرویس را با نیاز فعلی کامیونیتی خود هماهنگ کن.</p>
+        </div>
     </header>
 
     <div class="fc-upgrade-step-heading">
