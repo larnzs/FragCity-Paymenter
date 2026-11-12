@@ -1,5 +1,5 @@
 diff --git a/app/Livewire/Products/Checkout.php b/app/Livewire/Products/Checkout.php
-index 0000000..0000000 100644
+index c34cf8986b825fa51395d7ed0e08281dc18eda05..0000000000000000000000000000000000000000 100644
 --- a/app/Livewire/Products/Checkout.php
 +++ b/app/Livewire/Products/Checkout.php
 @@ -33,6 +33,14 @@
