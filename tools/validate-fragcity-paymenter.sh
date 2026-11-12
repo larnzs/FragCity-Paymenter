@@ -75,11 +75,15 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 ! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.16.1'" "$api"
-grep -Fq "'version' => '1.16.1'" "$api"
+grep -Fq "version: '1.17.0'" "$api"
+grep -Fq "'version' => '1.17.0'" "$api"
 grep -Fq "function startSso" "$api"
 grep -Fq "function completeSso" "$api"
 grep -Fq "function ssoTfaPage" "$api"
+grep -Fq "loadAuthenticatedFragCityProfile" "$api"
+grep -Fq "/api/paymenter-profile.php" "$api"
+grep -Fq "View::composer('components.navigation.index'" "$api"
+
 grep -Fq "fragcity_sso_2fa_return_to" "$api"
 grep -Fq "\$destination = \$returnTo === '/' ? '/' : \$returnTo;" "$api"
 ! grep -Fq "route('home')" "$api"
@@ -99,7 +103,11 @@ grep -Fq "/auth/fragcity/sso/callback" "$routes"
 grep -Fq "fragcitySsoEnabled" "$api"
 test -f "extensions/Others/FragCityAPI/database/migrations/2026_11_11_000009_create_fragcity_sso_used_tickets_table.php"
 grep -Fq "ticket ID prevents replay" "$api_readme"
-grep -Fq "version: '1.7.2'" "$cs2"
+grep -Fq "version: '1.8.0'" "$cs2"
+grep -Fq "function getActions(Service \$service" "$cs2"
+grep -Fq "function getCustomerDashboardView" "$cs2"
+test -s "extensions/Servers/FragCityCS2/views/customer-dashboard.blade.php"
+
 
 # The first supported CS2 subscription is now three days. Keep the historical
 # setting key so an existing Product ID value is not lost during extension update.
