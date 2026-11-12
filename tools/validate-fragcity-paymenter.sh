@@ -211,7 +211,10 @@ php -r '
     || !in_array("nullable", $serviceProperties[0]["validation"] ?? [], true)
     || !in_array("max:32", $serviceProperties[0]["validation"] ?? [], true)
     || ($pterodactylOptions[0]["type"] ?? null) !== "text"
-    || !in_array("max:64", $pterodactylOptions[0]["validation"] ?? [], true)) {
+    || ($pterodactylOptions[0]["required"] ?? false) !== true
+    || !in_array("required", $pterodactylOptions[0]["validation"] ?? [], true)
+    || !in_array("max:64", $pterodactylOptions[0]["validation"] ?? [], true)
+    || !in_array("regex:/^[A-Za-z0-9_. -]+$/", $pterodactylOptions[0]["validation"] ?? [], true)) {
     fwrite(STDERR, "CS2 GSLT and Server Name must remain validated text properties.\\n");
     exit(1);
   }
