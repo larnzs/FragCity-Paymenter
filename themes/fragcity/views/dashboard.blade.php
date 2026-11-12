@@ -3,7 +3,7 @@
 
     <section class="fc-portal-hero fc-dashboard-hero">
         <div class="fc-portal-hero__copy">
-            <span class="fc-portal-eyebrow"><span class="fc-portal-eyebrow__mark">FC</span> FRAGCITY / CUSTOMER CENTER</span>
+            <span class="fc-portal-eyebrow"><span class="fc-portal-eyebrow__mark">FC</span> FRAGCITY / مرکز کاربری</span>
             <h1>سلام {{ Auth::user()->first_name ?: Auth::user()->name }} <span aria-hidden="true">👋</span></h1>
             <p>مدیریت سرورها، پرداخت‌ها و درخواست‌های پشتیبانی حساب FragCity از یک پنل یکپارچه.</p>
             <div class="fc-portal-hero__meta">
@@ -54,7 +54,7 @@
             <section class="fc-portal-panel">
                 <div class="fc-portal-panel__heading">
                     <div>
-                        <span class="fc-portal-kicker">01 / SERVICES</span>
+                        <span class="fc-portal-kicker">01 / سرویس‌ها</span>
                         <h2><i class="fa-solid fa-server" aria-hidden="true"></i> سرویس‌های فعال</h2>
                         <p>سرویس‌های فعال و جزئیات اشتراک خود را مدیریت کن.</p>
                     </div>
@@ -71,7 +71,7 @@
             <section class="fc-portal-panel">
                 <div class="fc-portal-panel__heading">
                     <div>
-                        <span class="fc-portal-kicker">02 / SUPPORT</span>
+                        <span class="fc-portal-kicker">02 / پشتیبانی</span>
                         <h2><i class="fa-solid fa-headset" aria-hidden="true"></i> تیکت‌های باز</h2>
                         <p>آخرین پاسخ‌ها و درخواست‌های پشتیبانی را دنبال کن.</p>
                     </div>
@@ -79,7 +79,7 @@
                 </div>
                 <div class="fc-portal-widget"><livewire:tickets.widget /></div>
                 <x-navigation.link class="fc-portal-view-all" :href="route('tickets')">
-                    {{ __('dashboard.view_all') }}
+                    مشاهده همه
                     <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
                 </x-navigation.link>
             </section>
@@ -90,7 +90,7 @@
             <section class="fc-portal-panel">
                 <div class="fc-portal-panel__heading">
                     <div>
-                        <span class="fc-portal-kicker">03 / BILLING</span>
+                        <span class="fc-portal-kicker">03 / امور مالی</span>
                         <h2><i class="fa-solid fa-receipt" aria-hidden="true"></i> فاکتورهای پرداخت‌نشده</h2>
                         <p>فاکتورهای در انتظار پرداخت و سوابق مالی.</p>
                     </div>
@@ -98,7 +98,7 @@
                 </div>
                 <div class="fc-portal-widget"><livewire:invoices.widget :limit="3" /></div>
                 <x-navigation.link class="fc-portal-view-all" :href="route('invoices')">
-                    {{ __('dashboard.view_all') }}
+                    مشاهده همه
                     <i class="fa-solid fa-arrow-left" aria-hidden="true"></i>
                 </x-navigation.link>
             </section>
@@ -106,7 +106,7 @@
             <section class="fc-portal-panel fc-dashboard-shortcuts">
                 <div class="fc-portal-panel__heading">
                     <div>
-                        <span class="fc-portal-kicker">04 / ACCOUNT</span>
+                        <span class="fc-portal-kicker">04 / حساب کاربری</span>
                         <h2><i class="fa-solid fa-gear" aria-hidden="true"></i> تنظیمات حساب</h2>
                         <p>اطلاعات شخصی، امنیت و روش‌های پرداخت خود را به‌روز نگه دار.</p>
                     </div>
