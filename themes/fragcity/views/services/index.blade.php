@@ -3,7 +3,7 @@
     <div class="fc-portal-heading">
         <div>
             <span class="fc-portal-kicker">FRAGCITY / MY SERVICES</span>
-            <h1>{{ __('services.services') }}</h1>
+            <h1>سرویس‌های من</h1>
             <p>وضعیت، منابع و جزئیات سرویس‌های خریداری‌شده را از این بخش مدیریت کن.</p>
         </div>
         <a href="{{ route('home') }}" wire:navigate class="fc-portal-heading__action"><i class="fa-solid fa-plus"></i> مشاهده فروشگاه</a>
@@ -15,17 +15,33 @@
             <span class="fc-portal-list-card__icon"><x-ri-instance-line class="size-6" /></span>
             <span class="fc-portal-list-card__body">
                 <strong>{{ $service->label }}</strong>
+                @php
+                    $periodUnit = match ($service->plan->billing_unit) {
+                        'day' => 'روز',
+                        'week' => 'هفته',
+                        'month' => 'ماه',
+                        'year' => 'سال',
+                        default => 'دوره',
+                    };
+                    $periodCount = (int) $service->plan->billing_period;
+                    $periodLabel = $periodCount > 1 ? 'هر ' . $periodCount . ' ' . $periodUnit : 'هر ' . $periodUnit;
+                    $serviceStatusLabel = match ((string) $service->status) {
+                        'active' => 'فعال',
+                        'pending' => 'در انتظار',
+                        'suspended' => 'معلق',
+                        'cancelled' => 'لغو شده',
+                        'expired' => 'منقضی شده',
+                        default => 'نامشخص',
+                    };
+                @endphp
                 <small>{{ $service->product->name }} <span>·</span>
-                    {{ in_array($service->plan->type, ['recurring']) ? __('services.every_period', [
-                        'period' => $service->plan->billing_period > 1 ? $service->plan->billing_period : '',
-                        'unit' => trans_choice(__('services.billing_cycles.' . $service->plan->billing_unit), $service->plan->billing_period)
-                    ]) : 'اشتراک یک‌باره' }}
+                    {{ $service->plan->type === 'recurring' ? $periodLabel : 'اشتراک یک‌باره' }}
                 </small>
                 @if($service->expires_at)
-                    <small><i class="fa-regular fa-calendar" aria-hidden="true"></i> {{ __('services.renews_in') }} {{ $service->expires_at->format('Y-m-d') }}</small>
+                    <small><i class="fa-regular fa-calendar" aria-hidden="true"></i> تمدید در تاریخ {{ $service->expires_at->format('Y/m/d') }}</small>
                 @endif
             </span>
-            <span class="fc-portal-status fc-portal-status--{{ $service->status }}">{{ __('services.statuses.' . $service->status) }}</span>
+            <span class="fc-portal-status fc-portal-status--{{ $service->status }}">{{ $serviceStatusLabel }}</span>
             <span class="fc-portal-list-card__arrow"><i class="fa-solid fa-arrow-left"></i></span>
         </a>
         @empty
