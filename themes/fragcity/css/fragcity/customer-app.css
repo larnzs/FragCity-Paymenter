@@ -1222,9 +1222,8 @@ body.fc-customer-app-shell {
 }
 
 
-/* The invoice component is intentionally charcoal in the customer portal.
-   This final screen rule overrides the legacy paper-white document palette
-   declared above in this same stylesheet. Print remains paper-friendly. */
+/* The invoice component and its internal tables/totals use the same charcoal palette.
+   This final screen layer overrides the older paper-white invoice treatment above. */
 @media screen {
     body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper {
         color:#ededed !important;
@@ -1235,37 +1234,155 @@ body.fc-customer-app-shell {
     body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper :is(h1,h2,h3,h4,strong,th) {
         color:#f4f4f4 !important;
     }
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper :is(p,span,td,dt,dd,small) {
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper :is(p,td,dt,dd,small) {
         color:#c9c9c9 !important;
     }
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__rule,
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table td {
-        border-color:rgba(255,255,255,.09) !important;
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__eyebrow,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__label {
+        color:#ffb477 !important;
     }
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table,
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-meta,
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state,
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-party,
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary {
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-party > span:not(.fc-invoice-paper__label) {
+        color:#c9c9c9 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__rule {
+        height:1px;
+        border:0 !important;
+        background:rgba(255,255,255,.1) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__title code {
+        color:#e3e3e3 !important;
+        border-color:rgba(255,255,255,.1) !important;
+        background:rgba(0,0,0,.24) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-meta {
         color:#d7d7d7 !important;
         border-color:rgba(255,255,255,.09) !important;
-        background:rgba(255,255,255,.035) !important;
+        background:rgba(0,0,0,.22) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-meta > div {
+        border-color:rgba(255,255,255,.08) !important;
+        background:transparent !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-meta span {
+        color:#9f9f9f !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-meta strong {
+        color:#f2f2f2 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state {
+        color:#ddd !important;
+        border-color:rgba(249,115,22,.17) !important;
+        background:linear-gradient(110deg,rgba(249,115,22,.08),rgba(255,255,255,.025)) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state__status p,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state__amount span,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state__amount small {
+        color:#aaa !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state__amount strong {
+        color:#ffbd8b !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table-wrap {
+        border-color:rgba(255,255,255,.09) !important;
+        background:#101010 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table {
+        color:#d7d7d7 !important;
+        background:transparent !important;
     }
     body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table thead {
-        background:rgba(255,255,255,.05) !important;
+        background:rgba(249,115,22,.09) !important;
     }
     body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table th {
         color:#ffbd8b !important;
-    }
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary strong,
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-state__amount strong,
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__title h2 {
-        color:#f5f5f5 !important;
-    }
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__title code,
-    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-meta > div {
-        color:#d3d3d3 !important;
         border-color:rgba(255,255,255,.08) !important;
-        background:rgba(0,0,0,.2) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table td {
+        color:#cfcfcf !important;
+        border-color:rgba(255,255,255,.07) !important;
+        background:transparent !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table tbody tr:nth-child(even) {
+        background:rgba(255,255,255,.025) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table tbody tr:hover {
+        background:rgba(249,115,22,.055) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-table td a {
+        color:#ffb477 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-item-description {
+        color:#f0f0f0 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-item-total {
+        color:#ffbd8b !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-item-count {
+        color:#d5d5d5 !important;
+        border-color:rgba(249,115,22,.16) !important;
+        background:rgba(249,115,22,.07) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary {
+        border-color:rgba(255,255,255,.09) !important;
+        background:transparent !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary__note {
+        color:#ccc !important;
+        border-color:rgba(255,255,255,.09) !important;
+        background:rgba(255,255,255,.035) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary__note-icon {
+        color:#ffb477 !important;
+        background:rgba(249,115,22,.1) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary__note strong {
+        color:#eee !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-summary__note p {
+        color:#aaa !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-totals {
+        color:#ccc !important;
+        border-color:rgba(249,115,22,.16) !important;
+        background:linear-gradient(145deg,#171717,#101010) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-totals > div,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-totals dt {
+        color:#aaa !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-totals dd {
+        color:#e5e5e5 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-totals .fc-invoice-totals__grand {
+        color:#eee !important;
+        border-color:rgba(255,255,255,.12) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-totals .fc-invoice-totals__grand dd {
+        color:#ffbd8b !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-transactions .fc-invoice-table {
+        background:transparent !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-transaction-status {
+        color:#c5c5c5 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-transaction-status--success {
+        color:#86d2a8 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-transaction-status--processing {
+        color:#ffbd8b !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-transaction-status--failed {
+        color:#f19b9b !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__footer {
+        border-color:rgba(255,255,255,.1) !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__footer > span,
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__footer > strong {
+        color:#ffb477 !important;
+    }
+    body.fc-customer-app-shell .fc-invoice-detail-page .fc-invoice-paper__footer p {
+        color:#9c9c9c !important;
     }
 }
