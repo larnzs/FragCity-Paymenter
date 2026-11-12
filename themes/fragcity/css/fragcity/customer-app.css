@@ -643,6 +643,14 @@ body.fc-customer-app-shell {
         overflow: visible;
     }
 
+    .fc-customer-app-shell > div.w-full.flex.flex-col.flex-grow > div.w-full.flex.flex-grow.min-w-0 > div.flex.flex-col.flex-grow.min-w-0 {
+        display: block;
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        overflow: visible;
+    }
+
     .fc-customer-app-shell .fc-page-main {
         height: auto;
         min-height: calc(100dvh - var(--fc-customer-header-height));
