@@ -76,7 +76,7 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 
 # Extension versions and runtime bridge version must be released together.
 grep -Fq "version: '1.18.1'" "$api"
-grep -Fq "'version' => '1.17.0'" "$api"
+grep -Fq "'version' => '1.18.1'" "$api"
 test -s "deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
 grep -Fq "sensitiveConfigOptions" "deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
 grep -Fq "function startSso" "$api"
