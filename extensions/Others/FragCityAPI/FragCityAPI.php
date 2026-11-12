@@ -35,7 +35,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server VIP store, Paymenter wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.16.1',
+    version: '1.17.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -214,11 +214,159 @@ class FragCityAPI extends Extension
     public function boot(): void
     {
         View::share('fragcitySsoEnabled', $this->isSsoEnabled());
+        View::composer('components.navigation.index', function ($view): void {
+            $view->with('fragcityProfile', $this->loadAuthenticatedFragCityProfile());
+        });
 
         require_once __DIR__ . '/Support/SsoTfa.php';
         Livewire::component('fragcity-api.sso-tfa', SsoTfa::class);
 
         require __DIR__ . '/routes.php';
+    }
+
+
+    /**
+     * Resolve the signed-in customer's profile from the main FragCity users
+     * table. Paymenter derives the SteamID from its server-side identity link.
+     *
+     * @return array<string,mixed>|null
+     */
+    private function loadAuthenticatedFragCityProfile(): ?array
+    {
+        if (!Auth::check()) {
+            return null;
+        }
+
+        $paymenterUserId = (int) Auth::id();
+        if ($paymenterUserId < 1) {
+            return null;
+        }
+
+        try {
+            $steamId64 = (string) DB::table('fragcity_user_links')
+                ->where('user_id', $paymenterUserId)
+                ->value('steamid64');
+
+            if (!preg_match('/\A[0-9]{17}\z/D', $steamId64)) {
+                return null;
+            }
+
+            $cacheKey = 'fragcity_main_profile:v1:' . $paymenterUserId;
+            $profile = Cache::remember($cacheKey, now()->addMinutes(5), function () use (
+                $paymenterUserId,
+                $steamId64
+            ): array {
+                $secret = (string) $this->config('shared_secret');
+                $websiteOrigin = $this->ssoWebsiteOrigin();
+
+                if (
+                    $websiteOrigin === null
+                    || !preg_match('/\A[a-f0-9]{64,256}\z/iD', $secret)
+                    || !function_exists('curl_init')
+                ) {
+                    return [];
+                }
+
+                $body = json_encode([
+                    'paymenter_user_id' => $paymenterUserId,
+                    'steamid64' => $steamId64,
+                ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR);
+
+                $timestamp = (string) time();
+                $nonce = bin2hex(random_bytes(16));
+                $signature = hash_hmac('sha256', $timestamp . "\n" . $nonce . "\n" . $body, $secret);
+                $handle = curl_init($websiteOrigin . '/api/paymenter-profile.php');
+
+                if ($handle === false) {
+                    return [];
+                }
+
+                curl_setopt_array($handle, [
+                    CURLOPT_POST => true,
+                    CURLOPT_POSTFIELDS => $body,
+                    CURLOPT_HTTPHEADER => [
+                        'Accept: application/json',
+                        'Content-Type: application/json',
+                        'X-FragCity-Timestamp: ' . $timestamp,
+                        'X-FragCity-Nonce: ' . $nonce,
+                        'X-FragCity-Signature: ' . $signature,
+                    ],
+                    CURLOPT_RETURNTRANSFER => true,
+                    CURLOPT_CONNECTTIMEOUT => 5,
+                    CURLOPT_TIMEOUT => 10,
+                    CURLOPT_FOLLOWLOCATION => false,
+                    CURLOPT_SSL_VERIFYPEER => true,
+                    CURLOPT_SSL_VERIFYHOST => 2,
+                    CURLOPT_PROTOCOLS => CURLPROTO_HTTPS,
+                    CURLOPT_REDIR_PROTOCOLS => CURLPROTO_HTTPS,
+                ]);
+
+                $response = curl_exec($handle);
+                $curlError = curl_errno($handle);
+                $httpStatus = (int) curl_getinfo($handle, CURLINFO_HTTP_CODE);
+                curl_close($handle);
+
+                if (!is_string($response) || $curlError !== 0 || $httpStatus !== 200) {
+                    Log::notice('FragCity main-site profile lookup is temporarily unavailable.', [
+                        'http_status' => $httpStatus,
+                        'curl_error' => $curlError,
+                    ]);
+                    return [];
+                }
+
+                try {
+                    $decoded = json_decode($response, true, 32, JSON_THROW_ON_ERROR);
+                } catch (Throwable) {
+                    return [];
+                }
+
+                $data = is_array($decoded) && ($decoded['success'] ?? false) === true
+                    ? ($decoded['data'] ?? null)
+                    : null;
+
+                if (
+                    !is_array($data)
+                    || (int) ($data['paymenter_user_id'] ?? 0) !== $paymenterUserId
+                    || (string) ($data['steamid64'] ?? '') !== $steamId64
+                ) {
+                    return [];
+                }
+
+                // Do not render non-HTTPS or unrelated image URLs in the header.
+                foreach (['avatar_url', 'steam_avatar_image_url', 'steam_avatar_url', 'custom_avatar_url'] as $key) {
+                    $url = trim((string) ($data[$key] ?? ''));
+                    if ($url === '') {
+                        $data[$key] = null;
+                        continue;
+                    }
+
+                    $parts = parse_url($url);
+                    $host = is_array($parts) ? strtolower((string) ($parts['host'] ?? '')) : '';
+                    $isFragCityHost = $host === 'fragcity.ir' || str_ends_with($host, '.fragcity.ir');
+                    $isSteamHost = $host === 'steamstatic.com'
+                        || str_ends_with($host, '.steamstatic.com')
+                        || $host === 'akamaihd.net'
+                        || str_ends_with($host, '.akamaihd.net');
+
+                    if (
+                        !is_array($parts)
+                        || strtolower((string) ($parts['scheme'] ?? '')) !== 'https'
+                        || (!$isFragCityHost && !$isSteamHost)
+                    ) {
+                        $data[$key] = null;
+                    }
+                }
+
+                return $data;
+            });
+
+            return is_array($profile) && $profile !== [] ? $profile : null;
+        } catch (Throwable $error) {
+            Log::notice('FragCity main-site profile lookup failed safely.', [
+                'exception' => get_class($error),
+            ]);
+            return null;
+        }
     }
 
     public function ssoTfaPage()
@@ -238,7 +386,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.16.1',
+            'version' => '1.17.0',
             'timestamp' => now()->toIso8601String(),
         ]);
     }

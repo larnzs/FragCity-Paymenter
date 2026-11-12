@@ -1,19 +1,19 @@
 @if($service->plan->type == 'recurring' && $service->status == 'active' && Auth::user()->billingAgreements->count() > 0)
 <div class="flex items-center text-base">
-    <!-- Auto paying using -->
-    <span class="mr-2">{{ __(key: 'services.auto_pay') }}:</span>
+    <!-- مدیریت روش پرداخت خودکار -->
+    <span class="mr-2">پرداخت خودکار:</span>
     <span class="text-base/50">{{ $service->billingAgreement ? $service->billingAgreement->name :
-        __('services.auto_pay_not_configured') }}
+        'تنظیم نشده' }}
         <!-- Edit icon -->
         <button wire:click="$set('showBillingAgreement', true)" class="cursor-pointer">
             <x-ri-edit-line class="inline size-4 ml-1 text-base/50" />
         </button>
         @if($service->billingAgreement)
         <button  x-on:click="$store.confirmation.confirm({
-                                title: '{{ __('services.remove_payment_method') }}',
-                                message: '{{ __('services.remove_payment_method_confirm', ['name' => $service->billingAgreement->name]) }}',
-                                confirmText: '{{ __('common.confirm') }}',
-                                cancelText: '{{ __('common.cancel') }}',
+                                title: ''حذف روش پرداخت'',
+                                message: ''از حذف روش پرداخت ' + @js($service->billingAgreement->name) + ' مطمئنی؟'',
+                                confirmText: ''تأیید'',
+                                cancelText: ''انصراف'',
                                 callback: () => $wire.clearBillingAgreement()
                             })" class="cursor-pointer">
             <x-ri-close-line class="inline size-4 ml-1 text-base/50" />
@@ -22,7 +22,7 @@
     </span>
 </div>
 @if($showBillingAgreement)
-<x-modal :title="__('services.select_billing_agreement')" open="{{ $showBillingAgreement }}">
+<x-modal title="انتخاب روش پرداخت خودکار" open="{{ $showBillingAgreement }}">
     <x-slot name="closeTrigger">
         <div class="flex gap-4">
             <button wire:click="$set('showBillingAgreement', false)" @click="open = false" class="text-primary-100">
@@ -71,7 +71,7 @@
                     <div class="font-semibold text-base"> {{ $agreement->name }} </div>
                     @if($agreement->expiry)
                     <div class="text-sm text-neutral-500">
-                        Expires: {{ \Carbon\Carbon::parse($agreement->expiry)->format('m/Y') }}
+                        انقضا: {{ \Carbon\Carbon::parse($agreement->expiry)->format('m/Y') }}
                     </div>
                     @endif
                 </div>
@@ -87,7 +87,7 @@
 
         <div class="flex justify-end">
             <x-button.primary wire:click="updateBillingAgreement" wire:loading.attr="disabled">
-                {{ __('services.update_billing_agreement') }}
+                ذخیره روش پرداخت
             </x-button.primary>
         </div>
     </div>

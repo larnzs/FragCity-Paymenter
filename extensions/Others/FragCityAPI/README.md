@@ -1,12 +1,13 @@
 # FragCityAPI — Paymenter Bridge
 
-Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.16.1**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
+Compatibility target: Paymenter **v1.5.9**. Bridge contract version: **1.17.0**. This is a separate Paymenter add-on. It does not modify Paymenter Core and does not replace the FragCity CS2 server extension.
 
 ## Purpose
 
 Provides a narrow private server-to-server bridge for FragCity identity, paid CS2 orders and customer server access:
 
 - `POST /api/v1/fragcity/bridge/ping`
+- Read-only profile lookup: `POST https://fragcity.ir/api/paymenter-profile.php` (Paymenter server-to-server only)
 - `GET /auth/fragcity/sso/start`
 - `GET /auth/fragcity/sso/2fa`\n- `POST /auth/fragcity/sso/callback`
 - `POST /api/v1/fragcity/bridge/catalog/cs2`
@@ -308,3 +309,31 @@ Enable **FragCity API** in Paymenter Admin → Extensions → Others and configu
 ## Customer panel username
 
 The `servers/username` endpoint updates the customer's Pterodactyl Client username for one owned CS2 service. The signed bridge resolves the SteamID64 to the linked Paymenter user, verifies service ownership, and delegates the operation to FragCityCS2. The website must authenticate the customer and protect the request with CSRF before sending it through the private HTTPS HMAC bridge.
+
+
+## Read-only customer profile and Steam avatar
+
+When a customer is authenticated, the FragCity API extension composes the shared
+navigation with the linked FragCity profile. Paymenter derives the SteamID64
+from its own \`fragcity_user_links\` row, then sends a signed server-to-server
+request to the main website's \`POST /api/paymenter-profile.php\` endpoint.
+The request includes both the authenticated Paymenter user ID and linked
+SteamID64; FragCity checks both against the same \`users\` row and requires
+\`paymenter_sync_status = 'synced'\`.
+
+The allow-listed response includes username, first/last name, email, phone,
+public Steam profile details and safe avatar URLs. The shared header uses the
+website's active avatar (custom avatar where present, otherwise the cached
+Steam avatar) and Steam persona name. It is cached for five minutes. No browser
+request contains the HMAC secret, no SteamID is trusted from browser input, and
+no password hash or authentication token is returned.
+
+On the main website, back up \`kyonxcbt_fragcity_services\` and run
+\`database/migrations/20261112_paymenter_profile_api_nonces.sql\` once.
+The existing Steam profile columns migration must also have been applied.
+
+Steam login in Billing continues to use the existing one-time FragCity SSO
+flow: the Steam-branded Billing action redirects to the main site's Steam
+OpenID login, then returns a short-lived signed ticket to Paymenter. The main
+website remains the single Steam identity verifier; Paymenter uses the linked
+user record and does not create an independent Steam identity.

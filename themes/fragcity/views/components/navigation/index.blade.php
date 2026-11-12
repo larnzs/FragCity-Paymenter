@@ -1,6 +1,19 @@
 @php
     $fragcityMain = 'https://fragcity.ir';
     $fragcityFallbackAvatar = $fragcityMain . '/img/logoresponsive.png';
+    $fragcityProfile = is_array($fragcityProfile ?? null) ? $fragcityProfile : [];
+    $fragcityDisplayName = trim((string) ($fragcityProfile['steam_personaname'] ?? ''));
+    $fragcityDisplayName = $fragcityDisplayName !== ''
+        ? $fragcityDisplayName
+        : (auth()->check() ? auth()->user()->name : 'حساب کاربری');
+    $fragcityAvatar = trim((string) ($fragcityProfile['avatar_url'] ?? ''));
+    if ($fragcityAvatar === '') $fragcityAvatar = trim((string) ($fragcityProfile['steam_avatar_image_url'] ?? ''));
+    if ($fragcityAvatar === '') $fragcityAvatar = auth()->check() ? (string) (auth()->user()->avatar ?? '') : '';
+    $fragcityAvatar = $fragcityAvatar !== '' ? $fragcityAvatar : $fragcityFallbackAvatar;
+    $fragcityEmail = trim((string) ($fragcityProfile['email'] ?? ''));
+    $fragcityEmail = $fragcityEmail !== '' ? $fragcityEmail : (auth()->check() ? auth()->user()->email : '');
+    $fragcityPhone = trim((string) ($fragcityProfile['phone'] ?? ''));
+    $fragcitySteamId = trim((string) ($fragcityProfile['steamid64'] ?? ''));
 
     // Keep account-menu copy Persian even when Paymenter's global locale is English.
     $fragcityAccountNav = static function (array $nav): array {
@@ -85,25 +98,33 @@
                         <button type="button" class="frag-user-trigger" id="shockUserButton"
                                 aria-label="باز کردن منوی حساب کاربری" title="حساب کاربری"
                                 aria-expanded="false" aria-controls="shockUserMenu">
-                            <img src="{{ auth()->user()->avatar ?: $fragcityFallbackAvatar }}"
-                                 class="frag-avatar" alt="آواتار {{ auth()->user()->name }}"
+                            <img src="{{ $fragcityAvatar }}"
+                                 class="frag-avatar" alt="آواتار {{ $fragcityDisplayName }}"
                                  onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';">
-                            <span class="frag-username">{{ auth()->user()->name }}</span>
+                            <span class="frag-username">{{ $fragcityDisplayName }}</span>
                             <i class="fa-solid fa-chevron-down frag-arrow" aria-hidden="true"></i>
                         </button>
 
                         <div class="frag-dropdown-menu" id="shockUserMenu">
                             <div class="frag-drop-header frag-drop-header--profile">
                                 <span class="frag-drop-avatar-frame">
-                                    <img src="{{ auth()->user()->avatar ?: $fragcityFallbackAvatar }}"
+                                    <img src="{{ $fragcityAvatar }}"
                                          class="frag-drop-avatar" alt=""
                                          onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';">
                                 </span>
                                 <div class="frag-drop-info">
                                     <span class="frag-drop-eyebrow">حساب کاربری FragCity</span>
-                                    <span class="frag-drop-name">{{ auth()->user()->name }}</span>
+                                    <span class="frag-drop-name">{{ $fragcityDisplayName }}</span>
                                     <span class="frag-drop-account-label">ایمیل حساب</span>
-                                    <span class="frag-drop-steam">{{ auth()->user()->email }}</span>
+                                    <span class="frag-drop-steam">{{ $fragcityEmail }}</span>
+                                    @if ($fragcityPhone !== '')
+                                        <span class="frag-drop-account-label">شماره موبایل</span>
+                                        <span class="frag-drop-steam" dir="ltr">{{ $fragcityPhone }}</span>
+                                    @endif
+                                    @if ($fragcitySteamId !== '')
+                                        <span class="frag-drop-account-label">شناسه حساب Steam</span>
+                                        <span class="frag-drop-steam" dir="ltr">{{ $fragcitySteamId }}</span>
+                                    @endif
                                 </div>
                             </div>
                             <div class="frag-drop-divider"></div>
@@ -220,11 +241,11 @@
 
         @auth
             <div class="mobile-nav-profile">
-                <img src="{{ auth()->user()->avatar ?: $fragcityFallbackAvatar }}" alt=""
+                <img src="{{ $fragcityAvatar }}" alt=""
                      onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';">
                 <div>
-                    <strong>{{ auth()->user()->name }}</strong>
-                    <span>{{ auth()->user()->email }}</span>
+                    <strong>{{ $fragcityDisplayName }}</strong>
+                    <span>{{ $fragcityEmail }}</span>
                 </div>
             </div>
             <a href="{{ route('services') }}" class="mobile-nav-link" wire:navigate><i class="fa-solid fa-server" aria-hidden="true"></i><span>سرورهای من</span></a>

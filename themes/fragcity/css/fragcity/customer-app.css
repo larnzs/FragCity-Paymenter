@@ -1080,3 +1080,143 @@ body.fc-customer-app-shell {
         print-color-adjust:exact; -webkit-print-color-adjust:exact;
     }
 }
+
+
+/* CS2 customer service workspace */
+.fc-customer-app-shell .fc-service-detail-page--cs2 { padding-bottom:54px; }
+.fc-customer-app-shell .fc-service-hero { display:flex; align-items:center; justify-content:space-between; gap:22px; margin:16px 0 22px; padding:24px 26px; border:1px solid rgba(255,255,255,.085); border-top-color:rgba(249,115,22,.34); border-radius:18px; background:radial-gradient(ellipse at 100% 0,rgba(249,115,22,.12),transparent 42%),linear-gradient(145deg,rgba(26,26,26,.94),rgba(15,15,15,.92)); box-shadow:0 18px 44px rgba(0,0,0,.2),inset 0 1px rgba(255,255,255,.035); }
+.fc-customer-app-shell .fc-service-hero__identity { display:flex; min-width:0; align-items:center; gap:17px; }
+.fc-customer-app-shell .fc-service-hero__icon { display:grid; width:58px; height:58px; flex:0 0 58px; place-items:center; border:1px solid rgba(249,115,22,.28); border-radius:17px; color:#ffb477; background:rgba(249,115,22,.1); font-size:1.35rem; }
+.fc-customer-app-shell .fc-service-hero h1 { margin:3px 0 4px; color:#fff; font-size:clamp(1.45rem,2.5vw,2rem); font-weight:900; }
+.fc-customer-app-shell .fc-service-hero p { margin:0; color:#a5a5a5; font-size:.82rem; line-height:1.9; }
+.fc-customer-app-shell .fc-service-hero p span { padding:0 5px; color:#666; }
+.fc-customer-app-shell .fc-service-hero__actions { display:flex; flex:0 0 auto; align-items:center; gap:12px; }
+.fc-customer-app-shell .fc-service-status { display:inline-flex; min-height:32px; align-items:center; gap:8px; padding:6px 11px; border:1px solid rgba(255,255,255,.1); border-radius:999px; color:#ccc; background:rgba(255,255,255,.035); font-size:.74rem; font-weight:850; white-space:nowrap; }
+.fc-customer-app-shell .fc-service-status > span { width:7px; height:7px; border-radius:50%; background:#999; }
+.fc-customer-app-shell .fc-service-status--active { border-color:rgba(74,222,128,.22); color:#9be9b5; background:rgba(34,197,94,.07); }
+.fc-customer-app-shell .fc-service-status--active > span { background:#4ade80; box-shadow:0 0 10px rgba(74,222,128,.55); }
+.fc-customer-app-shell .fc-service-status--cancelled { border-color:rgba(248,113,113,.22); color:#f7a1a1; background:rgba(239,68,68,.06); }
+.fc-customer-app-shell .fc-service-status--cancelled > span { background:#f87171; }
+.fc-customer-app-shell .fc-service-status--pending { border-color:rgba(249,115,22,.22); color:#ffbd83; background:rgba(249,115,22,.065); }
+.fc-customer-app-shell .fc-service-status--pending > span { background:#fb923c; }
+.fc-customer-app-shell .fc-service-back-link { display:inline-flex; align-items:center; gap:7px; color:#aaa !important; font-size:.76rem; font-weight:800; text-decoration:none; transition:color .16s ease; }
+.fc-customer-app-shell .fc-service-back-link:hover { color:#ffb477 !important; }
+.fc-customer-app-shell .fc-service-invoice-alert { display:flex; align-items:center; gap:14px; margin:0 0 17px; padding:15px 17px; border:1px solid rgba(245,158,11,.19); border-radius:14px; background:linear-gradient(100deg,rgba(245,158,11,.1),rgba(245,158,11,.035)); }
+.fc-customer-app-shell .fc-service-invoice-alert > span { display:grid; width:40px; height:40px; flex:0 0 40px; place-items:center; border-radius:12px; color:#fbbf65; background:rgba(245,158,11,.12); }
+.fc-customer-app-shell .fc-service-invoice-alert > div { min-width:0; }
+.fc-customer-app-shell .fc-service-invoice-alert strong { color:#ffe0aa; font-size:.84rem; }
+.fc-customer-app-shell .fc-service-invoice-alert p { margin:4px 0 0; color:#bca987; font-size:.74rem; }
+.fc-customer-app-shell .fc-service-invoice-alert a { display:inline-flex; align-items:center; gap:8px; margin-right:auto; color:#ffc27c !important; font-size:.77rem; font-weight:850; white-space:nowrap; }
+.fc-customer-app-shell .fc-service-overview-grid { display:grid; grid-template-columns:minmax(0,1.2fr) minmax(270px,.8fr); align-items:start; gap:16px; }
+.fc-customer-app-shell .fc-service-overview-card,.fc-customer-app-shell .fc-service-actions-card,.fc-customer-app-shell .fc-service-extension-workspace { min-width:0; padding:22px; border:1px solid rgba(255,255,255,.085); border-radius:17px; background:linear-gradient(150deg,rgba(25,25,25,.94),rgba(15,15,15,.94)); box-shadow:0 14px 34px rgba(0,0,0,.15); }
+.fc-customer-app-shell .fc-service-section-heading { display:flex; align-items:center; gap:12px; margin-bottom:18px; }
+.fc-customer-app-shell .fc-service-section-heading > span { display:grid; width:40px; height:40px; flex:0 0 40px; place-items:center; border:1px solid rgba(249,115,22,.22); border-radius:12px; color:#ffae72; background:rgba(249,115,22,.08); }
+.fc-customer-app-shell .fc-service-section-heading h2 { margin:0; color:#f7f7f7; font-size:1rem; font-weight:900; }
+.fc-customer-app-shell .fc-service-section-heading p { margin:4px 0 0; color:#888; font-size:.74rem; }
+.fc-customer-app-shell .fc-service-facts { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 18px; }
+.fc-customer-app-shell .fc-service-facts > div { display:flex; min-width:0; justify-content:space-between; align-items:center; gap:12px; padding:13px 0; border-bottom:1px solid rgba(255,255,255,.065); }
+.fc-customer-app-shell .fc-service-facts > div > span { color:#929292; font-size:.77rem; }
+.fc-customer-app-shell .fc-service-facts strong { min-width:0; color:#eee; font-size:.79rem; font-weight:800; text-align:left; overflow-wrap:anywhere; }
+.fc-customer-app-shell .fc-service-facts .fc-service-price { color:#ffb477; direction:rtl; unicode-bidi:isolate; }
+.fc-customer-app-shell .fc-service-extra-fields { margin-top:18px; padding-top:17px; border-top:1px solid rgba(255,255,255,.08); }
+.fc-customer-app-shell .fc-service-extra-fields h3 { margin:0 0 10px; color:#e6e6e6; font-size:.82rem; font-weight:850; }
+.fc-customer-app-shell .fc-service-extra-fields > div { display:flex; justify-content:space-between; gap:12px; padding:8px 0; }
+.fc-customer-app-shell .fc-service-extra-fields span { color:#999; font-size:.76rem; }
+.fc-customer-app-shell .fc-service-extra-fields strong { color:#eee; font-size:.77rem; }
+.fc-customer-app-shell .fc-service-actions-list { display:grid; gap:9px; }
+.fc-customer-app-shell .fc-service-action { display:flex; width:100%; min-width:0; min-height:62px; align-items:center; gap:12px; padding:11px 13px; border:1px solid rgba(255,255,255,.075); border-radius:12px; color:#eee !important; background:rgba(255,255,255,.025); text-align:right; text-decoration:none; transition:transform .16s ease,border-color .16s ease,background .16s ease; }
+.fc-customer-app-shell .fc-service-action > i:first-child { display:grid; width:36px; height:36px; flex:0 0 36px; place-items:center; border-radius:10px; color:#ffb477; background:rgba(249,115,22,.09); }
+.fc-customer-app-shell .fc-service-action > span { display:grid; min-width:0; gap:4px; }
+.fc-customer-app-shell .fc-service-action strong { color:#eee; font-size:.79rem; font-weight:850; }
+.fc-customer-app-shell .fc-service-action small { color:#929292; font-size:.69rem; line-height:1.7; }
+.fc-customer-app-shell .fc-service-action > i:last-child { margin-right:auto; color:#777; font-size:.68rem; }
+.fc-customer-app-shell .fc-service-action:hover { transform:translateY(-1px); border-color:rgba(249,115,22,.27); background:rgba(249,115,22,.055); }
+.fc-customer-app-shell .fc-service-action--primary { border-color:rgba(249,115,22,.22); background:linear-gradient(110deg,rgba(249,115,22,.1),rgba(255,255,255,.025)); }
+.fc-customer-app-shell .fc-service-action--danger > i:first-child { color:#f39b9b; background:rgba(239,68,68,.09); }
+.fc-customer-app-shell .fc-service-action--danger:hover { border-color:rgba(239,68,68,.32); background:rgba(239,68,68,.065); }
+.fc-customer-app-shell .fc-service-action--muted { cursor:default; opacity:.7; }
+.fc-customer-app-shell .fc-service-extension-workspace { margin-top:17px; }
+.fc-customer-app-shell .fc-service-tabs { display:flex; gap:6px; margin:-3px 0 16px; padding-bottom:11px; border-bottom:1px solid rgba(255,255,255,.075); }
+.fc-customer-app-shell .fc-service-tabs button { min-height:37px; padding:7px 13px; border:1px solid transparent; border-radius:9px; color:#aaa; background:transparent; font-size:.76rem; font-weight:800; }
+.fc-customer-app-shell .fc-service-tabs button.is-active { border-color:rgba(249,115,22,.25); color:#ffb477; background:rgba(249,115,22,.08); }
+.fc-customer-app-shell .fc-service-extension-content { min-width:0; }
+.fc-customer-app-shell .fc-cs2-dashboard { display:grid; min-width:0; gap:16px; color:#f4f4f4; }
+.fc-customer-app-shell .fc-cs2-topline { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:2px 0 17px; border-bottom:1px solid rgba(255,255,255,.075); }
+.fc-customer-app-shell .fc-cs2-server-identity { display:flex; min-width:0; align-items:center; gap:13px; }
+.fc-customer-app-shell .fc-cs2-game-mark { display:grid; width:48px; height:48px; flex:0 0 48px; place-items:center; border:1px solid rgba(249,115,22,.26); border-radius:14px; color:#ffb477; background:rgba(249,115,22,.09); font-size:1.12rem; }
+.fc-customer-app-shell .fc-cs2-eyebrow { display:block; margin-bottom:5px; color:#fb923c; font-size:.61rem; font-weight:900; letter-spacing:.11em; }
+.fc-customer-app-shell .fc-cs2-server-identity h2 { margin:0; color:#fff; font-size:1.15rem; font-weight:900; }
+.fc-customer-app-shell .fc-cs2-server-identity p { margin:5px 0 0; color:#999; font-size:.73rem; }
+.fc-customer-app-shell .fc-cs2-server-identity p span { padding:0 3px; color:#666; }
+.fc-customer-app-shell .fc-cs2-status { display:inline-flex; min-height:32px; flex:0 0 auto; align-items:center; gap:8px; padding:6px 11px; border:1px solid rgba(255,255,255,.1); border-radius:999px; color:#ccc; background:rgba(255,255,255,.035); font-size:.72rem; font-weight:850; }
+.fc-customer-app-shell .fc-cs2-status__dot { width:7px; height:7px; border-radius:50%; background:#999; }
+.fc-customer-app-shell .fc-cs2-status--online { border-color:rgba(74,222,128,.23); color:#a4e9ba; background:rgba(34,197,94,.065); }
+.fc-customer-app-shell .fc-cs2-status--online .fc-cs2-status__dot { background:#4ade80; box-shadow:0 0 10px rgba(74,222,128,.55); }
+.fc-customer-app-shell .fc-cs2-status--offline { border-color:rgba(248,113,113,.2); color:#f3a0a0; background:rgba(239,68,68,.06); }
+.fc-customer-app-shell .fc-cs2-status--offline .fc-cs2-status__dot { background:#f87171; }
+.fc-customer-app-shell .fc-cs2-status--pending { border-color:rgba(249,115,22,.22); color:#ffc18b; background:rgba(249,115,22,.065); }
+.fc-customer-app-shell .fc-cs2-status--pending .fc-cs2-status__dot { background:#fb923c; }
+.fc-customer-app-shell .fc-cs2-status--suspended { border-color:rgba(248,113,113,.25); color:#f6a0a0; background:rgba(239,68,68,.08); }
+.fc-customer-app-shell .fc-cs2-status--suspended .fc-cs2-status__dot { background:#f87171; }
+.fc-customer-app-shell .fc-cs2-connect-card { display:flex; justify-content:space-between; align-items:center; gap:18px; padding:18px 20px; border:1px solid rgba(249,115,22,.2); border-radius:14px; background:linear-gradient(115deg,rgba(249,115,22,.11),rgba(255,255,255,.025)); }
+.fc-customer-app-shell .fc-cs2-connect-card > div { min-width:0; }
+.fc-customer-app-shell .fc-cs2-connect-card strong { display:block; color:#fff; font-size:.88rem; font-weight:900; }
+.fc-customer-app-shell .fc-cs2-connect-card p { margin:4px 0 0; color:#aaa; font-size:.72rem; }
+.fc-customer-app-shell .fc-cs2-connect-card code { max-width:100%; padding:9px 12px; border:1px solid rgba(249,115,22,.22); border-radius:9px; color:#ffd2aa; background:rgba(0,0,0,.22); font-size:.9rem; font-weight:900; overflow-wrap:anywhere; }
+.fc-customer-app-shell .fc-cs2-resource-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:11px; }
+.fc-customer-app-shell .fc-cs2-resource-card { display:flex; min-width:0; align-items:center; gap:12px; padding:15px; border:1px solid rgba(255,255,255,.075); border-radius:13px; background:linear-gradient(145deg,rgba(255,255,255,.035),rgba(255,255,255,.015)); }
+.fc-customer-app-shell .fc-cs2-resource-card__icon { display:grid; width:38px; height:38px; flex:0 0 38px; place-items:center; border:1px solid rgba(249,115,22,.2); border-radius:11px; color:#ffb477; background:rgba(249,115,22,.075); font-size:1rem; }
+.fc-customer-app-shell .fc-cs2-resource-card small,.fc-customer-app-shell .fc-cs2-resource-card span { display:block; color:#999; font-size:.68rem; }
+.fc-customer-app-shell .fc-cs2-resource-card strong { display:block; margin:3px 0; color:#fff; font-size:1.02rem; font-weight:900; }
+.fc-customer-app-shell .fc-cs2-details-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.fc-customer-app-shell .fc-cs2-panel { min-width:0; padding:17px; border:1px solid rgba(255,255,255,.075); border-radius:14px; background:rgba(255,255,255,.022); }
+.fc-customer-app-shell .fc-cs2-panel__heading { display:flex; align-items:center; gap:10px; margin-bottom:11px; }
+.fc-customer-app-shell .fc-cs2-panel__heading > span { display:grid; width:35px; height:35px; flex:0 0 35px; place-items:center; border-radius:10px; color:#ffb477; background:rgba(249,115,22,.09); }
+.fc-customer-app-shell .fc-cs2-panel__heading h3 { margin:0; color:#eee; font-size:.85rem; font-weight:900; }
+.fc-customer-app-shell .fc-cs2-panel__heading p { margin:3px 0 0; color:#888; font-size:.68rem; }
+.fc-customer-app-shell .fc-cs2-detail-list { display:grid; gap:0; margin:0; }
+.fc-customer-app-shell .fc-cs2-detail-list > div { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding:9px 0; border-bottom:1px solid rgba(255,255,255,.055); }
+.fc-customer-app-shell .fc-cs2-detail-list > div:last-child { border-bottom:0; }
+.fc-customer-app-shell .fc-cs2-detail-list dt { color:#999; font-size:.72rem; }
+.fc-customer-app-shell .fc-cs2-detail-list dd { margin:0; color:#e5e5e5; font-size:.73rem; font-weight:750; text-align:left; overflow-wrap:anywhere; }
+.fc-customer-app-shell .fc-cs2-feature-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.fc-customer-app-shell .fc-cs2-feature-grid > div { display:grid; gap:5px; place-items:center; min-height:70px; border:1px solid rgba(255,255,255,.06); border-radius:10px; background:rgba(0,0,0,.15); }
+.fc-customer-app-shell .fc-cs2-feature-grid strong { color:#ffb477; font-size:1.1rem; font-weight:900; }
+.fc-customer-app-shell .fc-cs2-feature-grid span { color:#999; font-size:.65rem; }
+.fc-customer-app-shell .fc-cs2-inline-notice { display:flex; align-items:center; gap:8px; margin-top:12px; color:#ffc17e; font-size:.7rem; }
+.fc-customer-app-shell .fc-cs2-access-content { display:flex; justify-content:space-between; align-items:center; gap:15px; }
+.fc-customer-app-shell .fc-cs2-account-info { display:flex; flex-wrap:wrap; gap:22px; }
+.fc-customer-app-shell .fc-cs2-account-info > div { display:grid; gap:5px; }
+.fc-customer-app-shell .fc-cs2-account-info small { color:#999; font-size:.67rem; }
+.fc-customer-app-shell .fc-cs2-account-info strong { color:#eee; font-size:.76rem; }
+.fc-customer-app-shell .fc-cs2-panel-link { display:inline-flex; min-height:42px; align-items:center; justify-content:center; gap:8px; padding:9px 13px; border:1px solid rgba(249,115,22,.3); border-radius:10px; color:#ffb477 !important; background:rgba(249,115,22,.08); font-size:.74rem; font-weight:900; white-space:nowrap; }
+.fc-customer-app-shell .fc-cs2-panel-link:hover { border-color:rgba(249,115,22,.55); background:rgba(249,115,22,.14); }
+.fc-customer-app-shell .fc-cs2-technical { padding:13px 15px; border:1px solid rgba(255,255,255,.065); border-radius:12px; background:rgba(255,255,255,.015); }
+.fc-customer-app-shell .fc-cs2-technical summary { display:flex; align-items:center; gap:8px; color:#aaa; font-size:.73rem; font-weight:800; cursor:pointer; }
+.fc-customer-app-shell .fc-cs2-technical summary i { color:#fb923c; }
+.fc-customer-app-shell .fc-cs2-technical .fc-cs2-detail-list { margin-top:12px; }
+.fc-customer-app-shell .fc-cs2-alert,.fc-customer-app-shell .fc-cs2-provisioning { display:flex; align-items:center; gap:14px; padding:19px; border:1px solid rgba(249,115,22,.18); border-radius:14px; background:rgba(249,115,22,.045); }
+.fc-customer-app-shell .fc-cs2-alert--warning { border-color:rgba(245,158,11,.2); background:rgba(245,158,11,.05); }
+.fc-customer-app-shell .fc-cs2-alert__icon,.fc-customer-app-shell .fc-cs2-provisioning__icon { display:grid; width:42px; height:42px; flex:0 0 42px; place-items:center; border-radius:12px; color:#ffb477; background:rgba(249,115,22,.1); }
+.fc-customer-app-shell .fc-cs2-alert strong,.fc-customer-app-shell .fc-cs2-provisioning h2 { color:#fff; font-size:.88rem; font-weight:900; }
+.fc-customer-app-shell .fc-cs2-alert p,.fc-customer-app-shell .fc-cs2-provisioning p { margin:4px 0 0; color:#aaa; font-size:.74rem; line-height:1.9; }
+.fc-customer-app-shell .fc-cs2-provisioning > div { flex:1; min-width:0; }
+.fc-customer-app-shell .fc-cs2-provisioning h2 { margin:2px 0 0; }
+.fc-customer-app-shell .fc-cs2-footer-note { display:flex; align-items:center; gap:8px; color:#777; font-size:.67rem; }
+.fc-customer-app-shell .fc-cs2-footer-note i { color:#69d995; }
+@media (max-width:900px) {
+    .fc-customer-app-shell .fc-service-overview-grid { grid-template-columns:minmax(0,1fr); }
+    .fc-customer-app-shell .fc-cs2-access-content { align-items:stretch; flex-direction:column; }
+    .fc-customer-app-shell .fc-cs2-panel-link { align-self:flex-start; }
+}
+@media (max-width:700px) {
+    .fc-customer-app-shell .fc-service-hero { align-items:flex-start; flex-direction:column; padding:19px; }
+    .fc-customer-app-shell .fc-service-hero__actions { width:100%; justify-content:space-between; }
+    .fc-customer-app-shell .fc-service-facts { grid-template-columns:minmax(0,1fr); }
+    .fc-customer-app-shell .fc-service-overview-card,.fc-customer-app-shell .fc-service-actions-card,.fc-customer-app-shell .fc-service-extension-workspace { padding:17px; }
+    .fc-customer-app-shell .fc-cs2-topline { align-items:flex-start; flex-direction:column; }
+    .fc-customer-app-shell .fc-cs2-connect-card { align-items:flex-start; flex-direction:column; padding:15px; }
+    .fc-customer-app-shell .fc-cs2-resource-grid,.fc-customer-app-shell .fc-cs2-details-grid { grid-template-columns:minmax(0,1fr); }
+    .fc-customer-app-shell .fc-cs2-provisioning,.fc-customer-app-shell .fc-service-invoice-alert { align-items:flex-start; flex-wrap:wrap; }
+    .fc-customer-app-shell .fc-service-invoice-alert a { margin-right:53px; }
+}

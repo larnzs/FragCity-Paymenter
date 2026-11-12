@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.7.2',
+    version: '1.8.0',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -500,6 +500,51 @@ class FragCityCS2 extends PterodactylExtension
         }
 
         return $payload;
+    }
+
+
+    /**
+     * Provide the dedicated CS2 customer workspace through Paymenter's
+     * native extension service-view lifecycle. Core remains untouched.
+     */
+    public function getActions(Service $service, $settings, $properties): array
+    {
+        return [[
+            'type' => 'view',
+            'name' => 'dashboard',
+            'label' => 'داشبورد سرور',
+            'function' => 'getCustomerDashboardView',
+        ]];
+    }
+
+    /**
+     * Render the customer-facing dashboard using the ownership-checked,
+     * allow-listed Pterodactyl snapshot.
+     */
+    public function getCustomerDashboardView(Service $service, $settings, $properties, string $viewName): string
+    {
+        if ($viewName !== 'dashboard') {
+            return '';
+        }
+
+        $summary = null;
+        $dashboardError = false;
+
+        try {
+            $summary = $this->getCustomerPanelSummary($service, $settings, $properties);
+        } catch (Throwable $error) {
+            $dashboardError = true;
+            Log::warning('FragCity CS2 customer dashboard could not load the server snapshot.', [
+                'service_id' => (int) $service->id,
+                'exception' => get_class($error),
+            ]);
+        }
+
+        return view()->file(__DIR__ . '/views/customer-dashboard.blade.php', [
+            'service' => $service,
+            'summary' => $summary,
+            'dashboardError' => $dashboardError,
+        ])->render();
     }
 
     /**
