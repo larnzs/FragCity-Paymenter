@@ -21,7 +21,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity CS2',
     description: 'Pterodactyl provisioning with validated settings generated from the FragCity CS2 Egg.',
-    version: '1.8.1',
+    version: '1.8.2',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -102,6 +102,72 @@ class FragCityCS2 extends PterodactylExtension
      * sequential PHP array by Paymenter 1.5.9. Such legacy labels are mapped
      * back to their explicit Egg value ("0") here. Unknown values are rejected.
      */
+    /**
+     * Validate service-level free-text Config Options before passing them to
+     * Paymenter's Pterodactyl adapter. Server Name is a Pterodactyl API field
+     * (servername), not an Egg variable; STEAM_ACC is a per-service Egg value.
+     *
+     * @param array<string,mixed> $properties
+     * @return array<string,mixed>
+     */
+    private function validateCustomerTextProperties(array $properties, array $manifest): array
+    {
+        foreach (($manifest['paymenter']['service_properties'] ?? []) as $field) {
+            $key = (string) ($field['env_variable'] ?? '');
+            if ($key === '') {
+                throw new RuntimeException('FragCity CS2 service text property definition is invalid.');
+            }
+
+            $value = $properties[$key] ?? null;
+            if ($value === null || $value === '') {
+                if (!empty($field['required'])) {
+                    throw new RuntimeException("FragCity CS2 {$key} is required.");
+                }
+                unset($properties[$key]);
+                continue;
+            }
+
+            if (!is_string($value) && !is_numeric($value)) {
+                throw new RuntimeException("FragCity CS2 {$key} must be a text value.");
+            }
+
+            $value = (string) $value;
+            $maximum = 32;
+            if (mb_strlen($value, 'UTF-8') > $maximum || preg_match('/[\\x00-\\x1F\\x7F]/', $value)) {
+                throw new RuntimeException("FragCity CS2 {$key} must be at most {$maximum} characters.");
+            }
+
+            $properties[$key] = $value;
+        }
+
+        foreach (($manifest['paymenter']['pterodactyl_options'] ?? []) as $field) {
+            $key = (string) ($field['env_variable'] ?? '');
+            if ($key !== 'servername') {
+                throw new RuntimeException('FragCity CS2 Pterodactyl server-name definition is invalid.');
+            }
+
+            $value = trim((string) ($properties[$key] ?? ''));
+            if ($value === '') {
+                // Let the official Pterodactyl adapter use Product Name #Service ID.
+                unset($properties[$key]);
+                continue;
+            }
+
+            if (
+                mb_strlen($value, 'UTF-8') > 64
+                || !preg_match('/\\A[A-Za-z0-9_. -]+\\z/D', $value)
+            ) {
+                throw new RuntimeException(
+                    'FragCity CS2 server name may contain only letters, numbers, spaces, _, - and . (max 64).'
+                );
+            }
+
+            $properties[$key] = $value;
+        }
+
+        return $properties;
+    }
+
     public function createServer(Service $service, $settings, $properties)
     {
         $manifest = $this->loadManifest();
@@ -123,6 +189,11 @@ class FragCityCS2 extends PterodactylExtension
         // limits, then map player/tickrate and feature-limit selections.
         $properties = $this->applyResourceLimitsFromConfigOptions($service, $properties);
         $properties = $this->applyNativeConfigOptions($service, $properties);
+        $properties = $this->validateCustomerTextProperties($properties, $manifest);
+
+        // GSLT is now scoped to each ServiceProperty. Never inherit an older
+        // Product-wide token into a newly created customer's server.
+        unset($settings['STEAM_ACC']);
 
         $this->ensurePterodactylClientUser($service, true);
 
@@ -157,6 +228,8 @@ class FragCityCS2 extends PterodactylExtension
         // inherited Pterodactyl updater consumes them.
         $properties = $this->applyResourceLimitsFromConfigOptions($service, $properties);
         $properties = $this->applyNativeConfigOptions($service, $properties);
+        $properties = $this->validateCustomerTextProperties($properties, $manifest);
+        unset($settings['STEAM_ACC']);
 
         // Paymenter's stock Pterodactyl updater preserves already-populated
         // Egg environment values, even when a native Service Config Option has
@@ -1289,11 +1362,15 @@ class FragCityCS2 extends PterodactylExtension
         $checkoutFields = $manifest['paymenter']['checkout_fields'] ?? [];
         $productFields = $manifest['paymenter']['product_fields'] ?? [];
         $configOptionFields = $manifest['paymenter']['config_options'] ?? [];
+        $servicePropertyFields = $manifest['paymenter']['service_properties'] ?? [];
+        $pterodactylOptions = $manifest['paymenter']['pterodactyl_options'] ?? [];
 
         if (
             !is_array($checkoutFields)
             || !is_array($productFields)
             || !is_array($configOptionFields)
+            || !is_array($servicePropertyFields)
+            || !is_array($pterodactylOptions)
         ) {
             throw new RuntimeException('FragCity CS2 manifest field lists are invalid.');
         }
@@ -1515,6 +1592,47 @@ class FragCityCS2 extends PterodactylExtension
             }
         }
 
+        $servicePropertyMap = [];
+        foreach ($servicePropertyFields as $field) {
+            $name = $field['name'] ?? null;
+            $envVariable = $field['env_variable'] ?? null;
+            if (
+                !is_string($name)
+                || !is_string($envVariable)
+                || $name === ''
+                || $envVariable === ''
+                || $name !== $envVariable
+                || isset($servicePropertyMap[$envVariable])
+                || !isset($variableMap[$envVariable])
+                || ($variableMap[$envVariable]['paymenter']['status'] ?? null) !== 'service_property'
+                || ($field['type'] ?? null) !== 'text'
+                || ($field['target'] ?? null) !== 'egg'
+                || !is_array($field['validation'] ?? null)
+            ) {
+                throw new RuntimeException('FragCity CS2 manifest contains an invalid service-level Egg property.');
+            }
+            $servicePropertyMap[$envVariable] = $field;
+        }
+
+        $pterodactylOptionMap = [];
+        foreach ($pterodactylOptions as $field) {
+            $name = $field['name'] ?? null;
+            $envVariable = $field['env_variable'] ?? null;
+            if (
+                !is_string($name)
+                || !is_string($envVariable)
+                || $name !== 'Server Name'
+                || $envVariable !== 'servername'
+                || ($field['type'] ?? null) !== 'text'
+                || ($field['target'] ?? null) !== 'server_name'
+                || isset($pterodactylOptionMap[$envVariable])
+                || !is_array($field['validation'] ?? null)
+            ) {
+                throw new RuntimeException('FragCity CS2 manifest contains an invalid Pterodactyl server-name option.');
+            }
+            $pterodactylOptionMap[$envVariable] = $field;
+        }
+
         foreach ($variableMap as $name => $variable) {
             $status = $variable['paymenter']['status'] ?? null;
 
@@ -1538,6 +1656,16 @@ class FragCityCS2 extends PterodactylExtension
                 continue;
             }
 
+            if ($status === 'service_property') {
+                if (!isset($servicePropertyMap[$name])) {
+                    throw new RuntimeException(
+                        "Egg variable {$name} is missing its declared per-service Paymenter text property."
+                    );
+                }
+
+                continue;
+            }
+
             if (!in_array($status, ['checkout', 'product_setting'], true) || !isset($fieldMap[$name])) {
                 throw new RuntimeException(
                     "Egg variable {$name} is missing its declared Paymenter field."
@@ -1552,6 +1680,8 @@ class FragCityCS2 extends PterodactylExtension
             || (int) ($summary['checkout_fields'] ?? -1) !== count($checkoutFields)
             || (int) ($summary['product_admin_fields'] ?? -1) !== count($productFields)
             || (int) ($summary['native_config_options'] ?? -1) !== count($configOptionMap)
+            || (int) ($summary['service_properties'] ?? -1) !== count($servicePropertyMap)
+            || (int) ($summary['pterodactyl_options'] ?? -1) !== count($pterodactylOptionMap)
         ) {
             throw new RuntimeException('FragCity CS2 manifest summary does not match its actual variable mapping.');
         }
