@@ -52,7 +52,9 @@
             <button type="button" class="fc-auth-modal__close" data-auth-modal-close aria-label="بستن پنجره ورود">
                 <i class="fa-solid fa-xmark" aria-hidden="true"></i>
             </button>
-            <livewire:auth.login />
+            <div class="fc-auth-modal__content">
+                <livewire:auth.login />
+            </div>
         </section>
     </div>
     @endif
