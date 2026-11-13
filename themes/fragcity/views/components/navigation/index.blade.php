@@ -192,7 +192,7 @@
                         <i class="fa-brands fa-steam" aria-hidden="true"></i><span>ورود با استیم</span>
                     </a>
                     @if (!config('settings.registration_disabled', false))
-                        <a href="{{ route('register') }}" class="shock-register-btn">
+                        <a href="{{ $fragcityMain }}/register/" class="shock-register-btn">
                             <i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>ثبت‌نام</span>
                         </a>
                     @endif
@@ -274,7 +274,7 @@
                 <i class="fa-brands fa-steam" aria-hidden="true"></i><span>ورود با استیم</span>
             </a>
             @if (!config('settings.registration_disabled', false))
-                <a href="{{ route('register') }}" class="mobile-nav-link"><i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>ساخت حساب کاربری</span></a>
+                <a href="{{ $fragcityMain }}/register/" class="mobile-nav-link"><i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>ساخت حساب کاربری</span></a>
             @endif
         @endauth
     </div>
