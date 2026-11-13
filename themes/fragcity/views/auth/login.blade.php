@@ -141,11 +141,9 @@
         @endif
 
         <div class="fc-auth-bottom">
-            @if (!config('settings.registration_disabled', false))
-                <span>حساب کاربری نداری؟</span>
-                <a href="{{ route('register') }}" wire:navigate>ثبت‌نام کن</a>
-                <span class="fc-auth-bottom__divider" aria-hidden="true">|</span>
-            @endif
+            <span>حساب کاربری نداری؟</span>
+            <a href="https://fragcity.ir/register/">در FragCity ثبت‌نام کن</a>
+            <span class="fc-auth-bottom__divider" aria-hidden="true">|</span>
             <a href="https://fragcity.ir/">صفحه اصلی FragCity</a>
         </div>
     </section>
