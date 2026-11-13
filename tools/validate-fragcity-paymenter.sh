@@ -75,8 +75,8 @@ grep -Fq "https://checkout.fragcity.ir" "$zarinpal_readme"
 ! grep -Fq "data.amount" "$zarinpal"
 
 # Extension versions and runtime bridge version must be released together.
-grep -Fq "version: '1.18.2'" "$api"
-grep -Fq "'version' => '1.18.2'" "$api"
+grep -Fq "version: '1.18.3'" "$api"
+grep -Fq "'version' => '1.18.3'" "$api"
 test -s "deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
 grep -Fq "sensitiveConfigOptions" "deployment/patches/paymenter-1.5.9-sensitive-config-options.patch"
 grep -Fq "function startSso" "$api"
@@ -103,6 +103,19 @@ grep -Fq "fragcity_sso_used_tickets" "$api"
 grep -Fq "/auth/fragcity/sso/start" "$routes"
 grep -Fq "/auth/fragcity/sso/callback" "$routes"
 grep -Fq "fragcitySsoEnabled" "$api"
+
+# FragCity browser SSO origin checks stay strict, while accepting the canonical www alias
+# and same-site top-level form posts when shared hosting omits the Origin header.
+grep -Fq "private function ssoWebsiteOriginAliases" "$api"
+grep -Fq "Sec-Fetch-Site" "$api"
+grep -Fq "Sec-Fetch-Mode" "$api"
+grep -Fq "Sec-Fetch-Dest" "$api"
+grep -Fq "private function redirectSsoErrorToModal" "$api"
+grep -Fq "query.get('auth') === 'login'" themes/fragcity/js/fragcity-auth-modal.js
+grep -Fq '<div class="fc-auth-modal__content">' themes/fragcity/views/layouts/app.blade.php
+grep -Fq 'https://fragcity.ir/register/' themes/fragcity/views/auth/login.blade.php
+! grep -Fq 'shock-register-btn' themes/fragcity/views/components/navigation/index.blade.php
+! grep -Fq 'ساخت حساب کاربری' themes/fragcity/views/components/navigation/index.blade.php
 test -f "extensions/Others/FragCityAPI/database/migrations/2026_11_11_000009_create_fragcity_sso_used_tickets_table.php"
 grep -Fq "ticket ID prevents replay" "$api_readme"
 grep -Fq "version: '1.8.3'" "$cs2"
