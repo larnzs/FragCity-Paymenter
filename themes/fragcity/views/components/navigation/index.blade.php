@@ -30,14 +30,23 @@
 <header class="shock-header" id="siteHeader">
     <div class="shock-container">
         <div class="shock-brand">
-            <a href="{{ $fragcityMain }}/support/" class="fc-support-toggle" aria-label="پشتیبانی" title="پشتیبانی">
-                <i class="fa-solid fa-headset" aria-hidden="true"></i>
-                <span class="fc-support-toggle__label">پشتیبانی</span>
-            </a>
             <a href="{{ $fragcityMain }}/" class="shock-logo-link" aria-label="صفحه اصلی FragCity">
                 <img src="{{ $fragcityMain }}/img/webp/newlogo.webp?v=20261102-2"
                      onerror="this.onerror=null;this.src='{{ $fragcityFallbackAvatar }}';"
                      alt="FragCity" class="shock-logo-img">
+            </a>
+            <a href="{{ $fragcityMain }}/support/" class="fc-support-toggle" aria-label="پشتیبانی" title="پشتیبانی">
+                <i class="fa-solid fa-headset" aria-hidden="true"></i>
+                <span class="fc-support-toggle__label">پشتیبانی</span>
+            </a>
+            @php $fcCartCount = \App\Classes\Cart::items()->count(); @endphp
+            <a href="{{ route('cart') }}" wire:navigate class="fc-header-cart-link"
+               aria-label="سبد خرید، {{ $fcCartCount }} مورد" title="سبد خرید">
+                <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
+                <span class="fc-header-cart-link__label">سبد خرید</span>
+                @if ($fcCartCount > 0)
+                    <span class="fc-header-cart-link__count">{{ $fcCartCount }}</span>
+                @endif
             </a>
         </div>
 
@@ -86,15 +95,7 @@
         </nav>
 
         <div class="shock-user-area-wrapper">
-            @php $fcCartCount = \App\Classes\Cart::items()->count(); @endphp
-            <a href="{{ route('cart') }}" wire:navigate class="fc-header-cart-link"
-               aria-label="سبد خرید، {{ $fcCartCount }} مورد" title="سبد خرید">
-                <i class="fa-solid fa-cart-shopping" aria-hidden="true"></i>
-                <span class="fc-header-cart-link__label">سبد خرید</span>
-                @if ($fcCartCount > 0)
-                    <span class="fc-header-cart-link__count">{{ $fcCartCount }}</span>
-                @endif
-            </a>
+
 
             <button type="button" class="fc-motion-toggle" aria-label="حالت عملکرد"
                     data-motion-toggle aria-pressed="false" title="حالت بدون انیمیشن">
@@ -186,17 +187,10 @@
                     </div>
                 </div>
             @else
-                <div class="shock-auth-actions">
-                    <a href="{{ route('login') }}" class="frag-login-btn" data-auth-modal-open
-                       aria-haspopup="dialog" aria-controls="fcLoginModal" aria-expanded="false">
-                        <i class="fa-brands fa-steam" aria-hidden="true"></i><span>ورود با استیم</span>
-                    </a>
-                    @if (!config('settings.registration_disabled', false))
-                        <a href="{{ $fragcityMain }}/register/" class="shock-register-btn">
-                            <i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>ثبت‌نام</span>
-                        </a>
-                    @endif
-                </div>
+                <a href="{{ route('login') }}" class="frag-login-btn" data-auth-modal-open
+                   aria-haspopup="dialog" aria-controls="fcLoginModal" aria-expanded="false">
+                    <i class="fa-brands fa-steam" aria-hidden="true"></i><span>ورود با استیم</span>
+                </a>
             @endauth
 
             <button type="button" class="shock-mobile-toggle" id="mobileNavOpen"
