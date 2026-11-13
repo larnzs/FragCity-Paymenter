@@ -4896,7 +4896,7 @@ class FragCityAPI extends Extension
                 'fetch_site' => strtolower(trim((string) $request->header('Sec-Fetch-Site', ''))),
             ]);
 
-            return redirect()->route('login')->with('error', 'FragCity SSO origin validation failed.');
+            return $this->redirectSsoErrorToModal( 'FragCity SSO origin validation failed.');
         }
 
         $expectedState = Session::get('fragcity_sso_state');
@@ -4911,7 +4911,7 @@ class FragCityAPI extends Extension
             || !is_string($ticket)
             || strlen($ticket) > 4096
         ) {
-            return redirect()->route('login')->with('error', 'FragCity SSO request expired. Please try again.');
+            return $this->redirectSsoErrorToModal( 'FragCity SSO request expired. Please try again.');
         }
 
         $ticketParts = explode('.', $ticket);
@@ -4920,17 +4920,17 @@ class FragCityAPI extends Extension
             || !preg_match('/\A[a-f0-9]{64}\z/D', $ticketParts[1])
             || $ticketParts[0] === ''
         ) {
-            return redirect()->route('login')->with('error', 'FragCity SSO ticket is invalid.');
+            return $this->redirectSsoErrorToModal( 'FragCity SSO ticket is invalid.');
         }
 
         $secret = (string) $this->config('shared_secret');
         if (!preg_match('/\A[a-f0-9]{64,256}\z/iD', $secret)) {
-            return redirect()->route('login')->with('error', 'FragCity SSO is not configured.');
+            return $this->redirectSsoErrorToModal( 'FragCity SSO is not configured.');
         }
 
         $expectedSignature = hash_hmac('sha256', $ticketParts[0], $secret);
         if (!hash_equals($expectedSignature, strtolower($ticketParts[1]))) {
-            return redirect()->route('login')->with('error', 'FragCity SSO signature validation failed.');
+            return $this->redirectSsoErrorToModal( 'FragCity SSO signature validation failed.');
         }
 
         $padding = str_repeat('=', (4 - (strlen($ticketParts[0]) % 4)) % 4);
@@ -4939,7 +4939,7 @@ class FragCityAPI extends Extension
             true
         );
         if ($decoded === false) {
-            return redirect()->route('login')->with('error', 'FragCity SSO ticket is invalid.');
+            return $this->redirectSsoErrorToModal( 'FragCity SSO ticket is invalid.');
         }
 
         try {
@@ -4970,13 +4970,13 @@ class FragCityAPI extends Extension
             || !hash_equals($expectedState, $claims['state'])
             || !is_bool($claims['remember'] ?? null)
         ) {
-            return redirect()->route('login')->with('error', 'FragCity SSO ticket is expired or invalid.');
+            return $this->redirectSsoErrorToModal( 'FragCity SSO ticket is expired or invalid.');
         }
 
         $steamId = $claims['sub'];
         $paymenterUserId = $claims['user_id'];
         $returnTo = $this->safeSsoReturnPath(
-            Session::pull('fragcity_sso_return_to', '/')
+            Session::get('fragcity_sso_return_to', '/')
         );
 
         // A unique SHA-256 JTI key makes a valid ticket consumable only once.
@@ -4995,7 +4995,7 @@ class FragCityAPI extends Extension
         } catch (QueryException) {
             Session::forget('fragcity_sso_state');
 
-            return redirect()->route('login')->with('error', 'This FragCity SSO request has already been used or cannot be verified.');
+            return $this->redirectSsoErrorToModal( 'This FragCity SSO request has already been used or cannot be verified.');
         }
 
         $link = DB::table('fragcity_user_links')
@@ -5007,10 +5007,11 @@ class FragCityAPI extends Extension
         if (!$link || !$user) {
             Session::forget('fragcity_sso_state');
 
-            return redirect()->route('login')->with('error', 'This FragCity account is not linked to a Billing account.');
+            return $this->redirectSsoErrorToModal( 'This FragCity account is not linked to a Billing account.');
         }
 
         Session::forget('fragcity_sso_state');
+        Session::forget('fragcity_sso_return_to');
 
         // FragCity is the identity source of truth. A valid one-time ticket
         // explicitly requests this linked identity, so replace any other
@@ -5043,6 +5044,33 @@ class FragCityAPI extends Extension
         (new \App\Actions\Auth\Login)->execute($user, $claims['remember']);
 
         return redirect()->to($destination);
+    }
+
+    /**
+     * Return a failed browser SSO attempt to the requested local Billing page
+     * and open the branded login modal there instead of sending customers to
+     * the standalone /login fallback page.
+     */
+    private function redirectSsoErrorToModal(string $message): RedirectResponse
+    {
+        $returnTo = $this->safeSsoReturnPath(Session::get('fragcity_sso_return_to', '/'));
+        $parts = parse_url($returnTo);
+        $path = is_array($parts) && is_string($parts['path'] ?? null) && $parts['path'] !== ''
+            ? $parts['path']
+            : '/';
+
+        $query = [];
+        if (is_array($parts) && isset($parts['query'])) {
+            parse_str((string) $parts['query'], $query);
+        }
+        $query['auth'] = 'login';
+
+        $destination = $path . '?' . http_build_query($query);
+        if (is_array($parts) && isset($parts['fragment']) && $parts['fragment'] !== '') {
+            $destination .= '#' . $parts['fragment'];
+        }
+
+        return redirect()->to($destination)->with('error', $message);
     }
 
     private function isSsoEnabled(): bool
