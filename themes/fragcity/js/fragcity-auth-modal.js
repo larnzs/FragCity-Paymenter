@@ -100,4 +100,20 @@
     document.addEventListener('livewire:navigated', function () {
         closeModal(false);
     });
+
+    // SSO failures return to the requested Billing page with this flag so
+    // the user sees the message inside the same blurred login modal.
+    const query = new URLSearchParams(window.location.search);
+    if (query.get('auth') === 'login') {
+        const root = modal();
+        if (root) {
+            openModal(null);
+            query.delete('auth');
+            const remainingQuery = query.toString();
+            const cleanUrl = window.location.pathname
+                + (remainingQuery ? '?' + remainingQuery : '')
+                + window.location.hash;
+            window.history.replaceState(window.history.state, '', cleanUrl);
+        }
+    }
 })();
