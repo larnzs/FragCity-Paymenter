@@ -125,10 +125,22 @@
         </form>
 
         @if ($fragcitySsoEnabled ?? false)
+            @php
+                $fcAuthReturnPath = request()->routeIs('login')
+                    ? '/'
+                    : '/' . ltrim(request()->path(), '/');
+                $fcAuthReturnQuery = request()->query();
+                unset($fcAuthReturnQuery['auth'], $fcAuthReturnQuery['redirect']);
+                if ($fcAuthReturnQuery !== []) {
+                    $fcAuthReturnPath .= '?' . http_build_query($fcAuthReturnQuery);
+                }
+                $fcAuthReturnPath = request()->query('redirect', $fcAuthReturnPath);
+            @endphp
+
             <div class="fc-auth-separator">یا با حساب اصلی FragCity وارد شو</div>
 
             <a
-                href="{{ route('extensions.fragcity-api.sso.start', ['redirect' => request()->query('redirect', '/')]) }}"
+                href="{{ route('extensions.fragcity-api.sso.start', ['redirect' => $fcAuthReturnPath]) }}"
                 class="fc-auth-sso-button"
             >
                 <i class="fa-brands fa-steam" aria-hidden="true"></i>
