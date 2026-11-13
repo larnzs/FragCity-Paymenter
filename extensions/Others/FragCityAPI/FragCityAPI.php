@@ -5054,6 +5054,7 @@ class FragCityAPI extends Extension
     private function redirectSsoErrorToModal(string $message): RedirectResponse
     {
         $returnTo = $this->safeSsoReturnPath(Session::get('fragcity_sso_return_to', '/'));
+        Session::forget(['fragcity_sso_state', 'fragcity_sso_return_to']);
         $parts = parse_url($returnTo);
         $path = is_array($parts) && is_string($parts['path'] ?? null) && $parts['path'] !== ''
             ? $parts['path']
