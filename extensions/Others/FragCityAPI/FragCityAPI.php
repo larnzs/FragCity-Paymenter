@@ -4873,14 +4873,15 @@ class FragCityAPI extends Extension
         $allowedWebsiteOrigins = $this->ssoWebsiteOriginAliases($websiteOrigin);
         $requestOriginHeader = trim((string) $request->header('Origin', ''));
         $requestOrigin = $this->normalizeHttpsOrigin($requestOriginHeader);
+        $originHeaderIsOpaque = strtolower($requestOriginHeader) === 'null';
         $originValid = $requestOrigin !== null
             && in_array($requestOrigin, $allowedWebsiteOrigins, true);
 
-        // Some shared-host/proxy stacks strip Origin on top-level HTML form posts.
-        // In that one case, require the browser's Fetch Metadata to prove a same-site
-        // document navigation. The signed one-time ticket and Paymenter session state
-        // remain mandatory below, so this is not an unauthenticated SSO bypass.
-        if (!$originValid && $requestOrigin === null) {
+        // Some shared-host/proxy stacks strip Origin, while an opaque browser
+        // context can send the literal "null". Only those two cases may use
+        // Fetch Metadata; parseable but non-allowlisted or insecure origins stay rejected.
+        // The signed one-time ticket and Paymenter session state remain mandatory below.
+        if (!$originValid && ($requestOriginHeader === '' || $originHeaderIsOpaque)) {
             $fetchSite = strtolower(trim((string) $request->header('Sec-Fetch-Site', '')));
             $fetchMode = strtolower(trim((string) $request->header('Sec-Fetch-Mode', '')));
             $fetchDestination = strtolower(trim((string) $request->header('Sec-Fetch-Dest', '')));
@@ -4895,7 +4896,10 @@ class FragCityAPI extends Extension
                 'received_origin' => $requestOrigin ?? ($requestOriginHeader !== '' ? 'invalid' : 'missing'),
                 'origin_header_state' => $requestOriginHeader === ''
                     ? 'missing'
-                    : ($requestOrigin === null ? 'unparseable' : 'parsed'),
+                    : ($originHeaderIsOpaque ? 'opaque_null' : ($requestOrigin === null ? 'unparseable' : 'parsed')),
+                'origin_header_value' => $requestOriginHeader === ''
+                    ? null
+                    : substr(preg_replace('/[\\x00-\\x1F\\x7F]/', '?', $requestOriginHeader) ?? '', 0, 160),
                 'fetch_site' => strtolower(trim((string) $request->header('Sec-Fetch-Site', ''))),
                 'fetch_mode' => strtolower(trim((string) $request->header('Sec-Fetch-Mode', ''))),
                 'fetch_dest' => strtolower(trim((string) $request->header('Sec-Fetch-Dest', ''))),
