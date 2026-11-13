@@ -35,7 +35,7 @@ use Throwable;
 #[ExtensionMeta(
     name: 'FragCity API',
     description: 'Private signed server-to-server VIP store, Paymenter wallet, CS2 checkout and service bridge for FragCity.',
-    version: '1.18.1',
+    version: '1.18.2',
     author: 'FragCity',
     url: 'https://fragcity.ir'
 )]
@@ -386,7 +386,7 @@ class FragCityAPI extends Extension
         return response()->json([
             'success' => true,
             'service' => 'FragCityAPI',
-            'version' => '1.18.1',
+            'version' => '1.18.2',
             'timestamp' => now()->toIso8601String(),
         ]);
     }
