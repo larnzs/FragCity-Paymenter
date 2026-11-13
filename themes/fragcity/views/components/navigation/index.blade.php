@@ -267,9 +267,6 @@
                data-auth-modal-open aria-haspopup="dialog" aria-controls="fcLoginModal" aria-expanded="false">
                 <i class="fa-brands fa-steam" aria-hidden="true"></i><span>ورود با استیم</span>
             </a>
-            @if (!config('settings.registration_disabled', false))
-                <a href="{{ $fragcityMain }}/register/" class="mobile-nav-link"><i class="fa-solid fa-user-plus" aria-hidden="true"></i><span>ساخت حساب کاربری</span></a>
-            @endif
         @endauth
     </div>
 </nav>
