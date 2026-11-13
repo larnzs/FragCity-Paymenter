@@ -4880,7 +4880,7 @@ class FragCityAPI extends Extension
         // In that one case, require the browser's Fetch Metadata to prove a same-site
         // document navigation. The signed one-time ticket and Paymenter session state
         // remain mandatory below, so this is not an unauthenticated SSO bypass.
-        if (!$originValid && $requestOriginHeader === '') {
+        if (!$originValid && $requestOrigin === null) {
             $fetchSite = strtolower(trim((string) $request->header('Sec-Fetch-Site', '')));
             $fetchMode = strtolower(trim((string) $request->header('Sec-Fetch-Mode', '')));
             $fetchDestination = strtolower(trim((string) $request->header('Sec-Fetch-Dest', '')));
@@ -4893,7 +4893,12 @@ class FragCityAPI extends Extension
             Log::warning('FragCity SSO browser-origin validation failed.', [
                 'expected_origin' => $websiteOrigin,
                 'received_origin' => $requestOrigin ?? ($requestOriginHeader !== '' ? 'invalid' : 'missing'),
+                'origin_header_state' => $requestOriginHeader === ''
+                    ? 'missing'
+                    : ($requestOrigin === null ? 'unparseable' : 'parsed'),
                 'fetch_site' => strtolower(trim((string) $request->header('Sec-Fetch-Site', ''))),
+                'fetch_mode' => strtolower(trim((string) $request->header('Sec-Fetch-Mode', ''))),
+                'fetch_dest' => strtolower(trim((string) $request->header('Sec-Fetch-Dest', ''))),
             ]);
 
             return $this->redirectSsoErrorToModal( 'FragCity SSO origin validation failed.');
