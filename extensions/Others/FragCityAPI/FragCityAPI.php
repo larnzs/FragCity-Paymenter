@@ -4867,11 +4867,35 @@ class FragCityAPI extends Extension
         $paymenterOrigin = $this->normalizeHttpsOrigin((string) config('app.url'));
         abort_if($websiteOrigin === null || $paymenterOrigin === null, 503, 'FragCity SSO is not configured.');
 
-        // This is a cross-origin form POST but remains same-site (both hosts are
-        // under fragcity.ir). Requiring the expected Origin adds a browser-side
-        // check on top of the per-session random state and signed ticket.
-        $requestOrigin = $this->normalizeHttpsOrigin((string) $request->header('Origin', ''));
-        if ($requestOrigin === null || !hash_equals($websiteOrigin, $requestOrigin)) {
+        // The main site may be served on either the apex or its www alias.
+        // Accept only those two explicit FragCity origins; never trust an arbitrary
+        // sibling subdomain or a forwarded host header.
+        $allowedWebsiteOrigins = $this->ssoWebsiteOriginAliases($websiteOrigin);
+        $requestOriginHeader = trim((string) $request->header('Origin', ''));
+        $requestOrigin = $this->normalizeHttpsOrigin($requestOriginHeader);
+        $originValid = $requestOrigin !== null
+            && in_array($requestOrigin, $allowedWebsiteOrigins, true);
+
+        // Some shared-host/proxy stacks strip Origin on top-level HTML form posts.
+        // In that one case, require the browser's Fetch Metadata to prove a same-site
+        // document navigation. The signed one-time ticket and Paymenter session state
+        // remain mandatory below, so this is not an unauthenticated SSO bypass.
+        if (!$originValid && $requestOriginHeader === '') {
+            $fetchSite = strtolower(trim((string) $request->header('Sec-Fetch-Site', '')));
+            $fetchMode = strtolower(trim((string) $request->header('Sec-Fetch-Mode', '')));
+            $fetchDestination = strtolower(trim((string) $request->header('Sec-Fetch-Dest', '')));
+            $originValid = $fetchSite === 'same-site'
+                && $fetchMode === 'navigate'
+                && $fetchDestination === 'document';
+        }
+
+        if (!$originValid) {
+            Log::warning('FragCity SSO browser-origin validation failed.', [
+                'expected_origin' => $websiteOrigin,
+                'received_origin' => $requestOrigin ?? ($requestOriginHeader !== '' ? 'invalid' : 'missing'),
+                'fetch_site' => strtolower(trim((string) $request->header('Sec-Fetch-Site', ''))),
+            ]);
+
             return redirect()->route('login')->with('error', 'FragCity SSO origin validation failed.');
         }
 
@@ -4927,7 +4951,7 @@ class FragCityAPI extends Extension
         $now = time();
         if (
             !is_array($claims)
-            || ($claims['iss'] ?? null) !== $websiteOrigin
+            || !in_array($claims['iss'] ?? null, $allowedWebsiteOrigins, true)
             || ($claims['aud'] ?? null) !== $paymenterOrigin
             || !is_string($claims['sub'] ?? null)
             || !preg_match('/\A[0-9]{17}\z/D', $claims['sub'])
@@ -5033,6 +5057,38 @@ class FragCityAPI extends Extension
     private function ssoWebsiteOrigin(): ?string
     {
         return $this->normalizeHttpsOrigin((string) ($this->config('website_base_url') ?: 'https://fragcity.ir'));
+    }
+
+    /**
+     * Return the configured canonical FragCity HTTPS origin and its one
+     * explicitly supported www alias. The alias is used only for browser
+     * Origin and signed issuer matching; all other hosts remain rejected.
+     *
+     * @return array<int, string>
+     */
+    private function ssoWebsiteOriginAliases(string $websiteOrigin): array
+    {
+        $origins = [$websiteOrigin];
+        $parts = parse_url($websiteOrigin);
+
+        if (!is_array($parts) || !is_string($parts['host'] ?? null)) {
+            return $origins;
+        }
+
+        $host = strtolower($parts['host']);
+        if (!in_array($host, ['fragcity.ir', 'www.fragcity.ir'], true)) {
+            return $origins;
+        }
+
+        $aliasHost = $host === 'fragcity.ir' ? 'www.fragcity.ir' : 'fragcity.ir';
+        $port = isset($parts['port']) ? ':' . (int) $parts['port'] : '';
+        $alias = $this->normalizeHttpsOrigin('https://' . $aliasHost . $port);
+
+        if ($alias !== null && !in_array($alias, $origins, true)) {
+            $origins[] = $alias;
+        }
+
+        return $origins;
     }
 
     private function normalizeHttpsOrigin(string $value): ?string
